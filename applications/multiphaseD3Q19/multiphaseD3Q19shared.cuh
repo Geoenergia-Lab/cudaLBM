@@ -79,6 +79,10 @@ namespace LBM
     using HydroHalo = device::halo<VelocitySet, config::periodicX, config::periodicY>;
     using PhaseHalo = device::halo<PhaseVelocitySet, config::periodicX, config::periodicY>;
 
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_oil() noexcept { return static_cast<scalar_t>(0.852); }
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_water() noexcept { return static_cast<scalar_t>(1); }
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t delta_rho() noexcept { return rho_oil() - rho_water(); }
+
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept { return block::sharedMemoryBufferSize<VelocitySet, 11>(sizeof(scalar_t)); }
 
     __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
@@ -320,9 +324,39 @@ namespace LBM
 
         const label_t idx = device::idx();
 
-        scalar_t ffx_ = static_cast<scalar_t>(0);
-        scalar_t ffy_ = static_cast<scalar_t>(0);
-        scalar_t ffz_ = static_cast<scalar_t>(0);
+        // Prefetch devPtrs into L2
+        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
+            [&](const auto moment)
+            {
+                cache::prefetch<cache::Level::L2, cache::Policy::evict_last>(&(devPtrs.ptr<moment>()[idx]));
+            });
+
+        // Coalesced read from global memory
+        thread::array<scalar_t, NUMBER_MOMENTS<true>()> moments;
+        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
+            [&](const auto moment)
+            {
+                moments[moment] = devPtrs.ptr<moment>()[idx];
+            });
+
+        scalar_t Fsx = static_cast<scalar_t>(0);
+        scalar_t Fsy = static_cast<scalar_t>(0);
+        scalar_t Fsz = static_cast<scalar_t>(0);
+
+        scalar_t Fpx = static_cast<scalar_t>(0);
+        scalar_t Fpy = static_cast<scalar_t>(0);
+        scalar_t Fpz = static_cast<scalar_t>(0);
+
+        scalar_t Fnx = static_cast<scalar_t>(0);
+        scalar_t Fny = static_cast<scalar_t>(0);
+        scalar_t Fnz = static_cast<scalar_t>(0);
+
+        scalar_t Fx = static_cast<scalar_t>(0);
+        scalar_t Fy = static_cast<scalar_t>(0);
+        scalar_t Fz = static_cast<scalar_t>(0);
+
+        scalar_t rho_ = static_cast<scalar_t>(1) + delta_rho() * moments[m_i<10>()];
+
         scalar_t normx_ = static_cast<scalar_t>(0);
         scalar_t normy_ = static_cast<scalar_t>(0);
         scalar_t normz_ = static_cast<scalar_t>(0);
@@ -521,15 +555,55 @@ namespace LBM
 
                 const scalar_t stCurv = -device::sigma * curvature * ind_;
 
-                ffx_ = stCurv * normx_;
-                ffy_ = stCurv * normy_;
-                ffz_ = stCurv * normz_;
+                Fsx = stCurv * normx_;
+                Fsy = stCurv * normy_;
+                Fsz = stCurv * normz_;
+
+                // Build stress tensor
+                const scalar_t pxx = moments[m_i<4>()] - moments[m_i<1>()] * moments[m_i<1>()];
+                const scalar_t pxy = moments[m_i<5>()] - moments[m_i<1>()] * moments[m_i<2>()];
+                const scalar_t pxz = moments[m_i<6>()] - moments[m_i<1>()] * moments[m_i<3>()];
+                const scalar_t pyy = moments[m_i<7>()] - moments[m_i<2>()] * moments[m_i<2>()];
+                const scalar_t pyz = moments[m_i<8>()] - moments[m_i<2>()] * moments[m_i<3>()];
+                const scalar_t pzz = moments[m_i<9>()] - moments[m_i<3>()] * moments[m_i<3>()];
+
+                const scalar_t drhox = delta_rho() * gx;
+                const scalar_t drhoy = delta_rho() * gy;
+                const scalar_t drhoz = delta_rho() * gz;
+
+                // Compute pressure force
+                Fpx = -moments[m_i<0>()] * (velocitySet::cs2<scalar_t>() * drhox);
+                Fpy = -moments[m_i<0>()] * (velocitySet::cs2<scalar_t>() * drhoy);
+                Fpz = -moments[m_i<0>()] * (velocitySet::cs2<scalar_t>() * drhoz);
+
+                // Compute viscous correction force
+                Fnx = -device::tt_omegaVar * (pxx * drhox + pxy * drhoy + pxz * drhoz);
+                Fny = -device::tt_omegaVar * (pxy * drhox + pyy * drhoy + pyz * drhoz);
+                Fnz = -device::tt_omegaVar * (pxz * drhox + pyz * drhoy + pzz * drhoz);
+
+                // Build force density
+                Fx = Fsx + Fpx + Fnx;
+                Fy = Fsy + Fpy + Fny;
+                Fz = Fsz + Fpz + Fnz;
             }
             else
             {
-                ffx_ = static_cast<scalar_t>(0);
-                ffy_ = static_cast<scalar_t>(0);
-                ffz_ = static_cast<scalar_t>(0);
+                Fsx = static_cast<scalar_t>(0);
+                Fsy = static_cast<scalar_t>(0);
+                Fsz = static_cast<scalar_t>(0);
+
+                Fpx = static_cast<scalar_t>(0);
+                Fpy = static_cast<scalar_t>(0);
+                Fpz = static_cast<scalar_t>(0);
+
+                Fnx = static_cast<scalar_t>(0);
+                Fny = static_cast<scalar_t>(0);
+                Fnz = static_cast<scalar_t>(0);
+
+                Fx = static_cast<scalar_t>(0);
+                Fy = static_cast<scalar_t>(0);
+                Fz = static_cast<scalar_t>(0);
+
                 normx_ = static_cast<scalar_t>(0);
                 normy_ = static_cast<scalar_t>(0);
                 normz_ = static_cast<scalar_t>(0);
@@ -537,33 +611,16 @@ namespace LBM
             }
         }
 
-        // Prefetch devPtrs into L2
-        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
-            [&](const auto moment)
-            {
-                cache::prefetch<cache::Level::L2, cache::Policy::evict_last>(&(devPtrs.ptr<moment>()[idx]));
-            });
-
-        const scalar_t rho_ = static_cast<scalar_t>(1);
-
-        // Coalesced read from global memory
-        thread::array<scalar_t, NUMBER_MOMENTS<true>()> moments;
-        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
-            [&](const auto moment)
-            {
-                moments[moment] = devPtrs.ptr<moment>()[idx];
-            });
-
         // Perform velocity half-step
-        moments[m_i<1>()] += 0.5 * ffx_ / rho_;
-        moments[m_i<2>()] += 0.5 * ffy_ / rho_;
-        moments[m_i<3>()] += 0.5 * ffz_ / rho_;
+        moments[m_i<1>()] += 0.5 * Fx / rho_;
+        moments[m_i<2>()] += 0.5 * Fy / rho_;
+        moments[m_i<3>()] += 0.5 * Fz / rho_;
 
         // Scale the moments correctly
         velocitySet::scale(moments);
 
         // Collide
-        Collision::collide(moments, ffx_, ffy_, ffz_, rho_);
+        Collision::collide(moments, Fx, Fy, Fz, rho_);
 
         // Calculate post collision populations
         thread::array<scalar_t, VelocitySet::Q()> pop;

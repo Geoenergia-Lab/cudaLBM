@@ -50,7 +50,7 @@ SourceFiles
 // #define MULTIPHASE_GLOBAL
 
 #if defined(MULTIPHASE_GLOBAL)
-#include "multiphaseD3Q19global.cuh" // Uses four extra global pointers. Currently being ported to pressure-based
+#include "multiphaseD3Q19global.cuh" // Uses four extra global pointers
 #else
 #include "multiphaseD3Q19shared.cuh" // Reduced global memory footprint
 #endif

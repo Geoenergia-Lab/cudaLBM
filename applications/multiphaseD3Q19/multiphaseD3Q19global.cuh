@@ -78,6 +78,10 @@ namespace LBM
     using HydroHalo = device::halo<VelocitySet, config::periodicX, config::periodicY>;
     using PhaseHalo = device::halo<PhaseVelocitySet, config::periodicX, config::periodicY>;
 
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_oil() noexcept { return static_cast<scalar_t>(0.852); }
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_water() noexcept { return static_cast<scalar_t>(1); }
+    __device__ __host__ [[nodiscard]] inline consteval scalar_t delta_rho() noexcept { return rho_oil() - rho_water(); }
+
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept { return block::sharedMemoryBufferSize<VelocitySet, 11>(sizeof(scalar_t)); }
 
     __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
@@ -194,7 +198,7 @@ namespace LBM
 
         __syncthreads();
 
-        // Calculate the moments at the boundary - TODO: pressure-based boundary conditions
+        // Calculate the moments at the boundary
         {
             const normalVector boundaryNormal;
 
@@ -318,8 +322,6 @@ namespace LBM
         normy[idx] = normy_;
         normz[idx] = normz_;
     }
-
-    // TODO: interpolate density
 
     /**
      * @brief Performs the collision step of the lattice Boltzmann method using the multiphase moment representation (D3Q19 hydrodynamics + D3Q7 phase field)
@@ -507,13 +509,11 @@ namespace LBM
                                                 phi_xm1_y_zp1 - phi_xp1_y_zm1 +
                                                 phi_x_ym1_zp1 - phi_x_yp1_zm1);
 
-            // TODO: phase-dependent rho as input
-            const scalar_t delta_rho = static_cast<scalar_t>(0.852) - static_cast<scalar_t>(1);
-            rho_ = static_cast<scalar_t>(1) + delta_rho * moments[m_i<10>()];
+            rho_ = static_cast<scalar_t>(1) + delta_rho() * moments[m_i<10>()];
 
-            const scalar_t drhox = delta_rho * velocitySet::as2<scalar_t>() * sgx;
-            const scalar_t drhoy = delta_rho * velocitySet::as2<scalar_t>() * sgy;
-            const scalar_t drhoz = delta_rho * velocitySet::as2<scalar_t>() * sgz;
+            const scalar_t drhox = delta_rho() * velocitySet::as2<scalar_t>() * sgx;
+            const scalar_t drhoy = delta_rho() * velocitySet::as2<scalar_t>() * sgy;
+            const scalar_t drhoz = delta_rho() * velocitySet::as2<scalar_t>() * sgz;
 
             // Compute pressure force
             Fpx = -moments[m_i<0>()] * (velocitySet::cs2<scalar_t>() * drhox);
@@ -521,9 +521,9 @@ namespace LBM
             Fpz = -moments[m_i<0>()] * (velocitySet::cs2<scalar_t>() * drhoz);
 
             // Compute viscous correction force
-            Fnx = -tt_omegaVar * (pxx * drhox + pxy * drhoy + pxz * drhoz);
-            Fny = -tt_omegaVar * (pxy * drhox + pyy * drhoy + pyz * drhoz);
-            Fnz = -tt_omegaVar * (pxz * drhox + pyz * drhoy + pzz * drhoz);
+            Fnx = -device::tt_omegaVar * (pxx * drhox + pxy * drhoy + pxz * drhoz);
+            Fny = -device::tt_omegaVar * (pxy * drhox + pyy * drhoy + pyz * drhoz);
+            Fnz = -device::tt_omegaVar * (pxz * drhox + pyz * drhoy + pzz * drhoz);
 
             // Build force density
             Fx = Fsx + Fpx + Fnx;
