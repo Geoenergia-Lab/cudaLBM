@@ -557,15 +557,6 @@ namespace LBM
     }
 
     /**
-     * @brief Reference density 1.0
-     **/
-    template <typename T>
-    __device__ __host__ [[nodiscard]] inline consteval T rho0() noexcept
-    {
-        return 1.0;
-    }
-
-    /**
      * @brief Queries a device and gets its properties
      * @param[in] deviceID The ID of the device to query
      * @return A cudaDeviceProp struct containing the properties of deviceID

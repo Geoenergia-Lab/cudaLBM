@@ -53,11 +53,11 @@ case normalVector::FRONT():
 {
     // Classic Neumann
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
+    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
     moments[m_i<0>()] = p;
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     if constexpr (VelocitySet::Q() == 19)
     {
@@ -102,11 +102,11 @@ case normalVector::WEST_FRONT():
 {
     // Classic Neumann
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
+    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
     moments[m_i<0>()] = p;
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     if constexpr (VelocitySet::Q() == 19)
     {
@@ -143,11 +143,11 @@ case normalVector::EAST_FRONT():
 {
     // Classic Neumann
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
+    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
     moments[m_i<0>()] = p;
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     if constexpr (VelocitySet::Q() == 19)
     {
@@ -184,11 +184,11 @@ case normalVector::SOUTH_FRONT():
 {
     // Classic Neumann
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
+    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
     moments[m_i<0>()] = p;
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     if constexpr (VelocitySet::Q() == 19)
     {
@@ -225,11 +225,11 @@ case normalVector::NORTH_FRONT():
 {
     // Classic Neumann
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
+    const scalar_t p = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
     moments[m_i<0>()] = p;
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     if constexpr (VelocitySet::Q() == 19)
     {
@@ -269,10 +269,10 @@ case normalVector::WEST_SOUTH_FRONT():
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
 
     // Classic Neumann
-    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     // IRBC-Neumann
     moments[m_i<4>()] = moments[m_i<1>()] * moments[m_i<1>()]; // mxx
@@ -291,10 +291,10 @@ case normalVector::WEST_NORTH_FRONT():
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
 
     // Classic Neumann
-    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     // IRBC-Neumann
     moments[m_i<4>()] = moments[m_i<1>()] * moments[m_i<1>()]; // mxx
@@ -313,10 +313,10 @@ case normalVector::EAST_SOUTH_FRONT():
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
 
     // Classic Neumann
-    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     // IRBC-Neumann
     moments[m_i<4>()] = moments[m_i<1>()] * moments[m_i<1>()]; // mxx
@@ -335,10 +335,10 @@ case normalVector::EAST_NORTH_FRONT():
     const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
 
     // Classic Neumann
-    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
-    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()];
-    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()];
-    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()];
+    moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+    moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()];
+    moments[m_i<2>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()];
+    moments[m_i<3>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()];
 
     // IRBC-Neumann
     moments[m_i<4>()] = moments[m_i<1>()] * moments[m_i<1>()]; // mxx
