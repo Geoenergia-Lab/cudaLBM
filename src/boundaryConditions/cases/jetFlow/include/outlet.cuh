@@ -37,10 +37,10 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Applies IRBC Neumann-type boundary conditions
+    Edge and corner definitions along the outlet plane of the jet.
 
 SourceFiles
-    IRBCNeumann.cuh
+    outlet.cuh
 
 Notes
     This file is intended to be included directly inside a switch-case block.
@@ -92,8 +92,6 @@ case normalVector::FRONT():
         moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];                                                                                                                                                                                                                                         // mzz
     }
 
-    already_handled = true;
-
     return;
 }
 
@@ -135,8 +133,6 @@ case normalVector::WEST_FRONT():
         moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];                                                                                                                                             // mzz
     }
 
-    already_handled = true;
-
     return;
 }
 case normalVector::EAST_FRONT():
@@ -175,8 +171,6 @@ case normalVector::EAST_FRONT():
         moments[m_i<8>()] = -(static_cast<scalar_t>(9) * mxy_I * rho_I - static_cast<scalar_t>(45) * myz_I * rho_I + static_cast<scalar_t>(5) * moments[m_i<2>()] * rho) / (static_cast<scalar_t>(18) * rho);  // myz
         moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];                                                                                                                                             // mzz
     }
-
-    already_handled = true;
 
     return;
 }
@@ -217,8 +211,6 @@ case normalVector::SOUTH_FRONT():
         moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];                                                                                                                                             // mzz
     }
 
-    already_handled = true;
-
     return;
 }
 case normalVector::NORTH_FRONT():
@@ -258,8 +250,6 @@ case normalVector::NORTH_FRONT():
         moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];                                                                                                                                             // mzz
     }
 
-    already_handled = true;
-
     return;
 }
 
@@ -282,8 +272,6 @@ case normalVector::SOUTH_WEST_FRONT():
     moments[m_i<8>()] = moments[m_i<2>()] * moments[m_i<3>()]; // myz
     moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()]; // mzz
 
-    already_handled = true;
-
     return;
 }
 case normalVector::NORTH_WEST_FRONT():
@@ -303,8 +291,6 @@ case normalVector::NORTH_WEST_FRONT():
     moments[m_i<7>()] = moments[m_i<2>()] * moments[m_i<2>()]; // myy
     moments[m_i<8>()] = moments[m_i<2>()] * moments[m_i<3>()]; // myz
     moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()]; // mzz
-
-    already_handled = true;
 
     return;
 }
@@ -326,8 +312,6 @@ case normalVector::SOUTH_EAST_FRONT():
     moments[m_i<8>()] = moments[m_i<2>()] * moments[m_i<3>()]; // myz
     moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()]; // mzz
 
-    already_handled = true;
-
     return;
 }
 case normalVector::NORTH_EAST_FRONT():
@@ -347,8 +331,6 @@ case normalVector::NORTH_EAST_FRONT():
     moments[m_i<7>()] = moments[m_i<2>()] * moments[m_i<2>()]; // myy
     moments[m_i<8>()] = moments[m_i<2>()] * moments[m_i<3>()]; // myz
     moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()]; // mzz
-
-    already_handled = true;
 
     return;
 }

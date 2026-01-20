@@ -13,6 +13,8 @@ caseName        lidDrivenCavity;
 
 Re              10000;
 
+L_char          255;
+
 u_inf           0.0256;
 
 startFrom       latestTime;

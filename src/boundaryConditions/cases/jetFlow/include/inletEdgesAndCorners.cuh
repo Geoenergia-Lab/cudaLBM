@@ -1,0 +1,220 @@
+/*---------------------------------------------------------------------------*\
+|                                                                             |
+| cudaLBM: CUDA-based moment representation Lattice Boltzmann Method          |
+| Developed at UDESC - State University of Santa Catarina                     |
+| Website: https://www.udesc.br                                               |
+| Github: https://github.com/geoenergiaUDESC/cudaLBM                          |
+|                                                                             |
+\*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*\
+
+Copyright (C) 2023 UDESC Geoenergia Lab
+Authors: Nathan Duggins, Breno Gemelgo (Geoenergia Lab, UDESC)
+
+This implementation is derived from concepts and algorithms developed in:
+  MR-LBM: Moment Representation Lattice Boltzmann Method
+  Copyright (C) 2021 CERNN
+  Developed at Universidade Federal do Paraná (UFPR)
+  Original authors: V. M. de Oliveira, M. A. de Souza, R. F. de Souza
+  GitHub: https://github.com/CERNN/MR-LBM
+  Licensed under GNU General Public License version 2
+
+License
+    This file is part of cudaLBM.
+
+    cudaLBM is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Description
+    Edge and corner definitions along the inlet plane of the jet.
+
+SourceFiles
+    inletEdgesAndCorners.cuh
+
+    This file is intended to be included directly inside a switch-case block.
+    Do NOT use include guards (#ifndef/#define/#endif).
+
+\*---------------------------------------------------------------------------*/
+
+// Static corners
+case normalVector::SOUTH_WEST_BACK():
+{
+    if constexpr (VelocitySet::Q() == 19)
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
+    }
+    else
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
+    }
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::SOUTH_EAST_BACK():
+{
+    if constexpr (VelocitySet::Q() == 19)
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
+    }
+    else
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
+    }
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::NORTH_WEST_BACK():
+{
+    if constexpr (VelocitySet::Q() == 19)
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
+    }
+    else
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
+    }
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::NORTH_EAST_BACK():
+{
+    if constexpr (VelocitySet::Q() == 19)
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
+    }
+    else
+    {
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
+    }
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+
+// Static edges
+case normalVector::WEST_BACK():
+{
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+
+    const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz;                      // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::EAST_BACK():
+{
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+
+    const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz;                      // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::SOUTH_BACK():
+{
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+
+    const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz;                      // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}
+case normalVector::NORTH_BACK():
+{
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+
+    const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz;                      // myz
+    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+
+    return;
+}

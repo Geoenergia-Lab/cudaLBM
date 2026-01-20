@@ -71,6 +71,7 @@ namespace LBM
               caseName_(string::extractParameter<std::string>(string::readFile("programControl"), "caseName")),
               Re_(initialiseConst<scalar_t>("Re")),
               u_inf_(initialiseConst<scalar_t>("u_inf")),
+              L_char_(initialiseConst<scalar_t>("L_char")),
               nTimeSteps_(string::extractParameter<label_t>(string::readFile("programControl"), "nTimeSteps")),
               saveInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "saveInterval")),
               infoInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "infoInterval")),
@@ -111,6 +112,7 @@ namespace LBM
             std::cout << deviceList()[deviceList().size() - 1] << "];" << std::endl;
             std::cout << "    caseName: " << caseName_ << ";" << std::endl;
             std::cout << "    Re = " << Re_ << ";" << std::endl;
+            std::cout << "    Ma = " << (u_inf_ / std::sqrt(static_cast<scalar_t>(3))) << ";" << std::endl;
             std::cout << "    nTimeSteps = " << nTimeSteps_ << ";" << std::endl;
             std::cout << "    saveInterval = " << saveInterval_ << ";" << std::endl;
             std::cout << "    infoInterval = " << infoInterval_ << ";" << std::endl;
@@ -162,6 +164,15 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline constexpr scalar_t u_inf() const noexcept
         {
             return u_inf_;
+        }
+
+        /**
+         * @brief Returns the characteristic length
+         * @return The characteristic length
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr scalar_t L_char() const noexcept
+        {
+            return L_char_;
         }
 
         /**
@@ -266,6 +277,11 @@ namespace LBM
          * @brief The characteristic velocity
          **/
         const scalar_t u_inf_;
+
+        /**
+         * @brief The characteristic length
+         **/
+        const scalar_t L_char_;
 
         /**
          * @brief Total number of simulation time steps, the save interval, info output interval and the latest time step at program start

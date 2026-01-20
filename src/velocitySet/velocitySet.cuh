@@ -74,7 +74,16 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline consteval velocitySet() noexcept {};
 
         /**
-         * @brief Get the a^2 constant (3.0)
+         * @brief Get the speed of sound (sqrt(3))
+         **/
+        template <typename T>
+        __device__ __host__ [[nodiscard]] static inline consteval T as() noexcept
+        {
+            return static_cast<T>(std::sqrt(3));
+        }
+
+        /**
+         * @brief Get the a^2 constant (a ^ 2)
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T as2() noexcept

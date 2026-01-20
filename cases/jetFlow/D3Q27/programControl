@@ -13,7 +13,9 @@ caseName        jetFlow;
 
 Re              3000;
 
-u_inf           0.016;
+L_char          16;
+
+u_inf           0.032;
 
 startFrom       latestTime;
 

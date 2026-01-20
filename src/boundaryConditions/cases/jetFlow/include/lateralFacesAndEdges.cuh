@@ -37,11 +37,12 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Boundary returns for (x,y). Periodicity is implemented at halo level,
-    see /src/blockHalo/halo.cuh for more informations
+    Face and edge definitions along the lateral planes of the jet.
+    Periodicity is implemented at halo level.
+    See /src/blockHalo/halo.cuh for more information.
 
 SourceFiles
-    periodic.cuh
+    lateralFacesAndEdges.cuh
 
     This file is intended to be included directly inside a switch-case block.
     Do NOT use include guards (#ifndef/#define/#endif).
@@ -49,14 +50,34 @@ SourceFiles
 \*---------------------------------------------------------------------------*/
 
 case normalVector::WEST():
+{
+    return;
+}
 case normalVector::EAST():
+{
+    return;
+}
 case normalVector::SOUTH():
+{
+    return;
+}
 case normalVector::NORTH():
+{
+    return;
+}
 case normalVector::SOUTH_WEST():
+{
+    return;
+}
 case normalVector::NORTH_WEST():
+{
+    return;
+}
 case normalVector::SOUTH_EAST():
+{
+    return;
+}
 case normalVector::NORTH_EAST():
 {
-    already_handled = true;
     return;
 }
