@@ -74,6 +74,7 @@ namespace LBM
     using HydroHalo = device::halo<VelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
     using PhaseHalo = device::halo<PhaseVelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
 
+    // Density configuration
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_oil() noexcept { return static_cast<scalar_t>(0.852); }
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_water() noexcept { return static_cast<scalar_t>(1); }
     __device__ __host__ [[nodiscard]] inline consteval scalar_t delta_rho() noexcept { return rho_oil() - rho_water(); }
@@ -179,30 +180,27 @@ namespace LBM
         // Load phase pop from global memory in cover nodes
         PhaseHalo::load(pop_g, ghostPhase);
 
-        // if constexpr (std::is_same<ultiphase::BoundaryConditions, multiphaseJet>::value)
-        {
-            // Compute post-stream moments
-            velocitySet::calculate_moments<VelocitySet>(pop, moments);
-            PhaseVelocitySet::calculate_phi(pop_g, moments);
+        // Compute post-stream moments
+        velocitySet::calculate_moments<VelocitySet>(pop, moments);
+        PhaseVelocitySet::calculate_phi(pop_g, moments);
 
-            // Update the shared buffer with the refreshed moments
-            device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
-                [&](const auto moment)
-                {
-                    const label_t ID = tid * label_constant<NUMBER_MOMENTS<true>() + 1>() + label_constant<moment>();
-                    shared_buffer[ID] = moments[moment];
-                });
-
-            __syncthreads();
-
-            // Calculate the moments at the boundary
+        // Update the shared buffer with the refreshed moments
+        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
+            [&](const auto moment)
             {
-                const normalVector boundaryNormal;
+                const label_t ID = tid * label_constant<NUMBER_MOMENTS<true>() + 1>() + label_constant<moment>();
+                shared_buffer[ID] = moments[moment];
+            });
 
-                if (boundaryNormal.isBoundary())
-                {
-                    multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
-                }
+        __syncthreads();
+
+        // Calculate the moments at the boundary
+        {
+            const normalVector boundaryNormal;
+
+            if (boundaryNormal.isBoundary())
+            {
+                multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
             }
         }
 
@@ -283,6 +281,7 @@ namespace LBM
         const scalar_t phi_x_ym1_zp1 = phi[i_ym + dzp];
         const scalar_t phi_x_ym1_zm1 = phi[i_ym - dzm];
 
+        // Compute gradients
         const scalar_t sgx =
             VelocitySet::w_1<scalar_t>() * (phi[i_xp] - phi[i_xm]) +
             VelocitySet::w_2<scalar_t>() * (phi_xp1_yp1_z - phi_xm1_ym1_z +
@@ -308,13 +307,16 @@ namespace LBM
         const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
         const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
+        // Interface indicator
         const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
-        const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
 
+        // Compute normals
+        const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
         const scalar_t normx_ = gx * invInd;
         const scalar_t normy_ = gy * invInd;
         const scalar_t normz_ = gz * invInd;
 
+        // Write to global memory
         ind[idx] = ind_;
         normx[idx] = normx_;
         normy[idx] = normy_;
@@ -373,26 +375,26 @@ namespace LBM
                 moments[moment] = devPtrs.ptr<moment>()[idx];
             });
 
+        // Read normals from global memory
         const scalar_t normx_ = normx[idx];
         const scalar_t normy_ = normy[idx];
         const scalar_t normz_ = normz[idx];
 
+        // Zero forces at bulk
         scalar_t Fsx = static_cast<scalar_t>(0);
         scalar_t Fsy = static_cast<scalar_t>(0);
         scalar_t Fsz = static_cast<scalar_t>(0);
-
         scalar_t Fpx = static_cast<scalar_t>(0);
         scalar_t Fpy = static_cast<scalar_t>(0);
         scalar_t Fpz = static_cast<scalar_t>(0);
-
         scalar_t Fnx = static_cast<scalar_t>(0);
         scalar_t Fny = static_cast<scalar_t>(0);
         scalar_t Fnz = static_cast<scalar_t>(0);
-
         scalar_t Fx = static_cast<scalar_t>(0);
         scalar_t Fy = static_cast<scalar_t>(0);
         scalar_t Fz = static_cast<scalar_t>(0);
 
+        // Fallback to unitary density contrast at bulk
         scalar_t rho_ = static_cast<scalar_t>(1);
 
         if (isInterior)
@@ -437,6 +439,7 @@ namespace LBM
             const label_t x_ym1_zp1 = i_ym + dzp;
             const label_t x_ym1_zm1 = i_ym - dzm;
 
+            // Compute curvature
             const scalar_t scx = VelocitySet::w_1<scalar_t>() * (normx[i_xp] - normx[i_xm]) +
                                  VelocitySet::w_2<scalar_t>() * (normx[xp1_yp1_z] - normx[xm1_ym1_z] +
                                                                  normx[xp1_y_zp1] - normx[xm1_y_zm1] +
@@ -456,9 +459,9 @@ namespace LBM
                                                                  normz[x_ym1_zp1] - normz[x_yp1_zm1]);
 
             const scalar_t curvature = velocitySet::as2<scalar_t>() * (scx + scy + scz);
-
             const scalar_t stCurv = -device::sigma * curvature * ind[idx];
 
+            // Assemble surface tension forces
             Fsx = stCurv * normx[idx];
             Fsy = stCurv * normy[idx];
             Fsz = stCurv * normz[idx];

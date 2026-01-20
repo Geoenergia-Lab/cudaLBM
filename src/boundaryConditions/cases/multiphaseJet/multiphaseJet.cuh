@@ -97,8 +97,6 @@ namespace LBM
 
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
 
-            bool already_handled = false;
-
             switch (boundaryNormal.nodeType())
             {
             // Round inflow + no-slip
@@ -128,7 +126,6 @@ namespace LBM
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
                 moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
 
-                already_handled = true;
                 return;
             }
 
@@ -138,19 +135,8 @@ namespace LBM
 // Outflow (zero-gradient) at front face
 #include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static back face outside of the jet
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 
@@ -166,8 +152,6 @@ namespace LBM
 
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
 
-            bool already_handled = false;
-
             switch (boundaryNormal.nodeType())
             {
             // Round inflow + no-slip
@@ -195,9 +179,8 @@ namespace LBM
                 moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
 
-                already_handled = true;
                 return;
             }
 
@@ -207,19 +190,8 @@ namespace LBM
 // Outflow (zero-gradient) at front face
 #include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static back face outside of the jet
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 

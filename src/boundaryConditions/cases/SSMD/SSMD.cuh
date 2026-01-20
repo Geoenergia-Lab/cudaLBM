@@ -97,8 +97,6 @@ namespace LBM
 
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
 
-            bool already_handled = false;
-
             switch (boundaryNormal.nodeType())
             {
             // Oil inflow + no-slip
@@ -107,7 +105,7 @@ namespace LBM
                 const label_t x = threadIdx.x + block::nx() * blockIdx.x;
                 const label_t y = threadIdx.y + block::ny() * blockIdx.y;
 
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
+                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - y_pos()) * (static_cast<scalar_t>(y) - y_pos()) < r2());
 
                 const scalar_t mxz_I = BACK_mxz_I(pop);
                 const scalar_t myz_I = BACK_myz_I(pop);
@@ -128,7 +126,6 @@ namespace LBM
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
                 moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
 
-                already_handled = true;
                 return;
             }
             // Water inflow + no-slip
@@ -137,10 +134,9 @@ namespace LBM
                 const label_t x = threadIdx.x + block::nx() * blockIdx.x;
                 const label_t z = threadIdx.z + block::nz() * blockIdx.z;
 
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - center_z()) * (static_cast<scalar_t>(z) - center_z()) < r2());
-
-                const scalar_t mxy_I = BACK_mxy_I(pop);
-                const scalar_t myz_I = BACK_myz_I(pop);
+                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - z_pos()) * (static_cast<scalar_t>(z) - z_pos()) < r2());
+                const scalar_t mxy_I = SOUTH_mxy_I(pop);
+                const scalar_t myz_I = SOUTH_myz_I(pop);
 
                 const scalar_t p = static_cast<scalar_t>(0);
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I;
@@ -156,31 +152,18 @@ namespace LBM
                 moments[m_i<7>()] = is_jet * (device::u_inf * device::u_inf); // myy
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = static_cast<scalar_t>(0);                 // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);
 
-                already_handled = true;
                 return;
             }
-
 // Periodic
 #include "include/periodic.cuh"
 
 // Outflow (zero-gradient) at front face
 #include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static boundaries
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 
@@ -196,8 +179,6 @@ namespace LBM
 
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
 
-            bool already_handled = false;
-
             switch (boundaryNormal.nodeType())
             {
             // Oil inflow + no-slip
@@ -206,7 +187,7 @@ namespace LBM
                 const label_t x = threadIdx.x + block::nx() * blockIdx.x;
                 const label_t y = threadIdx.y + block::ny() * blockIdx.y;
 
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
+                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - y_pos()) * (static_cast<scalar_t>(y) - y_pos()) < r2());
 
                 const scalar_t mxz_I = BACK_mxz_I(pop);
                 const scalar_t myz_I = BACK_myz_I(pop);
@@ -225,9 +206,8 @@ namespace LBM
                 moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
 
-                already_handled = true;
                 return;
             }
             // Water inflow + no-slip
@@ -236,10 +216,10 @@ namespace LBM
                 const label_t x = threadIdx.x + block::nx() * blockIdx.x;
                 const label_t z = threadIdx.z + block::nz() * blockIdx.z;
 
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - center_z()) * (static_cast<scalar_t>(z) - center_z()) < r2());
+                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - z_pos()) * (static_cast<scalar_t>(z) - z_pos()) < r2());
 
-                const scalar_t mxy_I = BACK_mxy_I(pop);
-                const scalar_t myz_I = BACK_myz_I(pop);
+                const scalar_t mxy_I = SOUTH_mxy_I(pop);
+                const scalar_t myz_I = SOUTH_myz_I(pop);
 
                 const scalar_t p = static_cast<scalar_t>(0);
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I;
@@ -255,9 +235,8 @@ namespace LBM
                 moments[m_i<7>()] = is_jet * (device::u_inf * device::u_inf); // myy
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = static_cast<scalar_t>(0);                 // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);       // phi
 
-                already_handled = true;
                 return;
             }
 
@@ -267,19 +246,8 @@ namespace LBM
 // Outflow (zero-gradient) at front face
 #include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static boundaries
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 
@@ -294,9 +262,19 @@ namespace LBM
             return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::ny - 1);
         }
 
+        __device__ [[nodiscard]] static inline scalar_t y_pos() noexcept
+        {
+            return static_cast<scalar_t>(0.5) * center_y();
+        }
+
         __device__ [[nodiscard]] static inline scalar_t center_z() noexcept
         {
             return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::nz - 1);
+        }
+
+        __device__ [[nodiscard]] static inline scalar_t z_pos() noexcept
+        {
+            return static_cast<scalar_t>(0.7) * center_z();
         }
 
         __device__ [[nodiscard]] static inline scalar_t radius() noexcept

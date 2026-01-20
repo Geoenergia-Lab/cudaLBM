@@ -37,7 +37,7 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    A class applying boundary conditions to the turbulent jet case
+    A class applying boundary conditions to the monophase jet case
 
 Namespace
     LBM
@@ -56,10 +56,9 @@ namespace LBM
      * @class monophaseJet
      * @brief Applies boundary conditions for jet simulations using moment representation
      *
-     * This class implements the boundary condition treatment for the D3Q19 lattice
-     * model in jet flow simulations. It handles static wall, inflow, and
-     * outflow boundaries using moment-based boundary conditions derived from the
-     * regularized LBM approach.
+     * This class implements the boundary condition treatment for monophase jet flow simulations.
+     * It handles a round inflow with no-slip outside of the circle, periodic laterals and outflow
+     * boundaries using moment-based boundary conditions derived from the regularized LBM approach.
      **/
     class monophaseJet
     {
@@ -77,9 +76,8 @@ namespace LBM
          * @param[in] boundaryNormal Normal vector information at boundary node
          *
          * This method implements the moment-based boundary condition treatment
-         * for the D3Q19 lattice model. Currently, it handles both the inflow
-         * (jet) boundary located at the BACK face of the domain and the outflow
-         * boundary located at the FRONT face.
+         * It handles both the round inflow boundary located at the BACK face with no-slip
+         * outside of the circle, periodic sides and the outflow boundary located at the FRONT face.
          *
          * The method uses the regularized LBM approach to reconstruct boundary
          * moments from available population information, ensuring mass conservation
@@ -94,10 +92,7 @@ namespace LBM
         {
             static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
 
-            // const scalar_t rho_I = velocitySet::rho_I<VelocitySet>(pop, boundaryNormal);
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
-
-            bool already_handled = false;
 
             switch (boundaryNormal.nodeType())
             {
@@ -127,7 +122,6 @@ namespace LBM
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
 
-                already_handled = true;
                 return;
             }
 
@@ -135,21 +129,10 @@ namespace LBM
 #include "include/periodic.cuh"
 
 // Outflow (zero-gradient) at front face
-#include "include/IRBCN.cuh"
+#include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static back face outside of the jet
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 
@@ -162,10 +145,7 @@ namespace LBM
         {
             static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
 
-            // const scalar_t rho_I = velocitySet::rho_I<VelocitySet>(pop, boundaryNormal);
             const scalar_t p_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
-
-            bool already_handled = false;
 
             switch (boundaryNormal.nodeType())
             {
@@ -195,7 +175,6 @@ namespace LBM
                 moments[m_i<8>()] = myz;                                      // myz
                 moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
 
-                already_handled = true;
                 return;
             }
 
@@ -205,19 +184,8 @@ namespace LBM
 // Outflow (zero-gradient) at front face
 #include "include/IRBCNeumann.cuh"
 
-            // Call static boundaries for uncovered cases
-            default:
-            {
-                if (!already_handled)
-                {
-                    switch (boundaryNormal.nodeType())
-                    {
+// Static back face outside of the jet
 #include "include/fallback.cuh"
-                    }
-                }
-
-                break;
-            }
             }
         }
 

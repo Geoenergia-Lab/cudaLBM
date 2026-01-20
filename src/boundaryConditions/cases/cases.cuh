@@ -58,8 +58,8 @@ SourceFiles
 #include "lidDrivenCavity/lidDrivenCavity.cuh"
 
 // Multiphase boundary conditions defines
-#define MULTIPHASEJET
-// #define SSMD
+// #define MULTIPHASEJET
+#define SUBSEAMECHANICALDISPERSION
 
 #include "multiphaseJet/multiphaseJet.cuh"
 #include "SSMD/SSMD.cuh"
@@ -92,7 +92,7 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
 #endif
 
-#ifdef SSMD
+#ifdef SUBSEAMECHANICALDISPERSION
         using BoundaryConditions = SSMD;
         __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
         __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }

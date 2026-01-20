@@ -72,6 +72,7 @@ namespace LBM
     using HydroHalo = device::halo<VelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
     using PhaseHalo = device::halo<PhaseVelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
 
+    // Density configuration
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_oil() noexcept { return static_cast<scalar_t>(0.852); }
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_water() noexcept { return static_cast<scalar_t>(1); }
     __device__ __host__ [[nodiscard]] inline consteval scalar_t delta_rho() noexcept { return rho_oil() - rho_water(); }
@@ -174,6 +175,7 @@ namespace LBM
             const scalar_t phi_x_ym1_zp1 = phi[i_ym + dzp];
             const scalar_t phi_x_ym1_zm1 = phi[i_ym - dzm];
 
+            // Compute gradients
             const scalar_t sgx =
                 VelocitySet::w_1<scalar_t>() * (phi[i_xp] - phi[i_xm]) +
                 VelocitySet::w_2<scalar_t>() * (phi_xp1_yp1_z - phi_xm1_ym1_z +
@@ -199,9 +201,11 @@ namespace LBM
             const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
             const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
+            // Interface indicator
             const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
-            const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
 
+            // Compute normals
+            const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
             normx_ = gx * invInd;
             normy_ = gy * invInd;
             normz_ = gz * invInd;
@@ -261,29 +265,27 @@ namespace LBM
         // Load phase pop from global memory in cover nodes
         PhaseHalo::load(pop_g, ghostPhase);
 
-        {
-            // Compute post-stream moments
-            velocitySet::calculate_moments<VelocitySet>(pop, moments);
-            PhaseVelocitySet::calculate_phi(pop_g, moments);
+        // Compute post-stream moments
+        velocitySet::calculate_moments<VelocitySet>(pop, moments);
+        PhaseVelocitySet::calculate_phi(pop_g, moments);
 
-            // Update the shared buffer with the refreshed moments
-            device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
-                [&](const auto moment)
-                {
-                    const label_t ID = tid * label_constant<NUMBER_MOMENTS<true>() + 1>() + label_constant<moment>();
-                    shared_buffer[ID] = moments[moment];
-                });
-
-            __syncthreads();
-
-            // Calculate the moments at the boundary
+        // Update the shared buffer with the refreshed moments
+        device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
+            [&](const auto moment)
             {
-                const normalVector boundaryNormal;
+                const label_t ID = tid * label_constant<NUMBER_MOMENTS<true>() + 1>() + label_constant<moment>();
+                shared_buffer[ID] = moments[moment];
+            });
 
-                if (boundaryNormal.isBoundary())
-                {
-                    multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
-                }
+        __syncthreads();
+
+        // Calculate the moments at the boundary
+        {
+            const normalVector boundaryNormal;
+
+            if (boundaryNormal.isBoundary())
+            {
+                multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
             }
         }
 
@@ -333,42 +335,42 @@ namespace LBM
                 moments[moment] = devPtrs.ptr<moment>()[idx];
             });
 
+        // Zero forces, normals and indicator at bulk
         scalar_t Fsx = static_cast<scalar_t>(0);
         scalar_t Fsy = static_cast<scalar_t>(0);
         scalar_t Fsz = static_cast<scalar_t>(0);
-
         scalar_t Fpx = static_cast<scalar_t>(0);
         scalar_t Fpy = static_cast<scalar_t>(0);
         scalar_t Fpz = static_cast<scalar_t>(0);
-
         scalar_t Fnx = static_cast<scalar_t>(0);
         scalar_t Fny = static_cast<scalar_t>(0);
         scalar_t Fnz = static_cast<scalar_t>(0);
-
         scalar_t Fx = static_cast<scalar_t>(0);
         scalar_t Fy = static_cast<scalar_t>(0);
         scalar_t Fz = static_cast<scalar_t>(0);
-
-        scalar_t rho_ = static_cast<scalar_t>(1) + delta_rho() * moments[m_i<10>()];
-
         scalar_t normx_ = static_cast<scalar_t>(0);
         scalar_t normy_ = static_cast<scalar_t>(0);
         scalar_t normz_ = static_cast<scalar_t>(0);
         scalar_t ind_ = static_cast<scalar_t>(0);
+
+        // Fallback to unitary density contrast at bulk
+        scalar_t rho_ = static_cast<scalar_t>(1) + delta_rho() * moments[m_i<10>()];
         {
+            // Tiled static shared memory allocation
             __shared__ scalar_t sh_phi[block::nz() + 4][block::ny() + 4][block::nx() + 4];
             __shared__ scalar_t sh_nx[block::nz() + 2][block::ny() + 2][block::nx() + 2];
             __shared__ scalar_t sh_ny[block::nz() + 2][block::ny() + 2][block::nx() + 2];
             __shared__ scalar_t sh_nz[block::nz() + 2][block::ny() + 2][block::nx() + 2];
 
+            // Global indexes
             const label_t x = threadIdx.x + block::nx() * blockIdx.x;
             const label_t y = threadIdx.y + block::ny() * blockIdx.y;
             const label_t z = threadIdx.z + block::nz() * blockIdx.z;
-
             const label_t x0 = blockIdx.x * block::nx();
             const label_t y0 = blockIdx.y * block::ny();
             const label_t z0 = blockIdx.z * block::nz();
 
+            // Explicit domain guard: avoids OOB reads when filling halos
             auto in_domain = [&](label_t global_x, label_t global_y, label_t global_z) -> bool
             {
                 return global_x < device::nx &&
@@ -376,13 +378,14 @@ namespace LBM
                        global_z < device::nz;
             };
 
+            // Global linear index helper (kept inline for clarity and reuse)
             auto gidx = [&](label_t global_x, label_t global_y, label_t global_z) -> label_t
             {
                 return device::idxGlobalFromIdx(global_x, global_y, global_z);
             };
 
+            // Load phi interior + halo into shared memory (zero outside bulk)
             const scalar_t *const ptrRestrict phi = devPtrs.ptr<10>();
-
             for (label_t pz = threadIdx.z; pz < block::nz() + 4; pz += block::nz())
             {
                 const label_t global_z = z0 + pz - 2;
@@ -417,6 +420,7 @@ namespace LBM
                         const label_t global_x = x0 + ix - 1;
                         const label_t px = ix + 1;
 
+                        // Outside domain: normals forced to zero (no interface contribution)
                         if (!in_domain(global_x, global_y, global_z))
                         {
                             sh_nx[iz][iy][ix] = static_cast<scalar_t>(0);
@@ -424,6 +428,7 @@ namespace LBM
                             sh_nz[iz][iy][ix] = static_cast<scalar_t>(0);
                         }
 
+                        // Physical boundaries: normals suppressed to avoid spurious wall forcing
                         const bool isBoundary =
                             (global_x == 0) || (global_x == device::nx - 1) ||
                             (global_y == 0) || (global_y == device::ny - 1) ||
@@ -436,6 +441,7 @@ namespace LBM
                             sh_nz[iz][iy][ix] = static_cast<scalar_t>(0);
                         }
 
+                        // Isotropic discrete gradient (D3Q19/D3Q27-consistent stencil)
                         const scalar_t sgx =
                             VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
                             VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
@@ -457,10 +463,12 @@ namespace LBM
                                                             sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
                                                             sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]);
 
+                        // Convert lattice-gradient to physical gradient
                         const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
                         const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
                         const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
+                        // Normalization with epsilon to avoid division by zero in bulk
                         const scalar_t ind2 = gx * gx + gy * gy + gz * gz;
                         const scalar_t ind = sqrtf(ind2);
                         const scalar_t invInd = static_cast<scalar_t>(1) / (ind + static_cast<scalar_t>(1e-9));
@@ -474,6 +482,7 @@ namespace LBM
 
             __syncthreads();
 
+            // Curvature and surface-tension terms are only well-defined away from physical boundaries
             const bool curvInterior =
                 (x >= 1 && x <= device::nx - 2) &&
                 (y >= 1 && y <= device::ny - 2) &&
@@ -481,6 +490,7 @@ namespace LBM
 
             if (curvInterior)
             {
+                // Shared-memory indices for precomputed normals (1-cell halo)
                 const label_t ix = threadIdx.x + 1;
                 const label_t iy = threadIdx.y + 1;
                 const label_t iz = threadIdx.z + 1;
@@ -489,10 +499,12 @@ namespace LBM
                 normy_ = sh_ny[iz][iy][ix];
                 normz_ = sh_nz[iz][iy][ix];
 
+                // Shared-memory indices for phi (2-cell halo, isotropic gradient)
                 const label_t px = threadIdx.x + 2;
                 const label_t py = threadIdx.y + 2;
                 const label_t pz = threadIdx.z + 2;
 
+                // Isotropic discrete gradient (D3Q19/D3Q27-consistent stencil)
                 const scalar_t sgx =
                     VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
                     VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
@@ -514,12 +526,15 @@ namespace LBM
                                                     sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
                                                     sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]);
 
+                // Convert lattice-gradient to physical gradient
                 const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
                 const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
                 const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
+                // Interface indicator
                 ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
 
+                // Compute curvature
                 const scalar_t scx =
                     VelocitySet::w_1<scalar_t>() * (sh_nx[iz][iy][ix + 1] - sh_nx[iz][iy][ix - 1]) +
                     VelocitySet::w_2<scalar_t>() * (sh_nx[iz][iy + 1][ix + 1] - sh_nx[iz][iy - 1][ix - 1] +
@@ -542,9 +557,9 @@ namespace LBM
                                                     sh_nz[iz + 1][iy - 1][ix] - sh_nz[iz - 1][iy + 1][ix]);
 
                 const scalar_t curvature = velocitySet::as2<scalar_t>() * (scx + scy + scz);
-
                 const scalar_t stCurv = -device::sigma * curvature * ind_;
 
+                // Assemble surface tension forces
                 Fsx = stCurv * normx_;
                 Fsy = stCurv * normy_;
                 Fsz = stCurv * normz_;
@@ -578,22 +593,19 @@ namespace LBM
             }
             else
             {
+                // Outside curvature-valid region: force and geometry suppressed
                 Fsx = static_cast<scalar_t>(0);
                 Fsy = static_cast<scalar_t>(0);
                 Fsz = static_cast<scalar_t>(0);
-
                 Fpx = static_cast<scalar_t>(0);
                 Fpy = static_cast<scalar_t>(0);
                 Fpz = static_cast<scalar_t>(0);
-
                 Fnx = static_cast<scalar_t>(0);
                 Fny = static_cast<scalar_t>(0);
                 Fnz = static_cast<scalar_t>(0);
-
                 Fx = static_cast<scalar_t>(0);
                 Fy = static_cast<scalar_t>(0);
                 Fz = static_cast<scalar_t>(0);
-
                 normx_ = static_cast<scalar_t>(0);
                 normy_ = static_cast<scalar_t>(0);
                 normz_ = static_cast<scalar_t>(0);

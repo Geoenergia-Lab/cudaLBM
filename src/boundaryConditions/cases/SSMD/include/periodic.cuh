@@ -50,10 +50,6 @@ SourceFiles
 
 case normalVector::WEST():
 case normalVector::EAST():
-case normalVector::NORTH():
-case normalVector::WEST_NORTH():
-case normalVector::EAST_NORTH():
 {
-    already_handled = true;
     return;
 }
