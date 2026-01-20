@@ -50,8 +50,7 @@ SourceFiles
 #ifndef __MBLBM_CASES_CUH
 #define __MBLBM_CASES_CUH
 
-// #define MONOPHASEJET
-#define MULTIPHASEJET
+#define MONOPHASEJET
 // #define LIDDRIVENCAVITY
 
 #include "monophaseJet/monophaseJet.cuh"
@@ -60,15 +59,11 @@ SourceFiles
 
 namespace LBM
 {
-
+    /**
+     * @brief Monophase boundary conditions aliases
+     **/
 #ifdef MONOPHASEJET
     using BoundaryConditions = monophaseJet;
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
-#endif
-
-#ifdef MULTIPHASEJET
-    using BoundaryConditions = multiphaseJet;
     __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
     __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
 #endif
@@ -79,6 +74,16 @@ namespace LBM
     __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
     __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif
+
+    /**
+     * @brief Multiphase boundary conditions aliases
+     **/
+    namespace multiphase
+    {
+        using BoundaryConditions = multiphaseJet;
+        __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
+        __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
+    }
 
 }
 

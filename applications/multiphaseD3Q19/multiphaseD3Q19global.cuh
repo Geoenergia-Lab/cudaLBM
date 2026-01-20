@@ -71,8 +71,8 @@ namespace LBM
     using Collision = secondOrder;
 
     // Aliases use the standard halo methods
-    using HydroHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
-    using PhaseHalo = device::halo<PhaseVelocitySet, periodicX(), periodicY()>;
+    using HydroHalo = device::halo<VelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
+    using PhaseHalo = device::halo<PhaseVelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
 
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_oil() noexcept { return static_cast<scalar_t>(0.852); }
     __device__ __host__ [[nodiscard]] inline consteval scalar_t rho_water() noexcept { return static_cast<scalar_t>(1); }
@@ -179,15 +179,11 @@ namespace LBM
         // Load phase pop from global memory in cover nodes
         PhaseHalo::load(pop_g, ghostPhase);
 
-        if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
-        {
-            static_assert(!std::is_same<BoundaryConditions, lidDrivenCavity>::value, "Error: lidDrivenCavity boundary conditions do NOT support multiphase simulations.");
-        }
-
-        if constexpr (std::is_same<BoundaryConditions, monophaseJet>::value || std::is_same<BoundaryConditions, multiphaseJet>::value)
+        // if constexpr (std::is_same<ultiphase::BoundaryConditions, multiphaseJet>::value)
         {
             // Compute post-stream moments
             velocitySet::calculate_moments<VelocitySet>(pop, moments);
+            PhaseVelocitySet::calculate_phi(pop_g, moments);
 
             // Update the shared buffer with the refreshed moments
             device::constexpr_for<0, NUMBER_MOMENTS<true>()>(
@@ -205,7 +201,7 @@ namespace LBM
 
                 if (boundaryNormal.isBoundary())
                 {
-                    BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, &(shared_buffer[0]));
+                    multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
                 }
             }
         }

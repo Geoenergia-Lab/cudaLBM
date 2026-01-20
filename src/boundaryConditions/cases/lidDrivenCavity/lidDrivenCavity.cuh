@@ -136,7 +136,7 @@ namespace LBM
             switch (boundaryNormal.nodeType())
             {
             // Static boundaries
-            case normalVector::SOUTH_WEST_BACK():
+            case normalVector::WEST_SOUTH_BACK():
             {
                 if constexpr (VelocitySet::Q() == 19)
                 {
@@ -152,7 +152,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::SOUTH_WEST_FRONT():
+            case normalVector::WEST_SOUTH_FRONT():
             {
                 if constexpr (VelocitySet::Q() == 19)
                 {
@@ -168,7 +168,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::SOUTH_EAST_BACK():
+            case normalVector::EAST_SOUTH_BACK():
             {
                 if constexpr (VelocitySet::Q() == 19)
                 {
@@ -184,7 +184,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::SOUTH_EAST_FRONT():
+            case normalVector::EAST_SOUTH_FRONT():
             {
                 if constexpr (VelocitySet::Q() == 19)
                 {
@@ -200,7 +200,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::SOUTH_WEST():
+            case normalVector::WEST_SOUTH():
             {
                 const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
 
@@ -211,7 +211,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::SOUTH_EAST():
+            case normalVector::EAST_SOUTH():
             {
                 const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
 
@@ -409,7 +409,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_WEST_BACK():
+            case normalVector::WEST_NORTH_BACK():
             {
                 const scalar_t rho = -static_cast<scalar_t>(24) * rho_I /
                                      (-static_cast<scalar_t>(14) - static_cast<scalar_t>(8) * device::U_North[0] + static_cast<scalar_t>(9) * device::U_North[0] * device::U_North[0]);
@@ -421,7 +421,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_WEST_FRONT():
+            case normalVector::WEST_NORTH_FRONT():
             {
                 const scalar_t rho = -static_cast<scalar_t>(24) * rho_I /
                                      (-static_cast<scalar_t>(14) - static_cast<scalar_t>(8) * device::U_North[0] + static_cast<scalar_t>(9) * device::U_North[0] * device::U_North[0]);
@@ -433,7 +433,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_EAST_BACK():
+            case normalVector::EAST_NORTH_BACK():
             {
                 const scalar_t rho = -static_cast<scalar_t>(24) * rho_I /
                                      (-static_cast<scalar_t>(14) + static_cast<scalar_t>(8) * device::U_North[0] + static_cast<scalar_t>(9) * device::U_North[0] * device::U_North[0]);
@@ -445,7 +445,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_EAST_FRONT():
+            case normalVector::EAST_NORTH_FRONT():
             {
                 const scalar_t rho = -static_cast<scalar_t>(24) * rho_I /
                                      (-static_cast<scalar_t>(14) + static_cast<scalar_t>(8) * device::U_North[0] + static_cast<scalar_t>(9) * device::U_North[0] * device::U_North[0]);
@@ -490,7 +490,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_EAST():
+            case normalVector::EAST_NORTH():
             {
                 const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
 
@@ -506,7 +506,7 @@ namespace LBM
 
                 return;
             }
-            case normalVector::NORTH_WEST():
+            case normalVector::WEST_NORTH():
             {
                 const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
 

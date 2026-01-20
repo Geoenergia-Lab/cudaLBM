@@ -256,7 +256,6 @@ namespace LBM
         __device__ __constant__ scalar_t u_inf;
         __device__ __constant__ scalar_t L_char;
         __device__ __constant__ scalar_t u_inf_sq;
-        __device__ __constant__ scalar_t L_char;
 
         __device__ __constant__ scalar_t U_North[3];
         __device__ __constant__ scalar_t U_South[3];

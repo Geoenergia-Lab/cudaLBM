@@ -66,8 +66,7 @@ namespace LBM
 
     using VelocitySet = D3Q27;
     using Collision = secondOrder;
-
-    using Halo = device::halo<VelocitySet, periodicX(), periodicY()>;
+    using BlockHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
 
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept { return block::sharedMemoryBufferSize<VelocitySet, 10>(sizeof(scalar_t)); }
 
@@ -143,14 +142,26 @@ namespace LBM
         }
 
         // Load pop from global memory in cover nodes
-        Halo::load(pop, fGhost);
+        BlockHalo::load(pop, fGhost);
 
         if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
-        { // Calculate the moments either at the boundary or interior
-            throw;
+        {
+            // Calculate the moments either at the boundary or interior
+            {
+                const normalVector boundaryNormal;
+
+                if (boundaryNormal.isBoundary())
+                {
+                    BoundaryConditions::calculate_moments<VelocitySet>(pop, moments, boundaryNormal, &(shared_buffer[0]));
+                }
+                else
+                {
+                    velocitySet::calculate_moments<VelocitySet>(pop, moments);
+                }
+            }
         }
 
-        if constexpr (std::is_same<BoundaryConditions, monophaseJet>::value || std::is_same<BoundaryConditions, multiphaseJet>::value)
+        if constexpr (std::is_same<BoundaryConditions, monophaseJet>::value)
         {
             // Compute post-stream moments
             velocitySet::calculate_moments<VelocitySet>(pop, moments);
@@ -193,7 +204,7 @@ namespace LBM
             });
 
         // Save the populations to the block halo
-        Halo::save(pop, gGhost);
+        BlockHalo::save(pop, gGhost);
     }
 }
 

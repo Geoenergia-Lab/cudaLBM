@@ -68,8 +68,6 @@ namespace LBM
     using Collision = secondOrder;
     using BlockHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
 
-    using Halo = device::halo<VelocitySet, periodicX(), periodicY()>;
-
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept { return 0; }
 
     __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
@@ -94,8 +92,6 @@ namespace LBM
         const device::ptrCollection<6, const scalar_t> fGhost,
         const device::ptrCollection<6, scalar_t> gGhost)
     {
-        static_assert((std::is_same<BoundaryConditions, lidDrivenCavity>::value) || std::is_same<BoundaryConditions, jetFlow>::value);
-
         // Always a multiple of 32, so no need to check this(I think)
         if constexpr (out_of_bounds_check())
         {
@@ -166,7 +162,7 @@ namespace LBM
             }
         }
 
-        if constexpr (std::is_same<BoundaryConditions, monophaseJet>::value || std::is_same<BoundaryConditions, multiphaseJet>::value)
+        if constexpr (std::is_same<BoundaryConditions, monophaseJet>::value)
         {
             // Compute post-stream moments
             velocitySet::calculate_moments<VelocitySet>(pop, moments);
