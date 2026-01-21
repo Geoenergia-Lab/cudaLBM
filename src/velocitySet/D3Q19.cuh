@@ -120,33 +120,16 @@ namespace LBM
         }
 
         /**
-         * @brief Get all weights for device computation
+         * @brief Get all weights for computation
          * @return Thread array of 19 weights in D3Q19 order
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> w_q() noexcept
         {
-            // Return the component
             return {
                 w_0<T>(),
-                w_1<T>(),
-                w_1<T>(),
-                w_1<T>(),
-                w_1<T>(),
-                w_1<T>(),
-                w_1<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>(),
-                w_2<T>()};
+                w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(),
+                w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>()};
         }
 
         /**
@@ -166,33 +149,13 @@ namespace LBM
         }
 
         /**
-         * @brief Get x-components for all directions (device version)
+         * @brief Get x-components for all directions
          * @return Thread array of 19 x-velocity components
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cx() noexcept
         {
-            // Return the component
-            return {
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0)};
+            return {static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0)};
         }
 
         /**
@@ -212,33 +175,13 @@ namespace LBM
         }
 
         /**
-         * @brief Get y-components for all directions (device version)
+         * @brief Get y-components for all directions
          * @return Thread array of 19 y-velocity components
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cy() noexcept
         {
-            // Return the component
-            return {
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(-1),
-                static_cast<T>(1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1)};
+            return {static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1)};
         }
 
         /**
@@ -258,33 +201,13 @@ namespace LBM
         }
 
         /**
-         * @brief Get z-components for all directions (device version)
+         * @brief Get z-components for all directions
          * @return Thread array of 19 z-velocity components
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cz() noexcept
         {
-            // Return the component
-            return {
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(0),
-                static_cast<T>(0),
-                static_cast<T>(-1),
-                static_cast<T>(1),
-                static_cast<T>(-1),
-                static_cast<T>(1)};
+            return {static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1)};
         }
 
         /**
@@ -301,6 +224,36 @@ namespace LBM
 
             // Return the component
             return cz<T>()[q()];
+        }
+
+        /**
+         * @brief Get alpha-components for all directions
+         * @return Thread array of 19 alpha-velocity components
+         **/
+        template <typename T, const axisDirection alpha>
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> c() noexcept
+        {
+            if constexpr (alpha == axisDirection::NO_DIRECTION)
+            {
+                thread::array<T, Q_> result;
+                for (std::size_t i = 0; i < Q_; i++)
+                {
+                    result[i] = 1;
+                }
+                return result;
+            }
+            if constexpr (alpha == axisDirection::X)
+            {
+                return cx<T>();
+            }
+            if constexpr (alpha == axisDirection::Y)
+            {
+                return cy<T>();
+            }
+            if constexpr (alpha == axisDirection::Z)
+            {
+                return cz<T>();
+            }
         }
 
         /**

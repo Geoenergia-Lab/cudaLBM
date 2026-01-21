@@ -150,232 +150,38 @@ namespace LBM
             moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
         }
 
-        template <class VelocitySet, const axisDirection dir, const label_t q_>
-        __device__ __host__ [[nodiscard]] static inline consteval bool is_negative(const q_i<q_> q) noexcept
-        {
-            static_assert(((dir == X) || (dir == Y) || (dir == Z)));
-
-            if constexpr (dir == X)
-            {
-                return (VelocitySet::template cx<int>(q) < 0);
-            }
-
-            if constexpr (dir == Y)
-            {
-                return (VelocitySet::template cy<int>(q) < 0);
-            }
-
-            if constexpr (dir == Z)
-            {
-                return (VelocitySet::template cz<int>(q) < 0);
-            }
-        }
-
-        template <class VelocitySet, const axisDirection dir, const label_t q_>
-        __device__ __host__ [[nodiscard]] static inline consteval bool is_positive(const q_i<q_> q) noexcept
-        {
-            static_assert(((dir == X) || (dir == Y) || (dir == Z)));
-
-            if constexpr (dir == X)
-            {
-                return (VelocitySet::template cx<int>(q) > 0);
-            }
-
-            if constexpr (dir == Y)
-            {
-                return (VelocitySet::template cy<int>(q) > 0);
-            }
-
-            if constexpr (dir == Z)
-            {
-                return (VelocitySet::template cz<int>(q) > 0);
-            }
-        }
-
         /**
-         * @brief Determines if a discrete velocity direction is incoming relative to a boundary normal
-         * @tparam T Return type (typically numeric type)
-         * @tparam BoundaryNormal Type of boundary normal object with directional methods
-         * @tparam q_ Compile-time velocity direction index
-         * @param[in] q Compile-time constant representing velocity direction
-         * @param[in] boundaryNormal Boundary normal information with directional methods
-         * @return T 1 if velocity is incoming (pointing into domain), 0 if outgoing
-         *
-         * @details Checks if velocity components oppose boundary normal direction:
-         * - For East boundary (normal.x > 0): checks negative x-velocity component
-         * - For West boundary (normal.x < 0): checks positive x-velocity component
-         * - For North boundary (normal.y > 0): checks negative y-velocity component
-         * - For South boundary (normal.y < 0): checks positive y-velocity component
-         * - For Front boundary (normal.z > 0): checks negative z-velocity component
-         * - For Back boundary (normal.z < 0): checks positive z-velocity component
-         * Returns 1 only if no incoming component is detected on any axis
+         * @brief Calculate a specific moment of the distribution function
+         * @tparam VelocitySet The velocity set type
+         * @tparam alpha The first axis direction (X, Y, or Z)
+         * @tparam beta The second axis direction (X, Y, or Z)
+         * @param[in] pop The distribution function array
+         * @return The calculated moment value
          **/
-        template <typename T, class VelocitySet, class BoundaryNormal, const label_t q_>
-        __device__ __host__ [[nodiscard]] static inline constexpr T incomingSwitch(const q_i<q_> q, const BoundaryNormal &boundaryNormal) noexcept
-        {
-            // boundaryNormal.x > 0  => EAST boundary
-            // boundaryNormal.x < 0  => WEST boundary
-            const bool cond_x = (boundaryNormal.isEast() & is_negative<VelocitySet, X>(q)) | (boundaryNormal.isWest() & is_positive<VelocitySet, X>(q));
-
-            // boundaryNormal.y > 0  => NORTH boundary
-            // boundaryNormal.y < 0  => SOUTH boundary
-            const bool cond_y = (boundaryNormal.isNorth() & is_negative<VelocitySet, Y>(q)) | (boundaryNormal.isSouth() & is_positive<VelocitySet, Y>(q));
-
-            // boundaryNormal.z > 0  => FRONT boundary
-            // boundaryNormal.z < 0  => BACK boundary
-            const bool cond_z = (boundaryNormal.isFront() & is_negative<VelocitySet, Z>(q)) | (boundaryNormal.isBack() & is_positive<VelocitySet, Z>(q));
-
-            return static_cast<T>(!(cond_x | cond_y | cond_z));
-        }
-
-        /**
-         * @brief Calculate equilibrium distribution function for a direction
-         * @tparam T Data type for calculation
-         * @param[in] rhow Weighted density (w_q[q] * rho)
-         * @param[in] uc3 3 * (u·c_q) = 3*(u*cx + v*cy + w*cz)
-         * @param[in] p1_muu 1 - 1.5*(u² + v² + w²)
-         * @return Equilibrium distribution value for the direction
-         **/
-        template <typename T>
-        __host__ [[nodiscard]] static T f_eq(const T rhow, const T uc3, const T p1_muu) noexcept
-        {
-            return (rhow * (p1_muu + uc3 * (static_cast<T>(1.0) + uc3 * static_cast<T>(0.5))));
-        }
-
-        /**
-         * @brief Calculate full equilibrium distribution for given velocity
-         * @tparam T Data type for calculation
-         * @param[in] u x-component of velocity
-         * @param[in] v y-component of velocity
-         * @param[in] w z-component of velocity
-         * @return Array of 19 equilibrium distribution values
-         **/
-        template <class VelocitySet>
-        __host__ [[nodiscard]] static const thread::array<scalar_t, VelocitySet::Q()> F_eq(const scalar_t u, const scalar_t v, const scalar_t w) noexcept
-        {
-            thread::array<scalar_t, VelocitySet::Q()> pop;
-
-            for (label_t q = 0; q < VelocitySet::Q(); q++)
-            {
-                pop[q] = f_eq<scalar_t>(
-                    VelocitySet::template w_q<scalar_t>()[q],
-                    static_cast<scalar_t>(3) * ((u * VelocitySet::template cx<scalar_t>()[q]) + (v * VelocitySet::template cy<scalar_t>()[q]) + (w * VelocitySet::template cz<scalar_t>()[q])),
-                    static_cast<scalar_t>(1) - static_cast<scalar_t>(1.5) * ((u * u) + (v * v) + (w * w)));
-            }
-
-            return pop;
-        }
-
         template <class VelocitySet, const axisDirection alpha, const axisDirection beta>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<int, VelocitySet::Q()> c_AlphaBeta() noexcept
+        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop) noexcept
         {
-            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z) || (alpha == NO_DIRECTION)));
-            static_assert(((beta == X) || (beta == Y) || (beta == Z) || (beta == NO_DIRECTION)));
+            constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
+            constexpr const label_t N = number_non_zero(c_AB);
+            constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
+            constexpr const thread::array<label_t, N> indices = non_zero_indices<N>(c_AB);
 
-            if constexpr ((alpha == NO_DIRECTION) && (beta == NO_DIRECTION))
+            return [&]<const label_t... Is>(std::index_sequence<Is...>)
             {
-                thread::array<int, VelocitySet::Q()> toReturn;
-                for (std::size_t i = 0; i < toReturn.size(); i++)
-                {
-                    toReturn[i] = 1;
-                }
-                return toReturn;
-            }
-
-            if constexpr ((alpha == X))
-            {
-                if constexpr ((beta == X))
-                {
-                    return (VelocitySet::template cx<int>() * VelocitySet::template cx<int>());
-                }
-                if constexpr ((beta == Y))
-                {
-                    return (VelocitySet::template cx<int>() * VelocitySet::template cy<int>());
-                }
-                if constexpr ((beta == Z))
-                {
-                    return (VelocitySet::template cx<int>() * VelocitySet::template cz<int>());
-                }
-                if constexpr ((beta == NO_DIRECTION))
-                {
-                    return VelocitySet::template cx<int>();
-                }
-            }
-
-            if constexpr ((alpha == Y))
-            {
-                if constexpr ((beta == X))
-                {
-                    return (VelocitySet::template cy<int>() * VelocitySet::template cx<int>());
-                }
-                if constexpr ((beta == Y))
-                {
-                    return (VelocitySet::template cy<int>() * VelocitySet::template cy<int>());
-                }
-                if constexpr ((beta == Z))
-                {
-                    return (VelocitySet::template cy<int>() * VelocitySet::template cz<int>());
-                }
-                if constexpr ((beta == NO_DIRECTION))
-                {
-                    return VelocitySet::template cy<int>();
-                }
-            }
-
-            if constexpr ((alpha == Z))
-            {
-                if constexpr ((beta == X))
-                {
-                    return (VelocitySet::template cz<int>() * VelocitySet::template cx<int>());
-                }
-                if constexpr ((beta == Y))
-                {
-                    return (VelocitySet::template cz<int>() * VelocitySet::template cy<int>());
-                }
-                if constexpr ((beta == Z))
-                {
-                    return (VelocitySet::template cz<int>() * VelocitySet::template cz<int>());
-                }
-                if constexpr ((beta == NO_DIRECTION))
-                {
-                    return VelocitySet::template cz<int>();
-                }
-            }
+                return (process_momentum_element<C[Is]>(pop[indices[Is]]) + ...);
+            }(std::make_index_sequence<N>{});
         }
 
-        template <const int coeff, class VelocitySet, const label_t I, class BoundaryNormal>
-        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
-            const scalar_t pop_value,
-            const BoundaryNormal &boundaryNormal) noexcept
-        {
-            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
-
-            if constexpr (coeff == 1)
-            {
-                return incomingSwitch<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
-            }
-            else if constexpr (coeff == -1)
-            {
-                return -incomingSwitch<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
-            }
-        }
-
-        template <const int coeff, class VelocitySet>
-        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
-            const scalar_t pop_value) noexcept
-        {
-            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
-
-            if constexpr (coeff == 1)
-            {
-                return pop_value;
-            }
-            else if constexpr (coeff == -1)
-            {
-                return -pop_value;
-            }
-        }
-
+        /**
+         * @brief Calculate a specific moment of the distribution function
+         * @tparam VelocitySet The velocity set type
+         * @tparam alpha The first axis direction (X, Y, or Z)
+         * @tparam beta The second axis direction (X, Y, or Z)
+         * @tparam BoundaryNormal The boundary normal vector type
+         * @param[in] pop The distribution function array
+         * @param[in] boundaryNormal The boundary normal vector
+         * @return The calculated moment value
+         **/
         template <class VelocitySet, const axisDirection alpha, const axisDirection beta, class BoundaryNormal>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop, const BoundaryNormal &boundaryNormal) noexcept
         {
@@ -390,20 +196,12 @@ namespace LBM
             }(std::make_index_sequence<N>{});
         }
 
-        template <class VelocitySet, const axisDirection alpha, const axisDirection beta>
-        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop) noexcept
-        {
-            constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
-            constexpr const label_t N = number_non_zero(c_AB);
-            constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
-            constexpr const thread::array<label_t, N> indices = non_zero_indices<N>(c_AB);
-
-            return [&]<const label_t... Is>(std::index_sequence<Is...>)
-            {
-                return (process_momentum_element<C[Is], VelocitySet>(pop[indices[Is]]) + ...);
-            }(std::make_index_sequence<N>{});
-        }
-
+        /**
+         * @brief Calculate all moments of the distribution function
+         * @tparam VelocitySet The velocity set type
+         * @param[in] pop The distribution function array
+         * @param[out] mom The calculated moments array
+         **/
         template <class VelocitySet>
         __device__ __host__ static inline void calculate_moments(const thread::array<scalar_t, VelocitySet::Q()> &pop, thread::array<scalar_t, NUMBER_MOMENTS()> &mom) noexcept
         {
@@ -425,6 +223,14 @@ namespace LBM
             mom[m_i<9>()] = (calculate_moment<VelocitySet, Z, Z>(pop) * inv_rho) - cs2<scalar_t>();
         }
 
+        /**
+         * @brief Calculate all moments of the distribution function
+         * @tparam VelocitySet The velocity set type
+         * @tparam BoundaryNormal The boundary normal vector type
+         * @param[in] pop The distribution function array
+         * @param[out] mom The calculated moments array
+         * @param[in] boundaryNormal The boundary normal vector
+         **/
         template <class VelocitySet, class BoundaryNormal>
         __device__ __host__ static inline void calculate_moments(const thread::array<scalar_t, VelocitySet::Q()> &pop, thread::array<scalar_t, NUMBER_MOMENTS()> &mom, const BoundaryNormal &boundaryNormal) noexcept
         {
@@ -444,6 +250,140 @@ namespace LBM
             mom[m_i<7>()] = (calculate_moment<VelocitySet, Y, Y>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
             mom[m_i<8>()] = calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho;
             mom[m_i<9>()] = (calculate_moment<VelocitySet, Z, Z>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
+        }
+
+        /**
+         * @brief Returns the indices of the distribution functions on a specific face
+         * @tparam VelocitySet The velocity set being used
+         * @tparam alpha The axis direction (X, Y, or Z)
+         * @tparam v The value of the coordinate along the axis (-1 or 1)
+         * @return Indices of the distribution on a specific face
+         */
+        template <class VelocitySet, const axisDirection alpha, const int v>
+        __device__ __host__ [[nodiscard]] static inline consteval thread::array<label_t, VelocitySet::QF()> indices_on_face() noexcept
+        {
+            static_assert((v == -1 || v == 1));
+
+            constexpr const thread::array<int, VelocitySet::Q()> vals = VelocitySet::template c<int, alpha>();
+
+            thread::array<label_t, VelocitySet::QF()> indices;
+
+            label_t j = 0;
+
+            for (label_t i = 0; i < VelocitySet::Q(); i++)
+            {
+                if (vals[i] == v)
+                {
+                    indices[j] = i;
+                    j++;
+                }
+            }
+
+            return indices;
+        }
+
+    private:
+        /**
+         * @brief Returns the product of the c values for two directions
+         */
+        template <class VelocitySet, const axisDirection alpha, const axisDirection beta>
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<int, VelocitySet::Q()> c_AlphaBeta() noexcept
+        {
+            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z) || (alpha == NO_DIRECTION)));
+            static_assert(((beta == X) || (beta == Y) || (beta == Z) || (beta == NO_DIRECTION)));
+
+            return VelocitySet::template c<int, alpha>() * VelocitySet::template c<int, beta>();
+        }
+
+        /**
+         * @brief Processes a momentum element for a specific coefficient
+         */
+        template <const int coeff, class VelocitySet, const label_t I, class BoundaryNormal>
+        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
+            const scalar_t pop_value,
+            const BoundaryNormal &boundaryNormal) noexcept
+        {
+            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
+
+            if constexpr (coeff == 1)
+            {
+                return is_incoming<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
+            }
+            else if constexpr (coeff == -1)
+            {
+                return -is_incoming<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
+            }
+        }
+
+        /**
+         * @brief Processes a momentum element for a specific coefficient
+         */
+        template <const int coeff>
+        __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
+            const scalar_t pop_value) noexcept
+        {
+            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
+
+            if constexpr (coeff == 1)
+            {
+                return pop_value;
+            }
+            else if constexpr (coeff == -1)
+            {
+                return -pop_value;
+            }
+        }
+
+        template <class VelocitySet, const axisDirection alpha, const label_t q_>
+        __device__ __host__ [[nodiscard]] static inline consteval bool is_negative(const q_i<q_> q) noexcept
+        {
+            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z)));
+
+            return (VelocitySet::template c<int, alpha>()[q()] < 0);
+        }
+
+        template <class VelocitySet, const axisDirection alpha, const label_t q_>
+        __device__ __host__ [[nodiscard]] static inline consteval bool is_positive(const q_i<q_> q) noexcept
+        {
+            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z)));
+
+            return (VelocitySet::template c<int, alpha>()[q()] > 0);
+        }
+
+        /**
+         * @brief Determines if a discrete velocity direction is incoming relative to a boundary normal
+         * @tparam T Return type (typically numeric type)
+         * @tparam BoundaryNormal Type of boundary normal object with directional methods
+         * @tparam q_ Compile-time velocity direction index
+         * @param[in] q Compile-time constant representing velocity direction
+         * @param[in] boundaryNormal Boundary normal information with directional methods
+         * @return T 1 if velocity is incoming (pointing into domain), 0 if outgoing
+         *
+         * @details Checks if velocity components oppose boundary normal direction:
+         * - For East boundary (normal.x > 0): checks negative x-velocity component
+         * - For West boundary (normal.x < 0): checks positive x-velocity component
+         * - For North boundary (normal.y > 0): checks negative y-velocity component
+         * - For South boundary (normal.y < 0): checks positive y-velocity component
+         * - For Front boundary (normal.z > 0): checks negative z-velocity component
+         * - For Back boundary (normal.z < 0): checks positive z-velocity component
+         * Returns 1 only if no incoming component is detected on any axis
+         **/
+        template <typename T, class VelocitySet, class BoundaryNormal, const label_t q_>
+        __device__ __host__ [[nodiscard]] static inline constexpr T is_incoming(const q_i<q_> q, const BoundaryNormal &boundaryNormal) noexcept
+        {
+            // boundaryNormal.x > 0  => EAST boundary
+            // boundaryNormal.x < 0  => WEST boundary
+            const bool cond_x = (boundaryNormal.isEast() & is_negative<VelocitySet, X>(q)) | (boundaryNormal.isWest() & is_positive<VelocitySet, X>(q));
+
+            // boundaryNormal.y > 0  => NORTH boundary
+            // boundaryNormal.y < 0  => SOUTH boundary
+            const bool cond_y = (boundaryNormal.isNorth() & is_negative<VelocitySet, Y>(q)) | (boundaryNormal.isSouth() & is_positive<VelocitySet, Y>(q));
+
+            // boundaryNormal.z > 0  => FRONT boundary
+            // boundaryNormal.z < 0  => BACK boundary
+            const bool cond_z = (boundaryNormal.isFront() & is_negative<VelocitySet, Z>(q)) | (boundaryNormal.isBack() & is_positive<VelocitySet, Z>(q));
+
+            return static_cast<T>(!(cond_x | cond_y | cond_z));
         }
     };
 }

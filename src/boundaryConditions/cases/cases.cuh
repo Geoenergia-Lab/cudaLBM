@@ -61,6 +61,7 @@ namespace LBM
 
 #ifdef JETFLOW
     using BoundaryConditions = jetFlow;
+
     __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
     __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
 #endif

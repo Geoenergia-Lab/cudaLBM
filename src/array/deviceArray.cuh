@@ -68,7 +68,10 @@ namespace LBM
             __host__ [[nodiscard]] array(const host::array<false, T, VelocitySet, TimeType> &hostArray)
                 : ptr_(device::allocateArray<T>(hostArray.arr())),
                   name_(hostArray.name()),
-                  mesh_(hostArray.mesh()){};
+                  mesh_(hostArray.mesh())
+            {
+                initialise_boundary_condition(name_);
+            };
 
             /**
              * @brief Constructs a device array with field initialization
@@ -83,7 +86,10 @@ namespace LBM
                 const programControl &programCtrl)
                 : ptr_(toDevice(host::array<false, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
                   name_(name),
-                  mesh_(mesh){};
+                  mesh_(mesh)
+            {
+                initialise_boundary_condition(name_);
+            };
 
             /**
              * @brief Constructs a device array with field initialization
@@ -98,7 +104,10 @@ namespace LBM
                 const T value)
                 : ptr_(device::allocateArray<T>(mesh.nPoints(), value)),
                   name_(name),
-                  mesh_(mesh){};
+                  mesh_(mesh)
+            {
+                initialise_boundary_condition(name_);
+            };
 
             /**
              * @brief Allocates no memory on the device
@@ -106,7 +115,10 @@ namespace LBM
             __host__ [[nodiscard]] array(const std::string &name, const host::latticeMesh &mesh)
                 : ptr_(nullptr),
                   name_(name),
-                  mesh_(mesh){};
+                  mesh_(mesh)
+            {
+                initialise_boundary_condition(name_);
+            };
 
             /**
              * @brief Destructor - automatically releases device memory
@@ -203,6 +215,54 @@ namespace LBM
             __host__ [[nodiscard]] T *toDevice(const host::array<false, T, VelocitySet, TimeType> &hostArray)
             {
                 return device::allocateArray<T>(hostArray.arr());
+            }
+
+            /**
+             * @brief Converts a variable name to an index
+             * @param[in] name The name of the variable
+             * @return The index of the variable, or -1 if not found
+             **/
+            __host__ [[nodiscard]] static inline label_t name_to_index(const std::string &name) noexcept
+            {
+                if (name == "u")
+                {
+                    return 0;
+                }
+                else if (name == "v")
+                {
+                    return 1;
+                }
+                else if (name == "w")
+                {
+                    return 2;
+                }
+                return static_cast<label_t>(-1);
+            }
+
+            /**
+             * @brief Initialises boundary condition values on the GPU for a given variable name
+             * @param name The name of the variable to initialise boundary conditions for
+             **/
+            __host__ static void initialise_boundary_condition(const std::string &name) noexcept
+            {
+                if ((name == "u") || (name == "v") || (name == "w"))
+                {
+                    const label_t i = name_to_index(name);
+
+                    const boundaryValue<VelocitySet> North(name, "North");
+                    const boundaryValue<VelocitySet> South(name, "South");
+                    const boundaryValue<VelocitySet> East(name, "East");
+                    const boundaryValue<VelocitySet> West(name, "West");
+                    const boundaryValue<VelocitySet> Front(name, "Front");
+                    const boundaryValue<VelocitySet> Back(name, "Back");
+
+                    copyToSymbol(device::U_North, North(), i);
+                    copyToSymbol(device::U_South, South(), i);
+                    copyToSymbol(device::U_East, East(), i);
+                    copyToSymbol(device::U_West, West(), i);
+                    copyToSymbol(device::U_Front, Front(), i);
+                    copyToSymbol(device::U_Back, Back(), i);
+                }
             }
         };
     }

@@ -85,7 +85,7 @@ namespace LBM
                 f(std::integral_constant<label_t, Start>());
                 if constexpr (Start + 1 < End)
                 {
-                    constexpr_for<Start + 1, End>(std::forward<F>(f));
+                    host::constexpr_for<Start + 1, End>(std::forward<F>(f));
                 }
             }
         }
@@ -101,7 +101,7 @@ namespace LBM
                 f(integralConstant<label_t, Start>());
                 if constexpr (Start + 1 < End)
                 {
-                    constexpr_for<Start + 1, End>(std::forward<F>(f));
+                    device::constexpr_for<Start + 1, End>(std::forward<F>(f));
                 }
             }
         }
@@ -292,6 +292,28 @@ namespace LBM
             const label_t nxBlocks, const label_t nyBlocks) noexcept
         {
             return tx + block::nx() * (ty + block::ny() * (pop + QF * (bx + nxBlocks * (by + nyBlocks * bz))));
+        }
+
+        template <const axisDirection alpha, const label_t pop, const label_t QF>
+        __host__ [[nodiscard]] inline label_t idxPop(
+            const label_t tx, const label_t ty, const label_t tz,
+            const label_t bx, const label_t by, const label_t bz,
+            const label_t nxBlocks, const label_t nyBlocks)
+        {
+            if constexpr (alpha == X)
+            {
+                return idxPopX<pop, QF>(ty, tz, bx, by, bz, nxBlocks, nyBlocks);
+            }
+
+            if constexpr (alpha == Y)
+            {
+                return idxPopY<pop, QF>(tx, tz, bx, by, bz, nxBlocks, nyBlocks);
+            }
+
+            if constexpr (alpha == Z)
+            {
+                return idxPopZ<pop, QF>(tx, ty, bx, by, bz, nxBlocks, nyBlocks);
+            }
         }
     }
 
@@ -525,6 +547,15 @@ namespace LBM
      * @param[in] value The value to copy to the symbol
      **/
     template <typename T>
+    void copyToSymbol(const T &symbol, const T value, const label_t index)
+    {
+        cudaDeviceSynchronize();
+        const T valueTemp = value;
+        checkCudaErrors(cudaMemcpyToSymbol(symbol, &valueTemp, sizeof(T), static_cast<std::size_t>(index) * sizeof(T), cudaMemcpyHostToDevice));
+        cudaDeviceSynchronize();
+    }
+
+    template <typename T>
     void copyToSymbol(const T &symbol, const T value)
     {
         cudaDeviceSynchronize();
@@ -538,6 +569,19 @@ namespace LBM
     {
         cudaDeviceSynchronize();
         checkCudaErrors(cudaMemcpyToSymbol(symbol, value, N * sizeof(T), 0, cudaMemcpyHostToDevice));
+        cudaDeviceSynchronize();
+    }
+
+    template <typename T, const std::size_t N>
+    void copyToSymbol(const T (&symbol)[N], const T value, const label_t index)
+    {
+        if (index >= N)
+        {
+            throw std::runtime_error("Error setting device symbol index" + std::to_string(index) + " out of bounds for array of size " + std::to_string(N) + ".");
+        }
+        cudaDeviceSynchronize();
+        const T valueTemp = value;
+        checkCudaErrors(cudaMemcpyToSymbol(symbol, &valueTemp, sizeof(T), static_cast<std::size_t>(index) * sizeof(T), cudaMemcpyHostToDevice));
         cudaDeviceSynchronize();
     }
 

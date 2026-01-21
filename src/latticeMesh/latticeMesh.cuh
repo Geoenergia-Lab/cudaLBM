@@ -180,21 +180,9 @@ namespace LBM
                     const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
                     const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
                     const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
-                    const scalar_t U_North_temp[3] = {0, 0, 0};
-                    const scalar_t U_South_temp[3] = {0, 0, 0};
-                    const scalar_t U_East_temp[3] = {0, 0, 0};
-                    const scalar_t U_West_temp[3] = {0, 0, 0};
-                    const scalar_t U_Front_temp[3] = {0, 0, 0};
-                    const scalar_t U_Back_temp[3] = {0, 0, programCtrl.u_inf()};
 
                     copyToSymbol(device::L_char, programCtrl.L_char());
                     copyToSymbol(device::Re, programCtrl.Re());
-                    copyToSymbol(device::U_North, U_North_temp);
-                    copyToSymbol(device::U_South, U_South_temp);
-                    copyToSymbol(device::U_East, U_East_temp);
-                    copyToSymbol(device::U_West, U_West_temp);
-                    copyToSymbol(device::U_Front, U_Front_temp);
-                    copyToSymbol(device::U_Back, U_Back_temp);
                     copyToSymbol(device::tau, tauTemp);
                     copyToSymbol(device::omega, omegaTemp);
                     copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
@@ -323,6 +311,36 @@ namespace LBM
             __host__ [[nodiscard]] inline constexpr label_t nDims() const noexcept
             {
                 return static_cast<label_t>(nx_ > 1) + static_cast<label_t>(ny_ > 1) + static_cast<label_t>(nz_ > 1);
+            }
+
+            /**
+             * @brief Boundary check for the faces
+             * @param x,y,z The coordinate of the point
+             * @return True if the point is on the boundary, false otherwise
+             **/
+            __host__ [[nodiscard]] inline constexpr bool West(const label_t x) const noexcept
+            {
+                return (x == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool East(const label_t x) const noexcept
+            {
+                return (x == nx_ - 1);
+            }
+            __host__ [[nodiscard]] inline constexpr bool South(const label_t y) const noexcept
+            {
+                return (y == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool North(const label_t y) const noexcept
+            {
+                return (y == ny_ - 1);
+            }
+            __host__ [[nodiscard]] inline constexpr bool Back(const label_t z) const noexcept
+            {
+                return (z == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool Front(const label_t z) const noexcept
+            {
+                return (z == nz_ - 1);
             }
 
         private:

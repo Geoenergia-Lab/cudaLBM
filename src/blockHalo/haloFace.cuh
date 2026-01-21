@@ -86,11 +86,11 @@ namespace LBM
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &m_yz,
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh) noexcept
-                : x0_(device::allocateArray(initialise_pop<X, 0>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                : x0_(device::allocateArray(initialise_pop<X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
                   x1_(device::allocateArray(initialise_pop<X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  y0_(device::allocateArray(initialise_pop<Y, 0>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  y0_(device::allocateArray(initialise_pop<Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
                   y1_(device::allocateArray(initialise_pop<Y, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  z0_(device::allocateArray(initialise_pop<Z, 0>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  z0_(device::allocateArray(initialise_pop<Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
                   z1_(device::allocateArray(initialise_pop<Z, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))){};
 
             /**
@@ -210,38 +210,40 @@ namespace LBM
 
             /**
              * @brief Calculate number of elements for a halo face
-             * @tparam faceIndex Direction index (x, y, or z)
+             * @tparam alpha Direction index (x, y, or z)
              * @param[in] mesh Lattice mesh for dimensioning
              * @return Number of elements in the specified halo face
              **/
-            template <const axisDirection faceIndex>
+            template <const axisDirection alpha>
             __host__ [[nodiscard]] static inline constexpr label_t nFaces(const host::latticeMesh &mesh) noexcept
             {
-                if constexpr (faceIndex == X)
+                static_assert((alpha == X) || (alpha == Y) || (alpha == Z));
+
+                if constexpr (alpha == X)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nx()) * VelocitySet::QF();
                 }
-                if constexpr (faceIndex == Y)
+
+                if constexpr (alpha == Y)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::ny()) * VelocitySet::QF();
                 }
-                if constexpr (faceIndex == Z)
+
+                if constexpr (alpha == Z)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nz()) * VelocitySet::QF();
                 }
-
-                return 0;
             }
 
             /**
              * @brief Initialize population data for a specific halo face
-             * @tparam faceIndex Direction index (x, y, or z)
+             * @tparam alpha Direction index (x, y, or z)
              * @tparam side Face side (0 for min, 1 for max)
              * @param[in] fMom Moment representation of distribution functions
              * @param[in] mesh Lattice mesh for dimensioning
              * @return Initialized population data for the specified halo face
              **/
-            template <const axisDirection faceIndex, const label_t side>
+            template <const axisDirection alpha, const int side>
             __host__ [[nodiscard]] const std::vector<scalar_t> initialise_pop(
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &rho,
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &u,
@@ -255,7 +257,7 @@ namespace LBM
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh) const noexcept
             {
-                std::vector<scalar_t> face(nFaces<faceIndex>(mesh), 0);
+                std::vector<scalar_t> face(nFaces<alpha>(mesh), 0);
 
                 // Loop over all blocks and threads
                 for (label_t bz = 0; bz < mesh.nzBlocks(); ++bz)
@@ -294,7 +296,7 @@ namespace LBM
                                                 m_zz[base]});
 
                                         // Handle ghost cells (equivalent to threadIdx.x/y/z checks)
-                                        handleGhostCells<faceIndex, side>(face, pop, tx, ty, tz, bx, by, bz, mesh);
+                                        handleGhostCells<alpha, side>(face, pop, tx, ty, tz, bx, by, bz, mesh);
                                     }
                                 }
                             }
@@ -307,7 +309,7 @@ namespace LBM
 
             /**
              * @brief Populate halo face with population data from boundary cells
-             * @tparam faceIndex Direction index (x, y, or z)
+             * @tparam alpha Direction index (X, Y, or Z)
              * @tparam side Face side (0 for min, 1 for max)
              * @param[out] face Halo face data to populate
              * @param[in] pop Population density values for current cell
@@ -318,7 +320,7 @@ namespace LBM
              * This method handles the D3Q19 lattice model, storing appropriate
              * population components based on boundary position and direction.
              **/
-            template <const axisDirection faceIndex, const label_t side>
+            template <const axisDirection alpha, const int side>
             __host__ void static handleGhostCells(
                 std::vector<scalar_t> &face,
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
@@ -326,126 +328,134 @@ namespace LBM
                 const label_t bx, const label_t by, const label_t bz,
                 const host::latticeMesh &mesh) noexcept
             {
-                if constexpr (faceIndex == X)
-                {
-                    if constexpr (side == 0)
-                    {
-                        if (tx == 0)
-                        {
-                            // w
-                            face[host::idxPopX<0, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<2>()];
-                            face[host::idxPopX<1, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<8>()];
-                            face[host::idxPopX<2, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<10>()];
-                            face[host::idxPopX<3, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<14>()];
-                            face[host::idxPopX<4, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<16>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopX<5, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
-                                face[host::idxPopX<6, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
-                                face[host::idxPopX<7, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
-                                face[host::idxPopX<8, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
-                            }
-                        }
-                    }
-                    if constexpr (side == 1)
-                    {
-                        if (tx == (block::nx() - 1))
-                        {
-                            face[host::idxPopX<0, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<1>()];
-                            face[host::idxPopX<1, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<7>()];
-                            face[host::idxPopX<2, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<9>()];
-                            face[host::idxPopX<3, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<13>()];
-                            face[host::idxPopX<4, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<15>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopX<5, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
-                                face[host::idxPopX<6, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
-                                face[host::idxPopX<7, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
-                                face[host::idxPopX<8, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
-                            }
-                        }
-                    }
-                }
+                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, side>();
 
-                if constexpr (faceIndex == Y)
-                {
-                    if constexpr (side == 0)
+                host::constexpr_for<0, VelocitySet::QF()>(
+                    [&](const auto q)
                     {
-                        if (ty == 0)
-                        { // s
-                            face[host::idxPopY<0, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<4>()];
-                            face[host::idxPopY<1, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<8>()];
-                            face[host::idxPopY<2, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<12>()];
-                            face[host::idxPopY<3, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<13>()];
-                            face[host::idxPopY<4, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<18>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopY<5, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
-                                face[host::idxPopY<6, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
-                                face[host::idxPopY<7, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
-                                face[host::idxPopY<8, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
-                            }
-                        }
-                    }
-                    if constexpr (side == 1)
-                    {
-                        if (ty == (block::ny() - 1))
-                        {
-                            face[host::idxPopY<0, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<3>()];
-                            face[host::idxPopY<1, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<7>()];
-                            face[host::idxPopY<2, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<11>()];
-                            face[host::idxPopY<3, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<14>()];
-                            face[host::idxPopY<4, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<17>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopY<5, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
-                                face[host::idxPopY<6, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
-                                face[host::idxPopY<7, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
-                                face[host::idxPopY<8, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
-                            }
-                        }
-                    }
-                }
+                        face[host::idxPop<alpha, q, VelocitySet::QF()>(tx, ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[indices[q_i<q>()]];
+                    });
 
-                if constexpr (faceIndex == Z)
-                {
-                    if constexpr (side == 0)
-                    {
-                        if (tz == 0)
-                        { // b
-                            face[host::idxPopZ<0, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<6>()];
-                            face[host::idxPopZ<1, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<10>()];
-                            face[host::idxPopZ<2, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<12>()];
-                            face[host::idxPopZ<3, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<15>()];
-                            face[host::idxPopZ<4, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<17>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopZ<5, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
-                                face[host::idxPopZ<6, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
-                                face[host::idxPopZ<7, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
-                                face[host::idxPopZ<8, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
-                            }
-                        }
-                    }
-                    if constexpr (side == 1)
-                    {
-                        if (tz == (block::nz() - 1))
-                        {
-                            face[host::idxPopZ<0, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<5>()];
-                            face[host::idxPopZ<1, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<9>()];
-                            face[host::idxPopZ<2, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<11>()];
-                            face[host::idxPopZ<3, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<16>()];
-                            face[host::idxPopZ<4, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<18>()];
-                            if constexpr (VelocitySet::Q() == 27)
-                            {
-                                face[host::idxPopZ<5, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
-                                face[host::idxPopZ<6, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
-                                face[host::idxPopZ<7, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
-                                face[host::idxPopZ<8, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
-                            }
-                        }
-                    }
-                }
+                // if constexpr (alpha == X)
+                // {
+                //     if constexpr (side == 0)
+                //     {
+                //         if (tx == 0)
+                //         {
+                //             // w
+                //             face[host::idxPopX<0, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<2>()];
+                //             face[host::idxPopX<1, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<8>()];
+                //             face[host::idxPopX<2, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<10>()];
+                //             face[host::idxPopX<3, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<14>()];
+                //             face[host::idxPopX<4, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<16>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopX<5, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
+                //                 face[host::idxPopX<6, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
+                //                 face[host::idxPopX<7, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
+                //                 face[host::idxPopX<8, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
+                //             }
+                //         }
+                //     }
+                //     if constexpr (side == 1)
+                //     {
+                //         if (tx == (block::nx() - 1))
+                //         {
+                //             face[host::idxPopX<0, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<1>()];
+                //             face[host::idxPopX<1, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<7>()];
+                //             face[host::idxPopX<2, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<9>()];
+                //             face[host::idxPopX<3, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<13>()];
+                //             face[host::idxPopX<4, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<15>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopX<5, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
+                //                 face[host::idxPopX<6, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
+                //                 face[host::idxPopX<7, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
+                //                 face[host::idxPopX<8, VelocitySet::QF()>(ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
+                //             }
+                //         }
+                //     }
+                // }
+
+                // if constexpr (alpha == Y)
+                // {
+                //     if constexpr (side == 0)
+                //     {
+                //         if (ty == 0)
+                //         { // s
+                //             face[host::idxPopY<0, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<4>()];
+                //             face[host::idxPopY<1, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<8>()];
+                //             face[host::idxPopY<2, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<12>()];
+                //             face[host::idxPopY<3, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<13>()];
+                //             face[host::idxPopY<4, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<18>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopY<5, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
+                //                 face[host::idxPopY<6, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
+                //                 face[host::idxPopY<7, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
+                //                 face[host::idxPopY<8, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
+                //             }
+                //         }
+                //     }
+                //     if constexpr (side == 1)
+                //     {
+                //         if (ty == (block::ny() - 1))
+                //         {
+                //             face[host::idxPopY<0, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<3>()];
+                //             face[host::idxPopY<1, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<7>()];
+                //             face[host::idxPopY<2, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<11>()];
+                //             face[host::idxPopY<3, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<14>()];
+                //             face[host::idxPopY<4, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<17>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopY<5, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
+                //                 face[host::idxPopY<6, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
+                //                 face[host::idxPopY<7, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
+                //                 face[host::idxPopY<8, VelocitySet::QF()>(tx, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
+                //             }
+                //         }
+                //     }
+                // }
+
+                // if constexpr (alpha == Z)
+                // {
+                //     if constexpr (side == 0)
+                //     {
+                //         if (tz == 0)
+                //         { // b
+                //             face[host::idxPopZ<0, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<6>()];
+                //             face[host::idxPopZ<1, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<10>()];
+                //             face[host::idxPopZ<2, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<12>()];
+                //             face[host::idxPopZ<3, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<15>()];
+                //             face[host::idxPopZ<4, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<17>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopZ<5, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<20>()];
+                //                 face[host::idxPopZ<6, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<21>()];
+                //                 face[host::idxPopZ<7, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<24>()];
+                //                 face[host::idxPopZ<8, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<26>()];
+                //             }
+                //         }
+                //     }
+                //     if constexpr (side == 1)
+                //     {
+                //         if (tz == (block::nz() - 1))
+                //         {
+                //             face[host::idxPopZ<0, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<5>()];
+                //             face[host::idxPopZ<1, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<9>()];
+                //             face[host::idxPopZ<2, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<11>()];
+                //             face[host::idxPopZ<3, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<16>()];
+                //             face[host::idxPopZ<4, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<18>()];
+                //             if constexpr (VelocitySet::Q() == 27)
+                //             {
+                //                 face[host::idxPopZ<5, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<19>()];
+                //                 face[host::idxPopZ<6, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<22>()];
+                //                 face[host::idxPopZ<7, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<23>()];
+                //                 face[host::idxPopZ<8, VelocitySet::QF()>(tx, ty, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[q_i<25>()];
+                //             }
+                //         }
+                //     }
+                // }
             }
         };
     }

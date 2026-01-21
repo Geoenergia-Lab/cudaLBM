@@ -325,12 +325,12 @@ namespace LBM
 
                                         const label_t index = host::idx(tx, ty, tz, bx, by, bz, mesh);
 
-                                        const bool is_west = (x == 0);
-                                        const bool is_east = (x == mesh.nx() - 1);
-                                        const bool is_south = (y == 0);
-                                        const bool is_north = (y == mesh.ny() - 1);
-                                        const bool is_front = (z == 0);
-                                        const bool is_back = (z == mesh.nz() - 1);
+                                        const bool is_west = mesh.West(x);
+                                        const bool is_east = mesh.East(x);
+                                        const bool is_south = mesh.South(Y);
+                                        const bool is_north = mesh.North(y);
+                                        const bool is_back = mesh.Back(z);
+                                        const bool is_front = mesh.Front(z);
 
                                         const label_t boundary_count =
                                             static_cast<label_t>(is_west) +
