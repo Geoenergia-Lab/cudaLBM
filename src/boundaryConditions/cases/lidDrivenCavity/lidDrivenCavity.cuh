@@ -95,9 +95,9 @@ namespace LBM
             const normalVector &boundaryNormal,
             [[maybe_unused]] const scalar_t *const ptrRestrict shared_buffer) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: lidDrivenCavity::calculate_moments only supports D3Q19 and D3Q27.");
+            assertions::validate<VelocitySet>();
 
-            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
+            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
             const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
 
             // Apply Dirichlet boundary conditions
@@ -112,9 +112,9 @@ namespace LBM
                     boundaryNormal.isFront<scalar_t>(),
                     boundaryNormal.isBack<scalar_t>()};
 
-                moments[m_i<1>()] = U<X>(boundarySwitches, nBoundaries);
-                moments[m_i<2>()] = U<Y>(boundarySwitches, nBoundaries);
-                moments[m_i<3>()] = U<Z>(boundarySwitches, nBoundaries);
+                moments[m_i<1>()] = U<axis::X>(boundarySwitches, nBoundaries);
+                moments[m_i<2>()] = U<axis::Y>(boundarySwitches, nBoundaries);
+                moments[m_i<3>()] = U<axis::Z>(boundarySwitches, nBoundaries);
 
                 // We can make m_xx branchless very easily
                 // North: Equilibrium with constant velocity boundary
@@ -202,7 +202,7 @@ namespace LBM
             }
             case normalVector::SOUTH_WEST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
 
                 moments[m_i<0>()] = static_cast<scalar_t>(36) * (rho_I - mxy_I * rho_I + mxy_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega); // uz                                                                                                       // mxx
                 moments[m_i<5>()] = (static_cast<scalar_t>(36) * mxy_I * rho_I - moments[m_i<0>()]) / (static_cast<scalar_t>(9) * moments[m_i<0>()]);                  // mxy
@@ -213,7 +213,7 @@ namespace LBM
             }
             case normalVector::SOUTH_EAST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
 
                 moments[m_i<0>()] = -static_cast<scalar_t>(36) * (-rho_I - mxy_I * rho_I + mxy_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega); // uz
                 moments[m_i<5>()] = (static_cast<scalar_t>(36) * mxy_I * rho_I + moments[m_i<0>()]) / (static_cast<scalar_t>(9) * moments[m_i<0>()]);                    // mxy
@@ -224,7 +224,7 @@ namespace LBM
             }
             case normalVector::WEST_BACK():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -239,7 +239,7 @@ namespace LBM
             }
             case normalVector::WEST_FRONT():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -254,7 +254,7 @@ namespace LBM
             }
             case normalVector::EAST_BACK():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -269,7 +269,7 @@ namespace LBM
             }
             case normalVector::EAST_FRONT():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -284,7 +284,7 @@ namespace LBM
             }
             case normalVector::SOUTH_BACK():
             {
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -299,7 +299,7 @@ namespace LBM
             }
             case normalVector::SOUTH_FRONT():
             {
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + device::omega);
@@ -314,8 +314,8 @@ namespace LBM
             }
             case normalVector::WEST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
@@ -330,8 +330,8 @@ namespace LBM
             }
             case normalVector::EAST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
@@ -346,8 +346,8 @@ namespace LBM
             }
             case normalVector::SOUTH():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
@@ -362,8 +362,8 @@ namespace LBM
             }
             case normalVector::BACK():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
@@ -378,8 +378,8 @@ namespace LBM
             }
             case normalVector::FRONT():
             {
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
@@ -395,8 +395,8 @@ namespace LBM
             // Lid boundaries
             case normalVector::NORTH():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(6) * rho_I / static_cast<scalar_t>(5);
                 const scalar_t mxy = (static_cast<scalar_t>(6) * mxy_I * rho_I - device::U_North[0] * rho) / (static_cast<scalar_t>(3) * rho);
@@ -459,7 +459,7 @@ namespace LBM
             }
             case normalVector::NORTH_BACK():
             {
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(72) * (-rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) /
                                      (-static_cast<scalar_t>(48) - static_cast<scalar_t>(2) * device::omega + static_cast<scalar_t>(3) * device::U_North[0] * device::U_North[0] * device::omega);
@@ -475,7 +475,7 @@ namespace LBM
             }
             case normalVector::NORTH_FRONT():
             {
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = -static_cast<scalar_t>(72) * (rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) /
                                      (-static_cast<scalar_t>(48) - static_cast<scalar_t>(2) * device::omega + static_cast<scalar_t>(3) * device::U_North[0] * device::U_North[0] * device::omega);
@@ -492,7 +492,7 @@ namespace LBM
             }
             case normalVector::NORTH_EAST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxy_I * rho_I + mxy_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) - static_cast<scalar_t>(18) * device::U_North[0] - static_cast<scalar_t>(18) * device::U_North[0] * device::U_North[0] + device::omega + static_cast<scalar_t>(3) * device::U_North[0] * device::omega + static_cast<scalar_t>(3) * device::U_North[0] * device::U_North[0] * device::omega);
@@ -508,7 +508,7 @@ namespace LBM
             }
             case normalVector::NORTH_WEST():
             {
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
+                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
 
                 const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxy_I * rho_I + mxy_I * rho_I * device::omega) /
                                      (static_cast<scalar_t>(24) + static_cast<scalar_t>(18) * device::U_North[0] - static_cast<scalar_t>(18) * device::U_North[0] * device::U_North[0] + device::omega - static_cast<scalar_t>(3) * device::U_North[0] * device::omega + static_cast<scalar_t>(3) * device::U_North[0] * device::U_North[0] * device::omega);
@@ -533,7 +533,7 @@ namespace LBM
          * @tparam index Index of the velocity component to compute
          * @return Velocity component value
          **/
-        template <const axisDirection alpha>
+        template <const axis::direction alpha>
         __device__ static inline constexpr scalar_t U(const thread::array<scalar_t, 6> &boundarySwitches, const scalar_t n_boundaries) noexcept
         {
             // Calculate the boundary velocity value

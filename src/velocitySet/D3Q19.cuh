@@ -50,10 +50,32 @@ SourceFiles
 #ifndef __MBLBM_D3Q19_CUH
 #define __MBLBM_D3Q19_CUH
 
-#include "velocitySet.cuh"
-
 namespace LBM
 {
+    namespace constants
+    {
+        struct D3Q19
+        {
+            /**
+             * @brief Get number of discrete velocity directions
+             * @return 19 (number of directions in D3Q19 lattice)
+             **/
+            __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
+            {
+                return 19;
+            }
+
+            /**
+             * @brief Get number of velocity components on a lattice face
+             * @return 5 (number of directions crossing each face in D3Q19)
+             **/
+            __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
+            {
+                return 5;
+            }
+        };
+    }
+
     /**
      * @class D3Q19
      * @brief Implements the D3Q19 velocity set for 3D Lattice Boltzmann simulations
@@ -69,6 +91,8 @@ namespace LBM
     class D3Q19 : private velocitySet
     {
     public:
+        using vs = constants::D3Q19;
+
         /**
          * @brief Default constructor (consteval)
          **/
@@ -80,7 +104,7 @@ namespace LBM
          **/
         __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
         {
-            return Q_;
+            return vs::Q();
         }
 
         /**
@@ -89,7 +113,7 @@ namespace LBM
          **/
         __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
         {
-            return QF_;
+            return vs::QF();
         }
 
         /**
@@ -124,7 +148,7 @@ namespace LBM
          * @return Thread array of 19 weights in D3Q19 order
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> w_q() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> w_q() noexcept
         {
             return {
                 w_0<T>(),
@@ -142,10 +166,10 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline consteval T w_q(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
-            static_assert(q() < Q_, "Invalid velocity set index in member function w(q)");
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function w(q)");
 
             // Return the component
-            return w_q<T>()[q()];
+            return w_q<T>()[q];
         }
 
         /**
@@ -153,7 +177,7 @@ namespace LBM
          * @return Thread array of 19 x-velocity components
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cx() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> cx() noexcept
         {
             return {static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0)};
         }
@@ -168,10 +192,10 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline consteval T cx(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
-            static_assert(q() < Q_, "Invalid velocity set index in member function cx(q)");
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function cx(q)");
 
             // Return the component
-            return cx<T>()[q()];
+            return cx<T>()[q];
         }
 
         /**
@@ -179,7 +203,7 @@ namespace LBM
          * @return Thread array of 19 y-velocity components
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cy() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> cy() noexcept
         {
             return {static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1)};
         }
@@ -194,10 +218,10 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline consteval T cy(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
-            static_assert(q() < Q_, "Invalid velocity set index in member function cy(q)");
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function cy(q)");
 
             // Return the component
-            return cy<T>()[q()];
+            return cy<T>()[q];
         }
 
         /**
@@ -205,7 +229,7 @@ namespace LBM
          * @return Thread array of 19 z-velocity components
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> cz() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> cz() noexcept
         {
             return {static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1)};
         }
@@ -220,37 +244,39 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline consteval T cz(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
-            static_assert(q() < Q_, "Invalid velocity set index in member function cz(q)");
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function cz(q)");
 
             // Return the component
-            return cz<T>()[q()];
+            return cz<T>()[q];
         }
 
         /**
          * @brief Get alpha-components for all directions
          * @return Thread array of 19 alpha-velocity components
          **/
-        template <typename T, const axisDirection alpha>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> c() noexcept
+        template <typename T, const axis::direction alpha>
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> c() noexcept
         {
-            if constexpr (alpha == axisDirection::NO_DIRECTION)
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+
+            if constexpr (alpha == axis::NO_DIRECTION)
             {
-                thread::array<T, Q_> result;
-                for (std::size_t i = 0; i < Q_; i++)
+                thread::array<T, vs::Q()> result;
+                for (std::size_t i = 0; i < vs::Q(); i++)
                 {
                     result[i] = 1;
                 }
                 return result;
             }
-            if constexpr (alpha == axisDirection::X)
+            if constexpr (alpha == axis::X)
             {
                 return cx<T>();
             }
-            if constexpr (alpha == axisDirection::Y)
+            if constexpr (alpha == axis::Y)
             {
                 return cy<T>();
             }
-            if constexpr (alpha == axisDirection::Z)
+            if constexpr (alpha == axis::Z)
             {
                 return cz<T>();
             }
@@ -261,7 +287,7 @@ namespace LBM
          * @param[out] pop Population array to be filled
          * @param[in] moments Moment array (10 components)
          **/
-        __device__ static inline void reconstruct(thread::array<scalar_t, 19> &pop, const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
+        __device__ static inline void reconstruct(thread::array<scalar_t, vs::Q()> &pop, const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
         {
             const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
 
@@ -296,7 +322,7 @@ namespace LBM
          * @param[in] moments Moment array (10 components)
          * @return Population array with 19 components
          **/
-        __device__ __host__ [[nodiscard]] static inline thread::array<scalar_t, 19> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
+        __device__ __host__ [[nodiscard]] static inline thread::array<scalar_t, vs::Q()> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
         {
             const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
 
@@ -339,16 +365,6 @@ namespace LBM
         }
 
     private:
-        /**
-         * @brief Number of velocity components in the lattice
-         **/
-        static constexpr const label_t Q_ = 19;
-
-        /**
-         * @brief Number of velocity components on each lattice face
-         **/
-        static constexpr const label_t QF_ = 5;
-
         /**
          * @brief Implementation of the print loop
          * @note This function effectively unrolls the loop at compile-time and checks for its bounds

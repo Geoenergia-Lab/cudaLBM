@@ -327,7 +327,7 @@ namespace LBM
 
                                         const bool is_west = mesh.West(x);
                                         const bool is_east = mesh.East(x);
-                                        const bool is_south = mesh.South(Y);
+                                        const bool is_south = mesh.South(y);
                                         const bool is_north = mesh.North(y);
                                         const bool is_back = mesh.Back(z);
                                         const bool is_front = mesh.Front(z);

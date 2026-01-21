@@ -99,7 +99,7 @@ namespace LBM
          * @return The extracted parameter value
          * @throws std::runtime_error if the parameter is not found or is invalid
          * @note This function is used to extract values that MUST be numeric
-         */
+         **/
         template <const bool safety_check>
         __host__ [[nodiscard]] static scalar_t extractParameter(const std::string &fieldName, const std::string &regionName, const std::string &initialConditionsName)
         {
@@ -172,15 +172,15 @@ namespace LBM
                     }
                     if ((fieldName == "u") | (fieldName == "v") | (fieldName == "w"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_i<scalar_t>();
+                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale<scalar_t, axis::X>();
                     }
                     if ((fieldName == "m_xx") | (fieldName == "m_yy") | (fieldName == "m_zz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ii<scalar_t>();
+                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale<scalar_t, axis::X, axis::X>();
                     }
                     if ((fieldName == "m_xy") | (fieldName == "m_xz") | (fieldName == "m_yz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ij<scalar_t>();
+                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale<scalar_t, axis::X, axis::Y>();
                     }
                 }
 
@@ -200,35 +200,35 @@ namespace LBM
                     if (fieldName == "m_xx")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * u)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::X, axis::X>() * ((u * u)) / rho0<scalar_t>();
                     }
                     else if (fieldName == "m_xy")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * v)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::X, axis::Y>() * ((u * v)) / rho0<scalar_t>();
                     }
                     else if (fieldName == "m_xz")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * w)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::X, axis::Z>() * ((u * w)) / rho0<scalar_t>();
                     }
                     else if (fieldName == "m_yy")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * v)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::Y, axis::Y>() * ((v * v)) / rho0<scalar_t>();
                     }
                     else if (fieldName == "m_yz")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * w)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::Y, axis::Z>() * ((v * w)) / rho0<scalar_t>();
                     }
                     else if (fieldName == "m_zz")
                     {
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((w * w)) / rho0<scalar_t>();
+                        return velocitySet::scale<scalar_t, axis::Z, axis::Z>() * ((w * w)) / rho0<scalar_t>();
                     }
                     return 0; // Should never get here
                 }

@@ -60,7 +60,7 @@ namespace LBM
      * This class handles the creation, synchronization, and destruction of
      * multiple CUDA streams. It provides thread-safe access to streams and
      * ensures proper cleanup during destruction.
-     */
+     **/
     template <const label_t N>
     class streamHandler
     {
@@ -71,7 +71,7 @@ namespace LBM
          * Creates N CUDA streams upon construction. The constructor includes
          * a static assertion to ensure N is positive at compile-time.
          * @pre N must be positive (enforced via static_assert)
-         */
+         **/
         __host__ [[nodiscard]] streamHandler() noexcept
             : streams_(createCudaStreams())
         {
@@ -83,7 +83,7 @@ namespace LBM
          *
          * Automatically synchronizes and destroys all CUDA streams upon
          * object destruction. Ensures proper cleanup of GPU resources.
-         */
+         **/
         ~streamHandler() noexcept
         {
             if constexpr (N == 1)
@@ -109,7 +109,7 @@ namespace LBM
          *
          * Blocks the host until all operations in all CUDA streams complete.
          * This ensures completion of all asynchronous operations before continuing.
-         */
+         **/
         inline void synchronizeAll() const noexcept
         {
             host::constexpr_for<0, N>(
@@ -126,7 +126,7 @@ namespace LBM
          * @pre stream_ must be less than N (enforced via static_assert)
          *
          * Blocks the host until all operations in the specified stream complete.
-         */
+         **/
         template <const label_t stream_>
         inline void synchronize(const std::integral_constant<label_t, stream_> stream) const noexcept
         {
@@ -141,7 +141,7 @@ namespace LBM
          * @return Reference to the requested CUDA stream
          * @pre stream_ must be less than N (enforced via static_assert)
          * @warning No bounds checking performed at runtime
-         */
+         **/
         template <const label_t stream_>
         __device__ cudaStream_t &operator[](const std::integral_constant<label_t, stream_> stream) const noexcept
         {
@@ -151,7 +151,7 @@ namespace LBM
         /**
          * @brief Returns all managed CUDA streams
          * @return Const reference to std::array containing all CUDA streams
-         */
+         **/
         __host__ [[nodiscard]] inline const std::array<cudaStream_t, N> &streams() const noexcept
         {
             return streams_;
@@ -164,7 +164,7 @@ namespace LBM
          *
          * Private helper function that handles actual stream creation
          * with proper error checking and device synchronization.
-         */
+         **/
         __host__ [[nodiscard]] static const std::array<cudaStream_t, N> createCudaStreams() noexcept
         {
             std::array<cudaStream_t, N> streamsLBM;
@@ -181,7 +181,7 @@ namespace LBM
 
         /**
          * @brief The underlying streams held in a std::array
-         */
+         **/
         const std::array<cudaStream_t, N> streams_;
     };
 }

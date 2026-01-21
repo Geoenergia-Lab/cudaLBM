@@ -48,9 +48,9 @@ Notes
 
 \*---------------------------------------------------------------------------*/
 
-static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: jetFlow::calculate_moments only supports D3Q19 and D3Q27.");
+assertions::validate<VelocitySet>();
 
-const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
+const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
 const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
 
 switch (boundaryNormal.nodeType())
@@ -82,8 +82,8 @@ case normalVector::BACK():
     else
     {
         const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
-        const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-        const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+        const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+        const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
         const scalar_t rho = rho0<scalar_t>();
         const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;

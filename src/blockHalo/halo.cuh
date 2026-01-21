@@ -406,9 +406,9 @@ namespace LBM
                 const label_t idx_in_warp = idxWarp(threadIdx.x, threadIdx.y, threadIdx.z);
 
                 // Equivalent of threadIdx.alpha, threadIdx.beta
-                const dim2 xy = ij<X, Y>(idx_in_warp + offset);
-                const dim2 xz = ij<X, Z>(idx_in_warp + offset);
-                const dim2 yz = ij<Y, Z>(idx_in_warp + offset);
+                const dim2 xy = ij<axis::X, axis::Y>(idx_in_warp + offset);
+                const dim2 xz = ij<axis::X, axis::Z>(idx_in_warp + offset);
+                const dim2 yz = ij<axis::Y, axis::Z>(idx_in_warp + offset);
 
                 const label_t ID = idx_block(threadIdx.x, threadIdx.y, threadIdx.z);
 
@@ -748,20 +748,20 @@ namespace LBM
              * @param[in] I The index of a thread within a warp
              * @return Two-dimensional representation of I
              **/
-            template <const axisDirection alpha, const axisDirection beta>
+            template <const axis::direction alpha, const axis::direction beta>
             __device__ __host__ [[nodiscard]] static inline constexpr dim2 ij(const label_t I) noexcept
             {
-                if constexpr ((alpha == X) && (beta == Y))
+                if constexpr ((alpha == axis::X) && (beta == axis::Y))
                 {
                     return {I % (block::nx()), I / (block::nx())};
                 }
 
-                if constexpr ((alpha == X) && (beta == Z))
+                if constexpr ((alpha == axis::X) && (beta == axis::Z))
                 {
                     return {I % (block::nx()), I / (block::nx())};
                 }
 
-                if constexpr ((alpha == Y) && (beta == Z))
+                if constexpr ((alpha == axis::Y) && (beta == axis::Z))
                 {
                     return {I % (block::ny()), I / (block::ny())};
                 }

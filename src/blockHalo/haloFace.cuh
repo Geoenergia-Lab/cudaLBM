@@ -86,12 +86,12 @@ namespace LBM
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &m_yz,
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh) noexcept
-                : x0_(device::allocateArray(initialise_pop<X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  x1_(device::allocateArray(initialise_pop<X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  y0_(device::allocateArray(initialise_pop<Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  y1_(device::allocateArray(initialise_pop<Y, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  z0_(device::allocateArray(initialise_pop<Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
-                  z1_(device::allocateArray(initialise_pop<Z, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))){};
+                : x0_(device::allocateArray(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  x1_(device::allocateArray(initialise_pop<axis::X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  y0_(device::allocateArray(initialise_pop<axis::Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  y1_(device::allocateArray(initialise_pop<axis::Y, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  z0_(device::allocateArray(initialise_pop<axis::Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))),
+                  z1_(device::allocateArray(initialise_pop<axis::Z, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh))){};
 
             /**
              * @brief Destructor - releases all allocated device memory
@@ -214,22 +214,22 @@ namespace LBM
              * @param[in] mesh Lattice mesh for dimensioning
              * @return Number of elements in the specified halo face
              **/
-            template <const axisDirection alpha>
+            template <const axis::direction alpha>
             __host__ [[nodiscard]] static inline constexpr label_t nFaces(const host::latticeMesh &mesh) noexcept
             {
-                static_assert((alpha == X) || (alpha == Y) || (alpha == Z));
+                assertions::validate_direction<alpha, axis::NOT_NULL>();
 
-                if constexpr (alpha == X)
+                if constexpr (alpha == axis::X)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nx()) * VelocitySet::QF();
                 }
 
-                if constexpr (alpha == Y)
+                if constexpr (alpha == axis::Y)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::ny()) * VelocitySet::QF();
                 }
 
-                if constexpr (alpha == Z)
+                if constexpr (alpha == axis::Z)
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nz()) * VelocitySet::QF();
                 }
@@ -243,7 +243,7 @@ namespace LBM
              * @param[in] mesh Lattice mesh for dimensioning
              * @return Initialized population data for the specified halo face
              **/
-            template <const axisDirection alpha, const int side>
+            template <const axis::direction alpha, const int side>
             __host__ [[nodiscard]] const std::vector<scalar_t> initialise_pop(
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &rho,
                 const host::array<false, scalar_t, VelocitySet, time::instantaneous> &u,
@@ -320,7 +320,7 @@ namespace LBM
              * This method handles the D3Q19 lattice model, storing appropriate
              * population components based on boundary position and direction.
              **/
-            template <const axisDirection alpha, const int side>
+            template <const axis::direction alpha, const int side>
             __host__ void static handleGhostCells(
                 std::vector<scalar_t> &face,
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,

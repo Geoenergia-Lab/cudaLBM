@@ -57,6 +57,22 @@ SourceFiles
 
 namespace LBM
 {
+    class D3Q19;
+    class D3Q27;
+
+    namespace assertions
+    {
+        /**
+         * @brief Asserts that VelocitySet is a valid velocity set (D3Q19 or D3Q27)
+         * @tparam VelocitySet The velocity set
+         **/
+        template <class VelocitySet>
+        __device__ __host__ inline consteval void validate() noexcept
+        {
+            static_assert(((std::is_same<VelocitySet, D3Q19>::value) || (std::is_same<VelocitySet, D3Q27>::value)), "VelocitySet must be D3Q19 or D3Q27.");
+        }
+    }
+
     /**
      * @class velocitySet
      * @brief Base class for LBM velocity sets providing common constants and scaling operations
@@ -100,54 +116,83 @@ namespace LBM
             return static_cast<T>(static_cast<double>(1) / static_cast<double>(3));
         }
 
-        /**
-         * @brief Get scaling factor for first-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_i() noexcept
+        template <typename T, const axis::direction alpha = axis::NO_DIRECTION, const axis::direction beta = axis::NO_DIRECTION>
+        __device__ __host__ [[nodiscard]] static inline consteval T scale() noexcept
         {
-            return static_cast<T>(3);
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+
+            if constexpr (beta == axis::NO_DIRECTION)
+            {
+                if constexpr ((alpha == axis::X) || (alpha == axis::Y) || (alpha == axis::Z))
+                {
+                    return static_cast<T>(3);
+                }
+                else
+                {
+                    return static_cast<T>(1);
+                }
+            }
+            else
+            {
+                if constexpr (alpha == beta)
+                {
+                    return static_cast<T>(9);
+                }
+                else
+                {
+                    return static_cast<T>(4.5);
+                }
+            }
         }
 
-        /**
-         * @brief Get scaling factor for diagonal second-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_ii() noexcept
-        {
-            return static_cast<T>(4.5);
-        }
+        // /**
+        //  * @brief Get scaling factor for first-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_i() noexcept
+        // {
+        //     return static_cast<T>(3);
+        // }
 
-        /**
-         * @brief Get scaling factor for off-diagonal second-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_ij() noexcept
-        {
-            return static_cast<T>(9);
-        }
+        // /**
+        //  * @brief Get scaling factor for diagonal second-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_ii() noexcept
+        // {
+        //     return static_cast<T>(4.5);
+        // }
+
+        // /**
+        //  * @brief Get scaling factor for off-diagonal second-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_ij() noexcept
+        // {
+        //     return static_cast<T>(9);
+        // }
 
         /**
          * @brief Apply velocity set scaling factors to moment array
          * @param[in,out] moments Array of 10 moment variables to be scaled
          *
          * This method applies the appropriate scaling factors to each moment component:
-         * - First-order moments (velocity components): scaled by scale_i()
-         * - Diagonal second-order moments: scaled by scale_ii()
-         * - Off-diagonal second-order moments: scaled by scale_ij()
+         * - First-order moments (velocity components): scaled by scale()
+         * - Diagonal second-order moments: scaled by scale()
+         * - Off-diagonal second-order moments: scaled by scale()
          **/
         __device__ static inline void scale(thread::array<scalar_t, 10> &moments) noexcept
         {
             // Scale the moments correctly
-            moments[m_i<1>()] = scale_i<scalar_t>() * (moments[m_i<1>()]);
-            moments[m_i<2>()] = scale_i<scalar_t>() * (moments[m_i<2>()]);
-            moments[m_i<3>()] = scale_i<scalar_t>() * (moments[m_i<3>()]);
-            moments[m_i<4>()] = scale_ii<scalar_t>() * (moments[m_i<4>()]);
-            moments[m_i<5>()] = scale_ij<scalar_t>() * (moments[m_i<5>()]);
-            moments[m_i<6>()] = scale_ij<scalar_t>() * (moments[m_i<6>()]);
-            moments[m_i<7>()] = scale_ii<scalar_t>() * (moments[m_i<7>()]);
-            moments[m_i<8>()] = scale_ij<scalar_t>() * (moments[m_i<8>()]);
-            moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
+            moments[m_i<1>()] = scale<scalar_t, axis::X>() * (moments[m_i<1>()]);
+            moments[m_i<2>()] = scale<scalar_t, axis::Y>() * (moments[m_i<2>()]);
+            moments[m_i<3>()] = scale<scalar_t, axis::Z>() * (moments[m_i<3>()]);
+            moments[m_i<4>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<4>()]);
+            moments[m_i<5>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<5>()]);
+            moments[m_i<6>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<6>()]);
+            moments[m_i<7>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<7>()]);
+            moments[m_i<8>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<8>()]);
+            moments[m_i<9>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<9>()]);
         }
 
         /**
@@ -158,9 +203,13 @@ namespace LBM
          * @param[in] pop The distribution function array
          * @return The calculated moment value
          **/
-        template <class VelocitySet, const axisDirection alpha, const axisDirection beta>
+        template <class VelocitySet, const axis::direction alpha, const axis::direction beta>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop) noexcept
         {
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+            assertions::validate_direction<beta, axis::CAN_BE_NULL>();
+
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
             constexpr const label_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
@@ -179,12 +228,16 @@ namespace LBM
          * @tparam beta The second axis direction (X, Y, or Z)
          * @tparam BoundaryNormal The boundary normal vector type
          * @param[in] pop The distribution function array
-         * @param[in] boundaryNormal The boundary normal vector
+         * @param[in] boundaryNormal Normal vector information at boundary node
          * @return The calculated moment value
          **/
-        template <class VelocitySet, const axisDirection alpha, const axisDirection beta, class BoundaryNormal>
+        template <class VelocitySet, const axis::direction alpha, const axis::direction beta, class BoundaryNormal>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop, const BoundaryNormal &boundaryNormal) noexcept
         {
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+            assertions::validate_direction<beta, axis::CAN_BE_NULL>();
+
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
             constexpr const label_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
@@ -205,22 +258,24 @@ namespace LBM
         template <class VelocitySet>
         __device__ __host__ static inline void calculate_moments(const thread::array<scalar_t, VelocitySet::Q()> &pop, thread::array<scalar_t, NUMBER_MOMENTS()> &mom) noexcept
         {
+            assertions::validate<VelocitySet>();
+
             // Density
-            mom[m_i<0>()] = calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop);
+            mom[m_i<0>()] = calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop);
             const scalar_t inv_rho = static_cast<scalar_t>(1) / mom[m_i<0>()];
 
             // Velocity
-            mom[m_i<1>()] = calculate_moment<VelocitySet, X, NO_DIRECTION>(pop) * inv_rho;
-            mom[m_i<2>()] = calculate_moment<VelocitySet, Y, NO_DIRECTION>(pop) * inv_rho;
-            mom[m_i<3>()] = calculate_moment<VelocitySet, Z, NO_DIRECTION>(pop) * inv_rho;
+            mom[m_i<1>()] = calculate_moment<VelocitySet, axis::X, axis::NO_DIRECTION>(pop) * inv_rho;
+            mom[m_i<2>()] = calculate_moment<VelocitySet, axis::Y, axis::NO_DIRECTION>(pop) * inv_rho;
+            mom[m_i<3>()] = calculate_moment<VelocitySet, axis::Z, axis::NO_DIRECTION>(pop) * inv_rho;
 
             // Second order moments
-            mom[m_i<4>()] = (calculate_moment<VelocitySet, X, X>(pop) * inv_rho) - cs2<scalar_t>();
-            mom[m_i<5>()] = calculate_moment<VelocitySet, X, Y>(pop) * inv_rho;
-            mom[m_i<6>()] = calculate_moment<VelocitySet, X, Z>(pop) * inv_rho;
-            mom[m_i<7>()] = (calculate_moment<VelocitySet, Y, Y>(pop) * inv_rho) - cs2<scalar_t>();
-            mom[m_i<8>()] = calculate_moment<VelocitySet, Y, Z>(pop) * inv_rho;
-            mom[m_i<9>()] = (calculate_moment<VelocitySet, Z, Z>(pop) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<4>()] = (calculate_moment<VelocitySet, axis::X, axis::X>(pop) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<5>()] = calculate_moment<VelocitySet, axis::X, axis::Y>(pop) * inv_rho;
+            mom[m_i<6>()] = calculate_moment<VelocitySet, axis::X, axis::Z>(pop) * inv_rho;
+            mom[m_i<7>()] = (calculate_moment<VelocitySet, axis::Y, axis::Y>(pop) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<8>()] = calculate_moment<VelocitySet, axis::Y, axis::Z>(pop) * inv_rho;
+            mom[m_i<9>()] = (calculate_moment<VelocitySet, axis::Z, axis::Z>(pop) * inv_rho) - cs2<scalar_t>();
         }
 
         /**
@@ -229,27 +284,29 @@ namespace LBM
          * @tparam BoundaryNormal The boundary normal vector type
          * @param[in] pop The distribution function array
          * @param[out] mom The calculated moments array
-         * @param[in] boundaryNormal The boundary normal vector
+         * @param[in] boundaryNormal Normal vector information at boundary node
          **/
         template <class VelocitySet, class BoundaryNormal>
         __device__ __host__ static inline void calculate_moments(const thread::array<scalar_t, VelocitySet::Q()> &pop, thread::array<scalar_t, NUMBER_MOMENTS()> &mom, const BoundaryNormal &boundaryNormal) noexcept
         {
+            assertions::validate<VelocitySet>();
+
             // Density
-            mom[m_i<0>()] = calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
+            mom[m_i<0>()] = calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
             const scalar_t inv_rho = static_cast<scalar_t>(1) / mom[m_i<0>()];
 
             // Velocity
-            mom[m_i<1>()] = calculate_moment<VelocitySet, X, NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
-            mom[m_i<2>()] = calculate_moment<VelocitySet, Y, NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
-            mom[m_i<3>()] = calculate_moment<VelocitySet, Z, NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<1>()] = calculate_moment<VelocitySet, axis::X, axis::NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<2>()] = calculate_moment<VelocitySet, axis::Y, axis::NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<3>()] = calculate_moment<VelocitySet, axis::Z, axis::NO_DIRECTION>(pop, boundaryNormal) * inv_rho;
 
             // Second order moments
-            mom[m_i<4>()] = (calculate_moment<VelocitySet, X, X>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
-            mom[m_i<5>()] = calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho;
-            mom[m_i<6>()] = calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho;
-            mom[m_i<7>()] = (calculate_moment<VelocitySet, Y, Y>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
-            mom[m_i<8>()] = calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho;
-            mom[m_i<9>()] = (calculate_moment<VelocitySet, Z, Z>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<4>()] = (calculate_moment<VelocitySet, axis::X, axis::X>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<5>()] = calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<6>()] = calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<7>()] = (calculate_moment<VelocitySet, axis::Y, axis::Y>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<8>()] = calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho;
+            mom[m_i<9>()] = (calculate_moment<VelocitySet, axis::Z, axis::Z>(pop, boundaryNormal) * inv_rho) - cs2<scalar_t>();
         }
 
         /**
@@ -258,10 +315,13 @@ namespace LBM
          * @tparam alpha The axis direction (X, Y, or Z)
          * @tparam v The value of the coordinate along the axis (-1 or 1)
          * @return Indices of the distribution on a specific face
-         */
-        template <class VelocitySet, const axisDirection alpha, const int v>
+         **/
+        template <class VelocitySet, const axis::direction alpha, const int v>
         __device__ __host__ [[nodiscard]] static inline consteval thread::array<label_t, VelocitySet::QF()> indices_on_face() noexcept
         {
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::NOT_NULL>();
+
             static_assert((v == -1 || v == 1));
 
             constexpr const thread::array<int, VelocitySet::Q()> vals = VelocitySet::template c<int, alpha>();
@@ -285,24 +345,35 @@ namespace LBM
     private:
         /**
          * @brief Returns the product of the c values for two directions
-         */
-        template <class VelocitySet, const axisDirection alpha, const axisDirection beta>
+         **/
+        template <class VelocitySet, const axis::direction alpha, const axis::direction beta>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<int, VelocitySet::Q()> c_AlphaBeta() noexcept
         {
-            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z) || (alpha == NO_DIRECTION)));
-            static_assert(((beta == X) || (beta == Y) || (beta == Z) || (beta == NO_DIRECTION)));
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+            assertions::validate_direction<beta, axis::CAN_BE_NULL>();
 
             return VelocitySet::template c<int, alpha>() * VelocitySet::template c<int, beta>();
         }
 
         /**
          * @brief Processes a momentum element for a specific coefficient
-         */
+         **/
+        /**
+         * @brief Adds or subtracts a particular population based on the sign of the coefficient
+         * @tparam coeff The velocity set coefficient (-1 or 1)
+         * @tparam VelocitySet The velocity set
+         * @tparam BoundaryNormal The boundary normal vector type
+         * @param[in] pop_value A particular population
+         * @param[in] boundaryNormal
+         * @return Plus or minus pop_value depending on the value of coeff
+         **/
         template <const int coeff, class VelocitySet, const label_t I, class BoundaryNormal>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
             const scalar_t pop_value,
             const BoundaryNormal &boundaryNormal) noexcept
         {
+            assertions::validate<VelocitySet>();
             static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
 
             if constexpr (coeff == 1)
@@ -316,8 +387,11 @@ namespace LBM
         }
 
         /**
-         * @brief Processes a momentum element for a specific coefficient
-         */
+         * @brief Adds or subtracts a particular population based on the sign of the coefficient
+         * @tparam coeff The velocity set coefficient (-1 or 1)
+         * @param[in] pop_value A particular population
+         * @return Plus or minus pop_value depending on the value of coeff
+         **/
         template <const int coeff>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
             const scalar_t pop_value) noexcept
@@ -334,29 +408,45 @@ namespace LBM
             }
         }
 
-        template <class VelocitySet, const axisDirection alpha, const label_t q_>
+        /**
+         * @brief Determines whether or not a particular lattice coefficient is negative
+         * @tparam VelocitySet The velocity set
+         * @tparam alpha The axis direction (X, Y, or Z)
+         * @param[in] q The lattice index
+         * @return True if the lattice coefficient is negative, false otherwise
+         **/
+        template <class VelocitySet, const axis::direction alpha, const label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval bool is_negative(const q_i<q_> q) noexcept
         {
-            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z)));
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::NOT_NULL>();
 
-            return (VelocitySet::template c<int, alpha>()[q()] < 0);
+            return (VelocitySet::template c<int, alpha>()[q] < 0);
         }
 
-        template <class VelocitySet, const axisDirection alpha, const label_t q_>
+        /**
+         * @brief Determines whether or not a particular lattice coefficient is positive
+         * @tparam VelocitySet The velocity set
+         * @tparam alpha The axis direction (X, Y, or Z)
+         * @param[in] The lattice index
+         * @return True if the lattice coefficient is positive, false otherwise
+         **/
+        template <class VelocitySet, const axis::direction alpha, const label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval bool is_positive(const q_i<q_> q) noexcept
         {
-            static_assert(((alpha == X) || (alpha == Y) || (alpha == Z)));
+            assertions::validate<VelocitySet>();
+            assertions::validate_direction<alpha, axis::NOT_NULL>();
 
-            return (VelocitySet::template c<int, alpha>()[q()] > 0);
+            return (VelocitySet::template c<int, alpha>()[q] > 0);
         }
 
         /**
          * @brief Determines if a discrete velocity direction is incoming relative to a boundary normal
          * @tparam T Return type (typically numeric type)
-         * @tparam BoundaryNormal Type of boundary normal object with directional methods
+         * @tparam BoundaryNormal The boundary normal vector type
          * @tparam q_ Compile-time velocity direction index
          * @param[in] q Compile-time constant representing velocity direction
-         * @param[in] boundaryNormal Boundary normal information with directional methods
+         * @param[in] boundaryNormal Normal vector information at boundary node
          * @return T 1 if velocity is incoming (pointing into domain), 0 if outgoing
          *
          * @details Checks if velocity components oppose boundary normal direction:
@@ -371,17 +461,19 @@ namespace LBM
         template <typename T, class VelocitySet, class BoundaryNormal, const label_t q_>
         __device__ __host__ [[nodiscard]] static inline constexpr T is_incoming(const q_i<q_> q, const BoundaryNormal &boundaryNormal) noexcept
         {
+            assertions::validate<VelocitySet>();
+
             // boundaryNormal.x > 0  => EAST boundary
             // boundaryNormal.x < 0  => WEST boundary
-            const bool cond_x = (boundaryNormal.isEast() & is_negative<VelocitySet, X>(q)) | (boundaryNormal.isWest() & is_positive<VelocitySet, X>(q));
+            const bool cond_x = (boundaryNormal.isEast() & is_negative<VelocitySet, axis::X>(q)) | (boundaryNormal.isWest() & is_positive<VelocitySet, axis::X>(q));
 
             // boundaryNormal.y > 0  => NORTH boundary
             // boundaryNormal.y < 0  => SOUTH boundary
-            const bool cond_y = (boundaryNormal.isNorth() & is_negative<VelocitySet, Y>(q)) | (boundaryNormal.isSouth() & is_positive<VelocitySet, Y>(q));
+            const bool cond_y = (boundaryNormal.isNorth() & is_negative<VelocitySet, axis::Y>(q)) | (boundaryNormal.isSouth() & is_positive<VelocitySet, axis::Y>(q));
 
             // boundaryNormal.z > 0  => FRONT boundary
             // boundaryNormal.z < 0  => BACK boundary
-            const bool cond_z = (boundaryNormal.isFront() & is_negative<VelocitySet, Z>(q)) | (boundaryNormal.isBack() & is_positive<VelocitySet, Z>(q));
+            const bool cond_z = (boundaryNormal.isFront() & is_negative<VelocitySet, axis::Z>(q)) | (boundaryNormal.isBack() & is_positive<VelocitySet, axis::Z>(q));
 
             return static_cast<T>(!(cond_x | cond_y | cond_z));
         }
