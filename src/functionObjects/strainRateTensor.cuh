@@ -484,22 +484,22 @@ namespace LBM
                 /**
                  * @brief Instantaneous strain rate tensor components
                  **/
-                device::array<scalar_t, VelocitySet, time::instantaneous> xx_;
-                device::array<scalar_t, VelocitySet, time::instantaneous> xy_;
-                device::array<scalar_t, VelocitySet, time::instantaneous> xz_;
-                device::array<scalar_t, VelocitySet, time::instantaneous> yy_;
-                device::array<scalar_t, VelocitySet, time::instantaneous> yz_;
-                device::array<scalar_t, VelocitySet, time::instantaneous> zz_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xx_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xy_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xz_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yy_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yz_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> zz_;
 
                 /**
                  * @brief Time-averaged strain rate tensor components
                  **/
-                device::array<scalar_t, VelocitySet, time::timeAverage> xxMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> xyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> xzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> yyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> yzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> zzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xxMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> zzMean_;
             };
         }
     }

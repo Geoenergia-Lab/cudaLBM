@@ -328,16 +328,16 @@ namespace LBM
                 /**
                  * @brief Time-averaged moments
                  **/
-                device::array<scalar_t, VelocitySet, time::timeAverage> rhoMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> uMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> vMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> wMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxxMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> myyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> myzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mzzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> rhoMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> uMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> vMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> wMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxxMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> myyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> myzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mzzMean_;
             };
         }
     }

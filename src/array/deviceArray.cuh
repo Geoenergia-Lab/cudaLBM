@@ -54,8 +54,66 @@ namespace LBM
 {
     namespace device
     {
+        template <const field::type FullField, typename T, class VelocitySet, const time::type TimeType>
+        class array;
+
+        /**
+         * @class Array holding only a pointer - no name or mesh information
+         * @tparam T Fundamental type of the array
+         * @tparam VelocitySet The velocity set
+         * @tparam TimeType Type of time stepping (instantaneous or time-averaged)
+         **/
         template <typename T, class VelocitySet, const time::type TimeType>
-        class array
+        class array<field::SKELETON, T, VelocitySet, TimeType>
+        {
+        public:
+            __host__ [[nodiscard]] array(const std::vector<T> &hostArray)
+                : ptr_(device::allocateArray<T>(hostArray)){};
+
+            /**
+             * @brief Destructor - automatically releases device memory
+             * @note Noexcept guarantee: failsafe if cudaFree fails
+             **/
+            ~array() noexcept
+            {
+                checkCudaErrors(cudaFree(ptr_));
+            }
+
+            /**
+             * @brief Get read-only access to underlying data
+             * @return Const pointer to device memory
+             **/
+            __device__ __host__ [[nodiscard]] inline const T *constPtr() const noexcept
+            {
+                return ptr_;
+            }
+
+            /**
+             * @brief Get mutable access to underlying data
+             * @return Pointer to device memory
+             **/
+            __device__ __host__ [[nodiscard]] inline T *ptr() noexcept
+            {
+                return ptr_;
+            }
+
+            /**
+             * @brief Provide reference to pointer for swapping operations
+             **/
+            __host__ [[nodiscard]] inline constexpr T * ptrRestrict & ptrRef() noexcept
+            {
+                return ptr_;
+            }
+
+        private:
+            /**
+             * @brief Pointer to the data
+             **/
+            T *ptrRestrict ptr_;
+        };
+
+        template <typename T, class VelocitySet, const time::type TimeType>
+        class array<field::FULL_FIELD, T, VelocitySet, TimeType>
         {
         public:
             /**
@@ -65,7 +123,7 @@ namespace LBM
              * @param[in] mesh Lattice mesh defining array dimensions
              * @post Device memory is allocated and initialized with host data
              **/
-            __host__ [[nodiscard]] array(const host::array<false, T, VelocitySet, TimeType> &hostArray)
+            __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
                 : ptr_(device::allocateArray<T>(hostArray.arr())),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh()){};
@@ -81,7 +139,7 @@ namespace LBM
                 const std::string &name,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
-                : ptr_(toDevice(host::array<false, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
+                : ptr_(toDevice(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
                   name_(name),
                   mesh_(mesh){};
 
@@ -200,7 +258,7 @@ namespace LBM
              * @param[in] hostArray The host::array to be copied to the device
              * @return A pointer to the copied data
              **/
-            __host__ [[nodiscard]] T *toDevice(const host::array<false, T, VelocitySet, TimeType> &hostArray)
+            __host__ [[nodiscard]] T *toDevice(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
             {
                 return device::allocateArray<T>(hostArray.arr());
             }

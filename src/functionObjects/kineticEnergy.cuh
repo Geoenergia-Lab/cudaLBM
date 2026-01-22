@@ -397,12 +397,12 @@ namespace LBM
                 /**
                  * @brief Instantaneous total kinetic energy scalar
                  **/
-                device::array<scalar_t, VelocitySet, time::instantaneous> k_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> k_;
 
                 /**
                  * @brief Time-averaged total kinetic energy scalar
                  **/
-                device::array<scalar_t, VelocitySet, time::timeAverage> kMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> kMean_;
             };
         }
     }

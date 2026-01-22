@@ -60,7 +60,7 @@ namespace LBM
      **/
 #define ptrRestrict __restrict__
 
-    /** *
+    /**
      * @brief Verbose logging
      */
     __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
@@ -215,6 +215,9 @@ namespace LBM
         } type;
     }
 
+    /**
+     * @brief Time stepping types: instantaneous or time-averaged
+     */
     namespace time
     {
         typedef enum Enum : int
@@ -226,6 +229,9 @@ namespace LBM
 
     namespace axis
     {
+        /**
+         * @brief Cardinal axis directions: X, Y, Z or NO_DIRECTION
+         */
         typedef enum Enum : label_t
         {
             X = 0,
@@ -234,11 +240,41 @@ namespace LBM
             NO_DIRECTION = static_cast<label_t>(-1)
         } type;
 
+        /**
+         * @brief Enumerated type for axes: The axis either can or cannot be null
+         */
         typedef enum nullEnum : bool
         {
             NOT_NULL = false,
             CAN_BE_NULL = true
         } null;
+    }
+
+    namespace field
+    {
+        /**
+         * @brief Type of field to be allocated
+         * @note The skeleton type contains only a pointer;
+         * FULL_FIELD contains a pointer, name and a reference to the mesh
+         */
+        typedef enum Enum : bool
+        {
+            SKELETON = 0,
+            FULL_FIELD = 1
+        } type;
+    }
+
+    namespace host
+    {
+        /**
+         * @brief Type of memory allocation on the host:
+         * The memory is either pageable or pinned
+         */
+        typedef enum Enum : bool
+        {
+            PAGED = 0,
+            PINNED = 1
+        } type;
     }
 
     namespace assertions
@@ -284,7 +320,6 @@ namespace LBM
         __device__ __constant__ scalar_t tau;
         __device__ __constant__ scalar_t u_inf;
         __device__ __constant__ scalar_t L_char;
-        __device__ __constant__ scalar_t u_inf_sq;
 
         __device__ __constant__ scalar_t U_North[3];
         __device__ __constant__ scalar_t U_South[3];
