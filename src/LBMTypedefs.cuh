@@ -62,7 +62,7 @@ namespace LBM
 
     /**
      * @brief Verbose logging
-     **/
+     */
     __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
     {
 #ifdef VERBOSE
@@ -109,7 +109,7 @@ namespace LBM
     };
 
     /**
-     * @brief Label type used for index types
+     * @brief Label type used for scalar types
      * @note Types are either 32 bit or 64 bit unsigned integers
      * @note These types are supplied via command line defines during compilation
      **/
@@ -313,7 +313,6 @@ namespace LBM
          * @brief Device constant variables
          * @note These variables MUST be initialised on the GPU at program start with cudaMemcpyToSymbol
          **/
-        __device__ __constant__ scalar_t L_char;
         __device__ __constant__ label_t nx;
         __device__ __constant__ label_t ny;
         __device__ __constant__ label_t nz;

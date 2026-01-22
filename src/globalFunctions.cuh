@@ -252,7 +252,7 @@ namespace LBM
          * @param bx,by,bz Block indices
          * @param nxBlocks Number of blocks in x-direction
          * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index: ty + block::ny() * (tz + block::nz() * (pop + QF * (bx + nxBlocks * (by + nyBlocks * bz))))
+         * @return Linearized index: ty + block::ny()*(tz + block::nz()*(pop + QF*(bx + nxBlocks*(by + nyBlocks*bz)))
          * @note Optimized for coalesced memory access in X-direction
          **/
         template <const label_t pop, const label_t QF>
@@ -266,14 +266,9 @@ namespace LBM
 
         /**
          * @brief Index for Y-aligned population arrays
-         * @tparam pop Population index
-         * @tparam QF Number of populations
+         * @copydetails idxPopX
          * @param tx,tz Thread-local x/z coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index: tx + block::nx() * (tz + block::nz() * (pop + QF * (bx + nxBlocks * (by + nyBlocks * bz))))
-         * @note Optimized for coalesced memory access in Y-direction
+         * @return Linearized index: tx + block::nx()*(tz + block::nz()*(pop + QF*(bx + nxBlocks*(by + nyBlocks*bz)))
          **/
         template <const label_t pop, const label_t QF>
         __host__ [[nodiscard]] inline label_t idxPopY(
@@ -286,14 +281,9 @@ namespace LBM
 
         /**
          * @brief Index for Z-aligned population arrays
-         * @tparam pop Population index
-         * @tparam QF Number of populations
+         * @copydetails idxPopX
          * @param tx,ty Thread-local x/y coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index: tx + block::nx() * (ty + block::ny() * (pop + QF * (bx + nxBlocks * (by + nyBlocks * bz))))
-         * @note Optimized for coalesced memory access in Z-direction
+         * @return Linearized index: tx + block::nx()*(ty + block::ny()*(pop + QF*(bx + nxBlocks*(by + nyBlocks*bz)))
          **/
         template <const label_t pop, const label_t QF>
         __host__ [[nodiscard]] inline label_t idxPopZ(
@@ -567,15 +557,6 @@ namespace LBM
      * @param[in] symbol The symbol to which the value is to be copied
      * @param[in] value The value to copy to the symbol
      **/
-    template <typename T>
-    void copyToSymbol(const T &symbol, const T value, const label_t index)
-    {
-        cudaDeviceSynchronize();
-        const T valueTemp = value;
-        checkCudaErrors(cudaMemcpyToSymbol(symbol, &valueTemp, sizeof(T), static_cast<std::size_t>(index) * sizeof(T), cudaMemcpyHostToDevice));
-        cudaDeviceSynchronize();
-    }
-
     template <typename T>
     void copyToSymbol(const T &symbol, const T value)
     {

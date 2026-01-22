@@ -68,16 +68,16 @@ namespace LBM
         // Need to check that the length of fieldNames is 10
         __host__ [[nodiscard]] boundaryRegion(const std::string &regionName)
             : values_{
-                  boundaryValue<VelocitySet>("rho", regionName),
-                  boundaryValue<VelocitySet>("u", regionName),
-                  boundaryValue<VelocitySet>("v", regionName),
-                  boundaryValue<VelocitySet>("w", regionName),
-                  boundaryValue<VelocitySet>("m_xx", regionName),
-                  boundaryValue<VelocitySet>("m_xy", regionName),
-                  boundaryValue<VelocitySet>("m_xz", regionName),
-                  boundaryValue<VelocitySet>("m_yy", regionName),
-                  boundaryValue<VelocitySet>("m_yz", regionName),
-                  boundaryValue<VelocitySet>("m_zz", regionName)}
+                  boundaryValue("rho", regionName),
+                  boundaryValue("u", regionName),
+                  boundaryValue("v", regionName),
+                  boundaryValue("w", regionName),
+                  boundaryValue("m_xx", regionName),
+                  boundaryValue("m_xy", regionName),
+                  boundaryValue("m_xz", regionName),
+                  boundaryValue("m_yy", regionName),
+                  boundaryValue("m_yz", regionName),
+                  boundaryValue("m_zz", regionName)}
         {
             if constexpr (verbose())
             {
@@ -133,6 +133,7 @@ namespace LBM
 
         /**
          * @brief Print all field values for this boundary region
+         * @note Only active when VERBOSE macro is defined
          **/
         void print() const noexcept
         {

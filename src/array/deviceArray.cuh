@@ -173,10 +173,7 @@ namespace LBM
             __host__ [[nodiscard]] array(const std::string &name, const host::latticeMesh &mesh)
                 : ptr_(nullptr),
                   name_(name),
-                  mesh_(mesh)
-            {
-                initialise_boundary_condition(name_);
-            };
+                  mesh_(mesh){};
 
             /**
              * @brief Destructor - automatically releases device memory

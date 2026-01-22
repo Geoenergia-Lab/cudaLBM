@@ -64,7 +64,7 @@ namespace LBM
 
             /**
              * @brief Auxiliary template function that performs the VTU file writing.
-             **/
+             */
             __host__ void VTSWriter(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
@@ -134,7 +134,7 @@ namespace LBM
              * @brief Writes solution variables to an unstructured grid VTU file (.vtu)
              * This function checks the mesh size and dispatches to the implementation with
              * the appropriate index type (32-bit or 64-bit).
-             **/
+             */
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 const std::string &fileName,

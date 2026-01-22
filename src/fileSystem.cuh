@@ -63,7 +63,7 @@ namespace LBM
          * @tparam T The return type for the converted value
          * @param[in] nBytes Number of bytes to convert
          * @return The equivalent value in mebibytes as type T
-         **/
+         */
         template <typename T>
         __host__ [[nodiscard]] inline constexpr T to_mebibytes(const label_t nBytes) noexcept
         {
@@ -126,7 +126,7 @@ namespace LBM
 
         /**
          * @brief Enumeration for file formats
-         **/
+         */
         typedef enum Enum : int
         {
             ASCII = 0,
@@ -143,7 +143,7 @@ namespace LBM
          * @param[in] nz Number of grid points in z-direction
          * @param[in] nVars Number of field variables
          * @return The estimated disk space required for field data in bytes
-         **/
+         */
         template <const bool hasFields, const fileFormat_t fileFormat>
         __host__ [[nodiscard]] inline constexpr std::size_t fieldsDiskUsage(const label_t nx, const label_t ny, const label_t nz, const label_t nVars) noexcept
         {
@@ -183,7 +183,7 @@ namespace LBM
          * @param[in] ny Number of grid points in y-direction
          * @param[in] nz Number of grid points in z-direction
          * @return The estimated disk space required for element data in bytes
-         **/
+         */
         template <const bool hasElements, const label_t labelsPerElement>
         __host__ [[nodiscard]] inline constexpr std::size_t elementsDiskUsage(const label_t nx, const label_t ny, const label_t nz) noexcept
         {
@@ -209,7 +209,7 @@ namespace LBM
          * @param[in] nz Number of grid points in z-direction
          * @param[in] nVars Number of field variables
          * @return The total estimated disk space required in bytes
-         **/
+         */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets>
         __host__ [[nodiscard]] inline constexpr std::size_t expectedDiskUsage(const label_t nx, const label_t ny, const label_t nz, const label_t nVars) noexcept
         {
@@ -227,7 +227,7 @@ namespace LBM
          * @param[in] mesh The mesh object providing dimensions
          * @param[in] nVars Number of field variables
          * @return The total estimated disk space required in bytes
-         **/
+         */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
         __host__ [[nodiscard]] inline constexpr std::size_t expectedDiskUsage(const Mesh &mesh, const label_t nVars) noexcept
         {
@@ -245,7 +245,7 @@ namespace LBM
          * @param[in] mesh The mesh object providing dimensions
          * @param[in] nVars Number of field variables
          * @return True if sufficient disk space is available, false otherwise
-         **/
+         */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
         __host__ [[nodiscard]] bool diskSpaceCheck(const Mesh &mesh, const label_t nVars)
         {
@@ -268,7 +268,7 @@ namespace LBM
          * @param[in] nVars Number of field variables
          * @param[in] fileName Name of the file being written (for error message)
          * @throws std::runtime_error if insufficient disk space is available
-         **/
+         */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
         __host__ void diskSpaceAssertion(const Mesh &mesh, const label_t nVars, const std::string &fileName)
         {

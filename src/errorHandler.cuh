@@ -152,6 +152,18 @@ namespace LBM
         std::cerr << "    errorCode: " << err << std::endl;
         std::cerr << "    errorMessage: " << errorString << std::endl;
         std::cerr << "};" << std::endl;
+        // std::cerr
+        //     << "Run time error error at "
+        //     << loc.file_name()
+        //     << "("
+        //     << loc.line()
+        //     << "):"
+        //     << loc.function_name()
+        //     << ": ["
+        //     << err
+        //     << "] "
+        //     << errorString
+        //     << std::endl;
         std::exit(err);
     }
 

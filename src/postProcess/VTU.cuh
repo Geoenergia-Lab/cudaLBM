@@ -65,7 +65,7 @@ namespace LBM
             /**
              * @brief Auxiliary template function that performs the VTU file writing.
              * @tparam indexType The data type for the mesh indices (uint32_t or uint64_t).
-             **/
+             */
             template <typename indexType>
             __host__ void VTUWriter(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
@@ -140,7 +140,7 @@ namespace LBM
              * @brief Writes solution variables to an unstructured grid VTU file (.vtu)
              * This function checks the mesh size and dispatches to the implementation with
              * the appropriate index type (32-bit or 64-bit).
-             **/
+             */
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 const std::string &fileName,
