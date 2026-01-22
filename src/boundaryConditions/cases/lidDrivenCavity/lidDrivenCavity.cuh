@@ -50,7 +50,7 @@ SourceFiles
 #ifndef __MBLBM_LIDDRIVENCAVITY_CUH
 #define __MBLBM_LIDDRIVENCAVITY_CUH
 
-__host__ __device__ [[nodiscard]] inline consteval bool check_n_boundaries() noexcept { return false; }
+__device__ __host__ [[nodiscard]] inline consteval bool check_n_boundaries() noexcept { return false; }
 
 namespace LBM
 {

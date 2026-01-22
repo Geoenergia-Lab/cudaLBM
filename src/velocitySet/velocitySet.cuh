@@ -93,7 +93,16 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline consteval velocitySet() noexcept {};
 
         /**
-         * @brief Get the a^2 constant (3.0)
+         * @brief Get the speed of sound (sqrt(3))
+         **/
+        template <typename T>
+        __device__ __host__ [[nodiscard]] static inline consteval T as() noexcept
+        {
+            return static_cast<T>(std::sqrt(3));
+        }
+
+        /**
+         * @brief Get the a^2 constant (a ^ 2)
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T as2() noexcept
@@ -110,54 +119,83 @@ namespace LBM
             return static_cast<T>(static_cast<double>(1) / static_cast<double>(3));
         }
 
-        /**
-         * @brief Get scaling factor for first-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_i() noexcept
+        template <typename T, const axis::direction alpha = axis::NO_DIRECTION, const axis::direction beta = axis::NO_DIRECTION>
+        __device__ __host__ [[nodiscard]] static inline consteval T scale() noexcept
         {
-            return static_cast<T>(3);
+            assertions::validate_direction<alpha, axis::CAN_BE_NULL>();
+
+            if constexpr (beta == axis::NO_DIRECTION)
+            {
+                if constexpr ((alpha == axis::X) || (alpha == axis::Y) || (alpha == axis::Z))
+                {
+                    return static_cast<T>(3);
+                }
+                else
+                {
+                    return static_cast<T>(1);
+                }
+            }
+            else
+            {
+                if constexpr (alpha == beta)
+                {
+                    return static_cast<T>(9);
+                }
+                else
+                {
+                    return static_cast<T>(4.5);
+                }
+            }
         }
 
-        /**
-         * @brief Get scaling factor for diagonal second-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_ii() noexcept
-        {
-            return static_cast<T>(4.5);
-        }
+        // /**
+        //  * @brief Get scaling factor for first-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_i() noexcept
+        // {
+        //     return static_cast<T>(3);
+        // }
 
-        /**
-         * @brief Get scaling factor for off-diagonal second-order moments
-         **/
-        template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval T scale_ij() noexcept
-        {
-            return static_cast<T>(9);
-        }
+        // /**
+        //  * @brief Get scaling factor for diagonal second-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_ii() noexcept
+        // {
+        //     return static_cast<T>(4.5);
+        // }
+
+        // /**
+        //  * @brief Get scaling factor for off-diagonal second-order moments
+        //  **/
+        // template <typename T>
+        // __device__ __host__ [[nodiscard]] static inline consteval T scale_ij() noexcept
+        // {
+        //     return static_cast<T>(9);
+        // }
 
         /**
          * @brief Apply velocity set scaling factors to moment array
          * @param[in,out] moments Array of 10 moment variables to be scaled
          *
          * This method applies the appropriate scaling factors to each moment component:
-         * - First-order moments (velocity components): scaled by scale_i()
-         * - Diagonal second-order moments: scaled by scale_ii()
-         * - Off-diagonal second-order moments: scaled by scale_ij()
+         * - First-order moments (velocity components): scaled by scale()
+         * - Diagonal second-order moments: scaled by scale()
+         * - Off-diagonal second-order moments: scaled by scale()
          **/
         __device__ static inline void scale(thread::array<scalar_t, 10> &moments) noexcept
         {
             // Scale the moments correctly
-            moments[m_i<1>()] = scale_i<scalar_t>() * (moments[m_i<1>()]);
-            moments[m_i<2>()] = scale_i<scalar_t>() * (moments[m_i<2>()]);
-            moments[m_i<3>()] = scale_i<scalar_t>() * (moments[m_i<3>()]);
-            moments[m_i<4>()] = scale_ii<scalar_t>() * (moments[m_i<4>()]);
-            moments[m_i<5>()] = scale_ij<scalar_t>() * (moments[m_i<5>()]);
-            moments[m_i<6>()] = scale_ij<scalar_t>() * (moments[m_i<6>()]);
-            moments[m_i<7>()] = scale_ii<scalar_t>() * (moments[m_i<7>()]);
-            moments[m_i<8>()] = scale_ij<scalar_t>() * (moments[m_i<8>()]);
-            moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
+            moments[m_i<1>()] = scale<scalar_t, axis::X>() * (moments[m_i<1>()]);
+            moments[m_i<2>()] = scale<scalar_t, axis::Y>() * (moments[m_i<2>()]);
+            moments[m_i<3>()] = scale<scalar_t, axis::Z>() * (moments[m_i<3>()]);
+            moments[m_i<4>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<4>()]);
+            moments[m_i<5>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<5>()]);
+            moments[m_i<6>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<6>()]);
+            moments[m_i<7>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<7>()]);
+            moments[m_i<8>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<8>()]);
+            moments[m_i<9>()] = scale<scalar_t, axis::X, axis::X>() * (moments[m_i<9>()]);
         }
 
         /**
@@ -297,22 +335,10 @@ namespace LBM
 
     private:
         /**
-         * @brief Determines if a discrete velocity direction is incoming relative to a boundary normal
-         * @tparam T Return type (typically numeric type)
-         * @tparam BoundaryNormal Type of boundary normal object with directional methods
-         * @tparam q_ Compile-time velocity direction index
-         * @param[in] q Compile-time constant representing velocity direction
-         * @param[in] boundaryNormal Boundary normal information with directional methods
-         * @return T 1 if velocity is incoming (pointing into domain), 0 if outgoing
-         *
-         * @details Checks if velocity components oppose boundary normal direction:
-         * - For East boundary (normal.x > 0): checks negative x-velocity component
-         * - For West boundary (normal.x < 0): checks positive x-velocity component
-         * - For North boundary (normal.y > 0): checks negative y-velocity component
-         * - For South boundary (normal.y < 0): checks positive y-velocity component
-         * - For Front boundary (normal.z > 0): checks negative z-velocity component
-         * - For Back boundary (normal.z < 0): checks positive z-velocity component
-         * Returns 1 only if no incoming component is detected on any axis
+         * @brief Calculate all moments of the distribution function
+         * @tparam VelocitySet The velocity set type
+         * @param[in] pop The distribution function array
+         * @param[out] mom The calculated moments array
          **/
         template <typename T, class VelocitySet, class BoundaryNormal, const label_t q_>
         __device__ __host__ [[nodiscard]] static inline constexpr T is_incoming(const q_i<q_> q, const BoundaryNormal &boundaryNormal) noexcept
@@ -329,7 +355,13 @@ namespace LBM
             // boundaryNormal.z < 0  => BACK boundary
             const bool cond_z = (boundaryNormal.isFront() & is_negative<VelocitySet, axis::Z>(q)) | (boundaryNormal.isBack() & is_positive<VelocitySet, axis::Z>(q));
 
-            return static_cast<T>(!(cond_x | cond_y | cond_z));
+            // Second order moments
+            mom[m_i<4>()] = (calculate_moment<VelocitySet, axis::X, axis::X>(pop) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<5>()] = calculate_moment<VelocitySet, axis::X, axis::Y>(pop) * inv_rho;
+            mom[m_i<6>()] = calculate_moment<VelocitySet, axis::X, axis::Z>(pop) * inv_rho;
+            mom[m_i<7>()] = (calculate_moment<VelocitySet, axis::Y, axis::Y>(pop) * inv_rho) - cs2<scalar_t>();
+            mom[m_i<8>()] = calculate_moment<VelocitySet, axis::Y, axis::Z>(pop) * inv_rho;
+            mom[m_i<9>()] = (calculate_moment<VelocitySet, axis::Z, axis::Z>(pop) * inv_rho) - cs2<scalar_t>();
         }
 
         /**
@@ -355,6 +387,7 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
             const scalar_t pop_value) noexcept
         {
+            assertions::validate<VelocitySet>();
             static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
 
             if constexpr (coeff == 1)

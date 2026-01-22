@@ -130,6 +130,31 @@ namespace LBM
             [[nodiscard]] inline consteval array() = default;
 
             /**
+             * @brief Returns the number of elements in the array
+             * @return Compile-time constant number of elements (N)
+             **/
+            __device__ __host__ [[nodiscard]] static inline consteval label_t size() noexcept
+            {
+                return N;
+            }
+
+            /**
+             * @brief Store array elements back to device memory through pointer collection
+             * @param idx Linear index for device memory access
+             * @param devPtrs Collection of device pointers
+             * @note Compile-time unrolled loop for storing all elements
+             **/
+            __device__ inline void save_to(const device::ptrCollection<N, T> &devPtrs, const label_t idx) const noexcept
+            {
+                // Use pack expansion with index_sequence
+                [&]<const label_t... Is>(std::index_sequence<Is...>)
+                {
+                    // Fold expression using compile-time indexing
+                    ((devPtrs.template ptr<Is>()[idx] = data_[label_constant<Is>{}]), ...);
+                }(std::make_index_sequence<N>{});
+            }
+
+            /**
              * @brief Addition operator
              * @return The sum of two arrays of the same type and size
              **/
@@ -240,37 +265,7 @@ namespace LBM
                 return data_[idx];
             }
 
-            /**
-             * @brief Returns the number of elements in the array
-             * @return Compile-time constant number of elements (N)
-             **/
-            __device__ __host__ [[nodiscard]] static inline consteval label_t size() noexcept
-            {
-                return N;
-            }
-
-            /**
-             * @brief Store array elements back to device memory through pointer collection
-             * @param idx Linear index for device memory access
-             * @param devPtrs Collection of device pointers
-             * @note Compile-time unrolled loop for storing all elements
-             **/
-            __device__ inline void save_to(const device::ptrCollection<N, T> &devPtrs, const label_t idx) const noexcept
-            {
-                // Use pack expansion with index_sequence
-                [&]<const label_t... Is>(std::index_sequence<Is...>)
-                {
-                    // Fold expression using compile-time indexing
-                    ((devPtrs.template ptr<Is>()[idx] = data_[label_constant<Is>{}]), ...);
-                }(std::make_index_sequence<N>{});
-            }
-
         private:
-            /**
-             * @brief The underlying data
-             **/
-            T ptrRestrict data_[N];
-
             /**
              * @brief Compile-time check that accesses are valid
              **/
@@ -279,6 +274,11 @@ namespace LBM
             {
                 static_assert(in_bounds<i, N>, "index is out of range: Must be < N.");
             }
+
+            /**
+             * @brief The underlying data
+             **/
+            T ptrRestrict data_[N];
         };
     }
 

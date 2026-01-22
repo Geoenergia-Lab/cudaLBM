@@ -50,8 +50,6 @@ SourceFiles
 #ifndef __MBLBM_D3Q19_CUH
 #define __MBLBM_D3Q19_CUH
 
-#include "velocitySet.cuh"
-
 namespace LBM
 {
     namespace constants
@@ -146,11 +144,11 @@ namespace LBM
         }
 
         /**
-         * @brief Get all weights for device computation
+         * @brief Get all weights for computation
          * @return Thread array of 19 weights in D3Q19 order
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> w_q() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> w_q() noexcept
         {
             return {w_0<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>()};
         }
@@ -172,7 +170,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get x-components for all directions (device version)
+         * @brief Get x-components for all directions
          * @return Thread array of 19 x-velocity components
          **/
         template <typename T>
@@ -198,7 +196,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get y-components for all directions (device version)
+         * @brief Get y-components for all directions
          * @return Thread array of 19 y-velocity components
          **/
         template <typename T>
@@ -224,7 +222,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get z-components for all directions (device version)
+         * @brief Get z-components for all directions
          * @return Thread array of 19 z-velocity components
          **/
         template <typename T>

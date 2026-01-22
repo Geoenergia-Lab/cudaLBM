@@ -50,8 +50,6 @@ SourceFiles
 #ifndef __MBLBM_D3Q27_CUH
 #define __MBLBM_D3Q27_CUH
 
-#include "velocitySet.cuh"
-
 namespace LBM
 {
     namespace constants
@@ -155,7 +153,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get all weights for device computation
+         * @brief Get all weights for computation
          * @return Thread array of 27 weights in D3Q27 order
          **/
         template <typename T>
@@ -181,7 +179,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get x-components for all directions (device version)
+         * @brief Get x-components for all directions
          * @return Thread array of 27 x-velocity components
          **/
         template <typename T>
@@ -207,7 +205,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get y-components for all directions (device version)
+         * @brief Get y-components for all directions
          * @return Thread array of 27 y-velocity components
          **/
         template <typename T>
@@ -233,7 +231,7 @@ namespace LBM
         }
 
         /**
-         * @brief Get z-components for all directions (device version)
+         * @brief Get z-components for all directions
          * @return Thread array of 27 z-velocity components
          **/
         template <typename T>

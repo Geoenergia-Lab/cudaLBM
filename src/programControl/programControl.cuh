@@ -112,6 +112,7 @@ namespace LBM
             std::cout << deviceList()[deviceList().size() - 1] << "];" << std::endl;
             std::cout << "    caseName: " << caseName_ << ";" << std::endl;
             std::cout << "    Re = " << Re_ << ";" << std::endl;
+            std::cout << "    Ma = " << (u_inf_ / std::sqrt(static_cast<scalar_t>(3))) << ";" << std::endl;
             std::cout << "    nTimeSteps = " << nTimeSteps_ << ";" << std::endl;
             std::cout << "    saveInterval = " << saveInterval_ << ";" << std::endl;
             std::cout << "    infoInterval = " << infoInterval_ << ";" << std::endl;

@@ -221,8 +221,6 @@ namespace LBM
                 {
                     return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nz()) * VelocitySet::QF();
                 }
-
-                return 0;
             }
 
             /**

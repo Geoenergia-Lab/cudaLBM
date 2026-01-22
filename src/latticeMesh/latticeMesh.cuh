@@ -213,6 +213,7 @@ namespace LBM
                     //                     copyToSymbol(device::U_Front, U_Front_temp);
                     // #endif
 
+                    copyToSymbol(device::L_char, programCtrl.L_char());
                     copyToSymbol(device::Re, programCtrl.Re());
                     copyToSymbol(device::tau, tauTemp);
                     copyToSymbol(device::omega, omegaTemp);

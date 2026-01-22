@@ -68,19 +68,24 @@ namespace LBM
                  * @param[in] mAlphaBeta Second order moment component
                  * @return The calculated strain rate tensor component
                  **/
-                template <const label_t Index, typename T>
+                template <const axis::direction alpha, axis::direction beta, typename T>
                 __device__ [[nodiscard]] inline constexpr T S(const T uAlpha, const T uBeta, const T mAlphaBeta) noexcept
                 {
-                    static_assert((Index == index::xx() || Index == index::yy() || Index == index::zz() || Index == index::xy() || Index == index::xz() || Index == index::yz()), "Invalid index");
+                    assertions::validate_direction<alpha, axis::NOT_NULL>();
+                    assertions::validate_direction<beta, axis::NOT_NULL>();
 
-                    if constexpr (Index == index::xx() || Index == index::yy() || Index == index::zz())
-                    {
-                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ii<scalar_t>() * device::tau);
-                    }
-                    else
-                    {
-                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ij<scalar_t>() * device::tau);
-                    }
+                    // static_assert((Index == index::xx() || Index == index::yy() || Index == index::zz() || Index == index::xy() || Index == index::xz() || Index == index::yz()), "Invalid index");
+
+                    return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale<scalar_t, alpha, beta>() * device::tau);
+
+                    // if constexpr (Index == index::xx() || Index == index::yy() || Index == index::zz())
+                    // {
+                    //     return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale<scalar_t, X, X>() * device::tau);
+                    // }
+                    // else
+                    // {
+                    //     return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale<scalar_t, X, Y>() * device::tau);
+                    // }
                 }
 
                 /**
@@ -109,12 +114,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<axis::X, axis::X>(u, u, mxx);
+                    const scalar_t S_xy = S<axis::X, axis::Y>(u, v, mxy);
+                    const scalar_t S_xz = S<axis::X, axis::Z>(u, w, mxz);
+                    const scalar_t S_yy = S<axis::Y, axis::Y>(v, v, myy);
+                    const scalar_t S_yz = S<axis::Y, axis::Z>(v, w, myz);
+                    const scalar_t S_zz = S<axis::Z, axis::Z>(w, w, mzz);
 
                     // Read the mean values from global memory
                     const scalar_t S_xxMean = SMeanPtrs.ptr<0>()[idx];
@@ -167,12 +172,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous and write back to global
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<axis::X, axis::X>(u, u, mxx);
+                    const scalar_t S_xy = S<axis::X, axis::Y>(u, v, mxy);
+                    const scalar_t S_xz = S<axis::X, axis::Z>(u, w, mxz);
+                    const scalar_t S_yy = S<axis::Y, axis::Y>(v, v, myy);
+                    const scalar_t S_yz = S<axis::Y, axis::Z>(v, w, myz);
+                    const scalar_t S_zz = S<axis::Z, axis::Z>(w, w, mzz);
                     SPtrs.ptr<0>()[idx] = S_xx;
                     SPtrs.ptr<1>()[idx] = S_xy;
                     SPtrs.ptr<2>()[idx] = S_xz;
@@ -227,12 +232,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous and write back to global
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<axis::X, axis::X>(u, u, mxx);
+                    const scalar_t S_xy = S<axis::X, axis::Y>(u, v, mxy);
+                    const scalar_t S_xz = S<axis::X, axis::Z>(u, w, mxz);
+                    const scalar_t S_yy = S<axis::Y, axis::Y>(v, v, myy);
+                    const scalar_t S_yz = S<axis::Y, axis::Z>(v, w, myz);
+                    const scalar_t S_zz = S<axis::Z, axis::Z>(w, w, mzz);
                     SPtrs.ptr<0>()[idx] = S_xx;
                     SPtrs.ptr<1>()[idx] = S_xy;
                     SPtrs.ptr<2>()[idx] = S_xz;
