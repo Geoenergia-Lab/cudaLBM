@@ -344,6 +344,36 @@ namespace LBM
                 return static_cast<label_t>(nx_ > 1) + static_cast<label_t>(ny_ > 1) + static_cast<label_t>(nz_ > 1);
             }
 
+            /**
+             * @brief Boundary check for the faces
+             * @param x,y,z The coordinate of the point
+             * @return True if the point is on the boundary, false otherwise
+             **/
+            __host__ [[nodiscard]] inline constexpr bool West(const label_t x) const noexcept
+            {
+                return (x == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool East(const label_t x) const noexcept
+            {
+                return (x == nx_ - 1);
+            }
+            __host__ [[nodiscard]] inline constexpr bool South(const label_t y) const noexcept
+            {
+                return (y == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool North(const label_t y) const noexcept
+            {
+                return (y == ny_ - 1);
+            }
+            __host__ [[nodiscard]] inline constexpr bool Back(const label_t z) const noexcept
+            {
+                return (z == 0);
+            }
+            __host__ [[nodiscard]] inline constexpr bool Front(const label_t z) const noexcept
+            {
+                return (z == nz_ - 1);
+            }
+
         private:
             /**
              * @brief The number of lattices in the x, y and z directions
