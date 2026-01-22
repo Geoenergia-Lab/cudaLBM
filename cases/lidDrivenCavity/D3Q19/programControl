@@ -15,7 +15,7 @@ Re              10000;
 
 u_inf           0.0256;
 
-L_char          127;
+L_char          255;
 
 startFrom       latestTime;
 

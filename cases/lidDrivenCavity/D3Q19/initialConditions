@@ -170,7 +170,7 @@ field m_xx
 
     North
     {
-        value   equilibrium;
+        value   0;
     };
 
     South
