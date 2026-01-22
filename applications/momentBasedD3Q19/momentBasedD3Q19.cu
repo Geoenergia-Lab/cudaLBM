@@ -55,6 +55,8 @@ __host__ [[nodiscard]] inline consteval label_t NStreams() noexcept { return 1; 
 
 int main(const int argc, const char *const argv[])
 {
+    static_assert((std::is_same<BoundaryConditions, lidDrivenCavity>::value) || std::is_same<BoundaryConditions, jetFlow>::value);
+
     const programControl programCtrl(argc, argv);
 
     // Set cuda device
