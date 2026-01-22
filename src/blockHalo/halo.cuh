@@ -511,96 +511,54 @@ namespace LBM
 
                 /* write to global pop **/
                 if (West(x))
-                { // w
-                    gGhost.ptr<0>()[idxPopX<0, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<2>()];
-                    gGhost.ptr<0>()[idxPopX<1, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<8>()];
-                    gGhost.ptr<0>()[idxPopX<2, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<10>()];
-                    gGhost.ptr<0>()[idxPopX<3, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<14>()];
-                    gGhost.ptr<0>()[idxPopX<4, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<16>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<0>()[idxPopX<5, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<20>()];
-                        gGhost.ptr<0>()[idxPopX<6, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<22>()];
-                        gGhost.ptr<0>()[idxPopX<7, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<24>()];
-                        gGhost.ptr<0>()[idxPopX<8, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<25>()];
-                    }
+                {
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<0>()[idxPopX<i, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<streaming_index<axis::X, -1>(i)>()];
+                        });
                 }
-                if (East(x))
-                { // e
-                    gGhost.ptr<1>()[idxPopX<0, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<1>()];
-                    gGhost.ptr<1>()[idxPopX<1, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<7>()];
-                    gGhost.ptr<1>()[idxPopX<2, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<9>()];
-                    gGhost.ptr<1>()[idxPopX<3, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<13>()];
-                    gGhost.ptr<1>()[idxPopX<4, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<15>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<1>()[idxPopX<5, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<19>()];
-                        gGhost.ptr<1>()[idxPopX<6, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<21>()];
-                        gGhost.ptr<1>()[idxPopX<7, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<23>()];
-                        gGhost.ptr<1>()[idxPopX<8, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<26>()];
-                    }
+                else if (East(x))
+                {
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<1>()[idxPopX<i, VelocitySet::QF()>(threadIdx.y, threadIdx.z, blockIdx)] = pop[q_i<streaming_index<axis::X, 1>(i)>()];
+                        });
                 }
 
                 if (South(y))
-                { // s
-                    gGhost.ptr<2>()[idxPopY<0, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<4>()];
-                    gGhost.ptr<2>()[idxPopY<1, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<8>()];
-                    gGhost.ptr<2>()[idxPopY<2, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<12>()];
-                    gGhost.ptr<2>()[idxPopY<3, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<13>()];
-                    gGhost.ptr<2>()[idxPopY<4, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<18>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<2>()[idxPopY<5, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<20>()];
-                        gGhost.ptr<2>()[idxPopY<6, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<22>()];
-                        gGhost.ptr<2>()[idxPopY<7, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<23>()];
-                        gGhost.ptr<2>()[idxPopY<8, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<26>()];
-                    }
+                {
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<2>()[idxPopY<i, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<streaming_index<axis::Y, -1>(i)>()];
+                        });
                 }
-                if (North(y))
-                { // n
-                    gGhost.ptr<3>()[idxPopY<0, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<3>()];
-                    gGhost.ptr<3>()[idxPopY<1, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<7>()];
-                    gGhost.ptr<3>()[idxPopY<2, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<11>()];
-                    gGhost.ptr<3>()[idxPopY<3, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<14>()];
-                    gGhost.ptr<3>()[idxPopY<4, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<17>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<3>()[idxPopY<5, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<19>()];
-                        gGhost.ptr<3>()[idxPopY<6, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<21>()];
-                        gGhost.ptr<3>()[idxPopY<7, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<24>()];
-                        gGhost.ptr<3>()[idxPopY<8, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<25>()];
-                    }
+                else if (North(y))
+                {
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<3>()[idxPopY<i, VelocitySet::QF()>(threadIdx.x, threadIdx.z, blockIdx)] = pop[q_i<streaming_index<axis::Y, 1>(i)>()];
+                        });
                 }
 
                 if (Back(z))
-                { // b
-                    gGhost.ptr<4>()[idxPopZ<0, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<6>()];
-                    gGhost.ptr<4>()[idxPopZ<1, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<10>()];
-                    gGhost.ptr<4>()[idxPopZ<2, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<12>()];
-                    gGhost.ptr<4>()[idxPopZ<3, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<15>()];
-                    gGhost.ptr<4>()[idxPopZ<4, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<17>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<4>()[idxPopZ<5, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<20>()];
-                        gGhost.ptr<4>()[idxPopZ<6, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<21>()];
-                        gGhost.ptr<4>()[idxPopZ<7, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<24>()];
-                        gGhost.ptr<4>()[idxPopZ<8, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<26>()];
-                    }
-                }
-                if (Front(z))
                 {
-                    gGhost.ptr<5>()[idxPopZ<0, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<5>()];
-                    gGhost.ptr<5>()[idxPopZ<1, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<9>()];
-                    gGhost.ptr<5>()[idxPopZ<2, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<11>()];
-                    gGhost.ptr<5>()[idxPopZ<3, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<16>()];
-                    gGhost.ptr<5>()[idxPopZ<4, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<18>()];
-                    if constexpr (VelocitySet::Q() == 27)
-                    {
-                        gGhost.ptr<5>()[idxPopZ<5, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<19>()];
-                        gGhost.ptr<5>()[idxPopZ<6, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<22>()];
-                        gGhost.ptr<5>()[idxPopZ<7, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<23>()];
-                        gGhost.ptr<5>()[idxPopZ<8, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<25>()];
-                    }
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<4>()[idxPopZ<i, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<streaming_index<axis::Z, -1>(i)>()];
+                        });
+                }
+                else if (Front(z))
+                {
+                    device::constexpr_for<0, VelocitySet::QF()>(
+                        [&](const auto i)
+                        {
+                            gGhost.ptr<5>()[idxPopZ<i, VelocitySet::QF()>(threadIdx.x, threadIdx.y, blockIdx)] = pop[q_i<streaming_index<axis::Z, 1>(i)>()];
+                        });
                 }
             }
 
@@ -610,6 +568,20 @@ namespace LBM
              **/
             haloFace<VelocitySet> fGhost_;
             haloFace<VelocitySet> gGhost_;
+
+            /**
+             * @brief Returns the streaming index for a given axis and velocity
+             * @tparam alpha The axis direction (X, Y or Z)
+             * @tparam v The velocity component (-1 or 1)
+             * @param[i] i The index of the velocity
+             **/
+            template <const axis::type alpha, const int v>
+            __device__ [[nodiscard]] static inline consteval label_t streaming_index(const label_t i) noexcept
+            {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, v>();
+                return indices[i];
+            }
 
             /**
              * @brief Check if current thread is at western block boundary
