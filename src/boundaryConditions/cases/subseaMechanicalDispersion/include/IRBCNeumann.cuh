@@ -72,7 +72,7 @@ case normalVector::WEST_NORTH_FRONT():
 }
 case normalVector::EAST_NORTH_FRONT():
 {
-    const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y - 1, threadIdx.z);
+    const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y - 1, threadIdx.z - 1);
 
     // Classic Neumann
     moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];   // p
