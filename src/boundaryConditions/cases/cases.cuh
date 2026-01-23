@@ -62,7 +62,7 @@ SourceFiles
 #define SUBSEAMECHANICALDISPERSION
 
 #include "multiphaseJet/multiphaseJet.cuh"
-#include "SSMD/SSMD.cuh"
+#include "subseaMechanicalDispersion/subseaMechanicalDispersion.cuh"
 
 namespace LBM
 {
@@ -93,7 +93,7 @@ namespace LBM
 #endif
 
 #ifdef SUBSEAMECHANICALDISPERSION
-        using BoundaryConditions = SSMD;
+        using BoundaryConditions = subseaMechanicalDispersion;
         __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
         __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif

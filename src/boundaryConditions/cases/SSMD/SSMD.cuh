@@ -47,13 +47,13 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_SSMD_CUH
-#define __MBLBM_SSMD_CUH
+#ifndef __MBLBM_subseaMechanicalDispersion_CUH
+#define __MBLBM_subseaMechanicalDispersion_CUH
 
 namespace LBM
 {
     /**
-     * @class SSMD
+     * @class subseaMechanicalDispersion
      * @brief Applies boundary conditions for subsea mechanical dispersion simulations using moment representation
      *
      * This class implements the boundary condition treatment for the D3Q19 lattice
@@ -61,13 +61,13 @@ namespace LBM
      * outflow boundaries using moment-based boundary conditions derived from the
      * regularized LBM approach.
      **/
-    class SSMD
+    class subseaMechanicalDispersion
     {
     public:
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval SSMD(){};
+        __device__ __host__ [[nodiscard]] inline consteval subseaMechanicalDispersion(){};
 
         /**
          * @brief Calculate moment variables at boundary nodes

@@ -9,7 +9,7 @@
 
 /*---------------------------------------------------------------------------*\
 
-caseName        SSMD;
+caseName        subseaMechanicalDispersion;
 
 Re              3000;
 
