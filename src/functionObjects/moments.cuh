@@ -227,7 +227,7 @@ namespace LBM
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,
-                        host::toHost(
+                        host::to_host(
                             device::ptrCollection<10, scalar_t>(
                                 rhoMean_.ptr(),
                                 uMean_.ptr(),

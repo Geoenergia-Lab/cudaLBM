@@ -142,7 +142,7 @@ namespace LBM
                 const std::string &name,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
-                : ptr_(toDevice(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
+                : ptr_(to_device(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
                   name_(name),
                   mesh_(mesh)
             {
@@ -267,7 +267,7 @@ namespace LBM
              * @param[in] hostArray The host::array to be copied to the device
              * @return A pointer to the copied data
              **/
-            __host__ [[nodiscard]] T *toDevice(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
+            __host__ [[nodiscard]] T *to_device(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
             {
                 return device::allocateArray<T>(hostArray.arr());
             }
