@@ -17,17 +17,17 @@ We              500;
 
 u_inf           0.016;
 
-L_char          8;
+L_char          13;
 
 startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      100001;
+nTimeSteps      200001;
 
-saveInterval    1000;
+saveInterval    2000;
 
-infoInterval    1000;
+infoInterval    2000;
 
 multiphase      true;
 
