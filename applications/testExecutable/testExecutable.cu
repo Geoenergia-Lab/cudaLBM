@@ -55,20 +55,53 @@ using namespace LBM;
 
 using VelocitySet = D3Q19;
 
-int main()
-{
-    const host::array<true, label_t, VelocitySet, time::instantaneous> test(8, 99);
+constexpr const label_t nxGPUs = 1;
+constexpr const label_t nyGPUs = 1;
+constexpr const label_t nzGPUs = 2;
 
-    for (label_t i = 0; i < test.nPoints(); i++)
+int main(const int argc, const char *const argv[])
+{
+    static_assert((std::is_same<BoundaryConditions, lidDrivenCavity>::value) || std::is_same<BoundaryConditions, jetFlow>::value);
+
+    const programControl programCtrl(argc, argv);
+
+    // Set cuda device
+    checkCudaErrors(cudaDeviceSynchronize());
+    checkCudaErrors(cudaSetDevice(programCtrl.deviceList()[0]));
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    const host::latticeMesh mesh(programCtrl);
+
+    VelocitySet::print();
+
+    // Number of mesh points per GPU
+    const label_t nx = mesh.nx() / nxGPUs;
+    const label_t ny = mesh.ny() / nyGPUs;
+    const label_t nz = mesh.nz() / nzGPUs;
+
+    // Loop over the GPUs and print the offsets
+    for (label_t z = 0; z < nzGPUs; z++)
     {
-        std::cout << test[i] << std::endl;
+        for (label_t y = 0; y < nyGPUs; y++)
+        {
+            for (label_t x = 0; x < nxGPUs; x++)
+            {
+                const label_t deviceID = x + y * nxGPUs + z * nxGPUs * nyGPUs;
+                const label_t bx = (x * nx) / block::nx();
+                const label_t by = (y * ny) / block::ny();
+                const label_t bz = (z * nz) / block::nz();
+                const device::latticeMesh devMesh(deviceID, nx, ny, nz, bx, by, bz);
+                devMesh.print();
+                std::cout << std::endl;
+            }
+        }
     }
 
-    // scalar_t *const test_ptr = allocateHost<scalar_t>(1024);
+    // label_t *ptr_0;
 
-    // cudaFreeHost(test_ptr);
-
-    // std::cout << "This executable is used for testing purposes only" << std::endl;
+    // checkCudaErrors(cudaMalloc(&ptr_0, nx * ny * nz * sizeof(label_t)));
+    // std::cout << "Allocated " << nx * ny * nz << " elements" << std::endl;
+    // checkCudaErrors(cudaFree(ptr_0));
 
     return 0;
 }
