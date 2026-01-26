@@ -1,0 +1,24 @@
+/*---------------------------------------------------------------------------*\
+|                                                                             |
+| cudaLBM: CUDA-based moment representation Lattice Boltzmann Method          |
+| Developed at UDESC - State University of Santa Catarina                     |
+| Website: https://www.udesc.br                                               |
+| Github: https://github.com/geoenergiaUDESC/cudaLBM                          |
+|                                                                             |
+\*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*\
+
+nx              8;
+
+ny              8;
+
+nz              32;
+
+Lx              16;
+
+Ly              16;
+
+Lz              64;
+
+\*---------------------------------------------------------------------------*/
