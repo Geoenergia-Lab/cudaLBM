@@ -157,7 +157,7 @@ namespace LBM
             out << std::endl;
 
             // Write binary data with safe size conversion
-            const std::size_t byteSize = nPoints * sizeof(T);
+            const std::size_t byteSize = expectedSize * sizeof(T);
 
             if (byteSize > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
             {
