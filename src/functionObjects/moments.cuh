@@ -117,10 +117,12 @@ namespace LBM
                  * @param[in] streamsLBM Stream handler for CUDA operations
                  **/
                 __host__ [[nodiscard]] collection(
+                    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
                     const device::ptrCollection<10, scalar_t> &devPtrs,
                     const streamHandler<N> &streamsLBM) noexcept
-                    : mesh_(mesh),
+                    : hostWriteBuffer_(hostWriteBuffer),
+                      mesh_(mesh),
                       devPtrs_(devPtrs),
                       streamsLBM_(streamsLBM),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
@@ -223,23 +225,25 @@ namespace LBM
                  **/
                 __host__ void saveMean(const label_t timeStep) noexcept
                 {
+                    hostWriteBuffer_.copy_from_device(
+                        device::ptrCollection<10, scalar_t>(
+                            rhoMean_.ptr(),
+                            uMean_.ptr(),
+                            vMean_.ptr(),
+                            wMean_.ptr(),
+                            mxxMean_.ptr(),
+                            mxyMean_.ptr(),
+                            mxzMean_.ptr(),
+                            myyMean_.ptr(),
+                            myzMean_.ptr(),
+                            mzzMean_.ptr()),
+                        mesh_);
+
                     fileIO::writeFile<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,
-                        host::toHost(
-                            device::ptrCollection<10, scalar_t>(
-                                rhoMean_.ptr(),
-                                uMean_.ptr(),
-                                vMean_.ptr(),
-                                wMean_.ptr(),
-                                mxxMean_.ptr(),
-                                mxyMean_.ptr(),
-                                mxzMean_.ptr(),
-                                myyMean_.ptr(),
-                                myzMean_.ptr(),
-                                mzzMean_.ptr()),
-                            mesh_),
+                        hostWriteBuffer_.data(),
                         timeStep);
                 }
 
@@ -280,6 +284,8 @@ namespace LBM
                 }
 
             private:
+                host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer_;
+
                 /**
                  * @brief Field name for instantaneous scalar
                  **/
@@ -328,16 +334,16 @@ namespace LBM
                 /**
                  * @brief Time-averaged moments
                  **/
-                device::array<scalar_t, VelocitySet, time::timeAverage> rhoMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> uMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> vMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> wMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxxMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mxzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> myyMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> myzMean_;
-                device::array<scalar_t, VelocitySet, time::timeAverage> mzzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> rhoMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> uMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> vMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> wMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxxMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mxzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> myyMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> myzMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> mzzMean_;
             };
         }
     }

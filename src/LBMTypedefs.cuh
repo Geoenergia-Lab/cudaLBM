@@ -60,12 +60,24 @@ namespace LBM
      **/
 #define ptrRestrict __restrict__
 
-    /** *
+    /**
      * @brief Verbose logging
-     */
+     **/
     __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
     {
 #ifdef VERBOSE
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    /**
+     * @brief Runtime bounds checking for GPU kernels
+     **/
+    __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
+    {
+#ifdef OOB_CHECK
         return true;
 #else
         return false;
@@ -128,6 +140,11 @@ namespace LBM
         const label_t nx; // < Lattice points in x-direction
         const label_t ny; // < Lattice points in y-direction
         const label_t nz; // < Lattice points in z-direction
+
+        void print(const std::string &name) const noexcept
+        {
+            std::cout << "    " << name << " = [" << nx << ", " << ny << ", " << nz << "];" << std::endl;
+        }
     };
 
     /**
@@ -214,9 +231,10 @@ namespace LBM
             READ_IF_PRESENT = 2
         } type;
     }
-    // template <const ctorType::type T>
-    // using constructorType = const std::integral_constant<ctorType::type, T>;
 
+    /**
+     * @brief Time stepping types: instantaneous or time-averaged
+     */
     namespace time
     {
         typedef enum Enum : int
@@ -225,16 +243,80 @@ namespace LBM
             timeAverage = 1
         } type;
     }
-    // template <const time::::type T>
-    // using timeType = const std::integral_constant<time::::type, T>;
 
-    typedef enum axisDirectionEnum : label_t
+    namespace axis
     {
-        X = 0,
-        Y = 1,
-        Z = 2,
-        NO_DIRECTION = static_cast<label_t>(-1)
-    } axisDirection;
+        /**
+         * @brief Cardinal axis directions: X, Y, Z or NO_DIRECTION
+         */
+        typedef enum Enum : label_t
+        {
+            X = 0,
+            Y = 1,
+            Z = 2,
+            NO_DIRECTION = static_cast<label_t>(-1)
+        } type;
+
+        /**
+         * @brief Enumerated type for axes: The axis either can or cannot be null
+         */
+        typedef enum nullEnum : bool
+        {
+            NOT_NULL = false,
+            CAN_BE_NULL = true
+        } null;
+    }
+
+    namespace field
+    {
+        /**
+         * @brief Type of field to be allocated
+         * @note The skeleton type contains only a pointer;
+         * FULL_FIELD contains a pointer, name and a reference to the mesh
+         */
+        typedef enum Enum : bool
+        {
+            SKELETON = 0,
+            FULL_FIELD = 1
+        } type;
+    }
+
+    namespace host
+    {
+        /**
+         * @brief Type of memory allocation on the host:
+         * The memory is either pageable or pinned
+         */
+        typedef enum Enum : bool
+        {
+            PAGED = 0,
+            PINNED = 1
+        } mallocType;
+    }
+
+    namespace assertions
+    {
+        namespace axis
+        {
+            /**
+             * @brief Asserts that the direction alpha is a valid axis direction
+             * @tparam alpha The axis direction
+             * @tparam potentialNull Switch that determines whether alpha is allowed to be NO_DIRECTION or not
+             **/
+            template <const LBM::axis::type alpha, const LBM::axis::null null>
+            __device__ __host__ inline consteval void validate() noexcept
+            {
+                if constexpr (null == LBM::axis::CAN_BE_NULL)
+                {
+                    static_assert(((alpha == LBM::axis::X) || (alpha == LBM::axis::Y) || (alpha == LBM::axis::Z) || (alpha == LBM::axis::NO_DIRECTION)), "Axis direction must be X, Y or Z");
+                }
+                else
+                {
+                    static_assert(((alpha == LBM::axis::X) || (alpha == LBM::axis::Y) || (alpha == LBM::axis::Z)), "Axis direction must be X, Y, Z or NO_DIRECTION");
+                }
+            }
+        }
+    }
 
     struct dim2
     {
@@ -253,15 +335,14 @@ namespace LBM
         __device__ __constant__ label_t nz;
         __device__ __constant__ scalar_t Re;
         __device__ __constant__ scalar_t tau;
-        __device__ __constant__ scalar_t u_inf;
-        __device__ __constant__ scalar_t u_inf_sq;
+        __device__ __constant__ scalar_t L_char;
 
         __device__ __constant__ scalar_t U_North[3];
         __device__ __constant__ scalar_t U_South[3];
         __device__ __constant__ scalar_t U_East[3];
         __device__ __constant__ scalar_t U_West[3];
-        __device__ __constant__ scalar_t U_Front[3];
         __device__ __constant__ scalar_t U_Back[3];
+        __device__ __constant__ scalar_t U_Front[3];
 
         __device__ __constant__ scalar_t omega;
         __device__ __constant__ scalar_t t_omegaVar;
@@ -305,16 +386,15 @@ namespace LBM
                 return ptrs_[i];
             }
 
-            __host__ [[nodiscard]] constexpr std::array<T *, N> to_array() const noexcept
+            /**
+             * @brief Element access operator
+             * @param[in] i Index of element to access
+             * @return Value at index @p i
+             * @warning No bounds checking performed
+             **/
+            __device__ __host__ [[nodiscard]] inline const T *operator[](const label_t i) const noexcept
             {
-                std::array<T *, N> arr;
-
-                for (label_t i = 0; i < N; i++)
-                {
-                    arr[i] = ptrs_[i];
-                }
-
-                return arr;
+                return ptrs_[i];
             }
 
         private:

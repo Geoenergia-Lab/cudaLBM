@@ -76,13 +76,15 @@ namespace LBM
          * @param[in] streamsLBM Stream handler for LBM operations
          **/
         [[nodiscard]] objectRegistry(
+            host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
             const host::latticeMesh &mesh,
             const device::ptrCollection<10, scalar_t> &devPtrs,
             const streamHandler<N> &streamsLBM)
-            : mesh_(mesh),
-              M_(mesh, devPtrs, streamsLBM),
-              S_(mesh, devPtrs, streamsLBM),
-              k_(mesh, devPtrs, streamsLBM),
+            : hostWriteBuffer_(hostWriteBuffer),
+              mesh_(mesh),
+              M_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
+              S_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
+              k_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
               functionVector_(functionObjectCallInitialiser(M_, S_, k_)),
               saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {};
 
@@ -117,6 +119,8 @@ namespace LBM
         }
 
     private:
+        host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer_;
+
         /**
          * @brief Reference to lattice mesh
          **/

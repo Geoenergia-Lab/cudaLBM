@@ -788,35 +788,23 @@ namespace LBM
 
             std::vector<std::vector<T>> soa(nFields, std::vector<scalar_t>(nNodes, 0));
 
-            for (label_t bz = 0; bz < mesh.nzBlocks(); bz++)
-            {
-                for (label_t by = 0; by < mesh.nyBlocks(); by++)
+            grid_for(
+                mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
+                [&](const label_t bx, const label_t by, const label_t bz,
+                    const label_t tx, const label_t ty, const label_t tz)
                 {
-                    for (label_t bx = 0; bx < mesh.nxBlocks(); bx++)
+                    const label_t x = (bx * block::nx()) + tx;
+                    const label_t y = (by * block::ny()) + ty;
+                    const label_t z = (bz * block::nz()) + tz;
+
+                    const label_t idxGlobal = host::idxScalarGlobal(x, y, z, mesh.nx(), mesh.ny());
+                    const label_t idx = host::idx(tx, ty, tz, bx, by, bz, mesh);
+
+                    for (label_t field = 0; field < nFields; field++)
                     {
-                        for (label_t tz = 0; tz < block::nz(); tz++)
-                        {
-                            for (label_t ty = 0; ty < block::ny(); ty++)
-                            {
-                                for (label_t tx = 0; tx < block::nx(); tx++)
-                                {
-                                    const label_t x = (bx * block::nx()) + tx;
-                                    const label_t y = (by * block::ny()) + ty;
-                                    const label_t z = (bz * block::nz()) + tz;
-
-                                    const label_t idxGlobal = host::idxScalarGlobal(x, y, z, mesh.nx(), mesh.ny());
-                                    const label_t idx = host::idx(tx, ty, tz, bx, by, bz, mesh);
-
-                                    for (label_t field = 0; field < nFields; field++)
-                                    {
-                                        soa[field][idxGlobal] = fMom[idx + (field * mesh.nPoints())];
-                                    }
-                                }
-                            }
-                        }
+                        soa[field][idxGlobal] = fMom[idx + (field * mesh.nPoints())];
                     }
-                }
-            }
+                });
 
             return soa;
         }

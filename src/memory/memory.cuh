@@ -58,17 +58,25 @@ namespace LBM
 {
     namespace host
     {
+        /**
+         * @brief Allocates pinned memory on the host
+         * @tparam T The type of memory to be allocated
+         * @param[in] ptr The pointer to be allocated on the host
+         * @param[in] nPoints The number of points of type T to be allocated
+         **/
         template <typename T>
-        __host__ void allocateMemory(T **ptr, const std::size_t nPoints)
+        __host__ void allocateMemory(T **ptr, const std::size_t nPoints) noexcept
         {
-            const cudaError_t err = cudaMallocHost(ptr, sizeof(T) * nPoints);
-
-            if (err != cudaSuccess)
-            {
-                throw std::runtime_error("cudaMallocHost failed: " + std::string(cudaGetErrorString(err)));
-            }
+            checkCudaErrors(cudaMallocHost(ptr, sizeof(T) * nPoints));
         }
 
+        /**
+         * @brief Allocates pinned memory on the host, initialises it to val and returns a pointer
+         * @tparam T The type of memory to be allocated
+         * @param[in] nPoints The number of points of type T to be allocated
+         * @param[in] val The value to initialise all elements of the block of memory
+         * @return A pointer to a block of pinned memory on the host, all initialised to val
+         **/
         template <typename T>
         __host__ [[nodiscard]] T *allocate(const std::size_t nPoints, const T val) noexcept
         {
@@ -83,35 +91,27 @@ namespace LBM
 
             std::uninitialized_fill_n(ptr, nPoints, val);
 
-            // if constexpr (sizeof(T) == 1)
-            // {
-            //     // Byte-sized types
-            //     memset(ptr_, *reinterpret_cast<const unsigned char *>(&value), size_);
-            // }
-            // else if (value == T{})
-            // {
-            //     // Zero initialization
-            //     memset(ptr_, 0, size_ * sizeof(T));
-            // }
-            // else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>)
-            // {
-            //     // Check if it's -1 (all bits 1 in two's complement)
-            //     if (value == T(-1))
-            //     {
-            //         memset(ptr_, 0xFF, size_ * sizeof(T));
-            //     }
-            //     else
-            //     {
-            //         std::uninitialized_fill_n(ptr_, size_, value);
-            //     }
-            // }
-            // else
-            // {
-            //     // General case for trivial types
-            //     std::uninitialized_fill_n(ptr_, size_, value);
-            // }
-
             return ptr;
+        }
+
+        /**
+         * @brief Copies from a pointer on the device to a pointer on the GPU
+         * @tparam T The type of memory to be copied
+         * @param[in] devPtr The pointer on the device to be copied from
+         * @param[in] hostPtr The pointer on the host to be copied to
+         * @param[in] fieldIndex The index of the field in the host buffer to copy to
+         * @param[in] nPoints The number of points to be copied to the host
+         * @throws std::runtime_error if CUDA memory copy fails or if the pointer is null
+         **/
+        template <typename T>
+        __host__ void to_host(const T *const ptrRestrict devPtr, T *const ptrRestrict hostPtr, const label_t fieldIndex, const std::size_t nPoints) noexcept
+        {
+            checkCudaErrors(cudaMemcpy(hostPtr + (fieldIndex * nPoints), devPtr, nPoints * sizeof(T), cudaMemcpyDeviceToHost));
+
+            if constexpr (verbose())
+            {
+                std::cout << "Copied " << sizeof(T) * nPoints << " bytes of memory from device address " << devPtr << " to host address " << hostPtr << std::endl;
+            }
         }
 
         /**
@@ -123,75 +123,13 @@ namespace LBM
          * @throws std::runtime_error if CUDA memory copy fails
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> toHost(const T *const ptrRestrict devPtr, const std::size_t nPoints)
+        __host__ [[nodiscard]] const std::vector<T> to_host(const T *const ptrRestrict devPtr, const std::size_t nPoints) noexcept
         {
             std::vector<T> hostFields(nPoints, 0);
 
-            if (devPtr == nullptr)
-            {
-                std::cout << "Null pointer!" << std::endl;
-            }
-
-            const cudaError_t err = cudaMemcpy(hostFields.data(), devPtr, nPoints * sizeof(T), cudaMemcpyDeviceToHost);
-
-            if (err != cudaSuccess)
-            {
-                throw std::runtime_error("cudaMemcpyDeviceToHost failed: " + std::string(cudaGetErrorString(err)));
-            }
+            to_host(devPtr, hostFields, 0, nPoints);
 
             return hostFields;
-        }
-
-        /**
-         * @brief Copies multiple device arrays to host and interleaves them
-         * @tparam M Mesh type
-         * @tparam T Data type of the elements
-         * @tparam nVars Number of variables (arrays) to copy
-         * @param[in] devPtrs Collection of device pointers to copy from
-         * @param[in] mesh Mesh object providing dimension information
-         * @return std::vector<T> containing interleaved data from all arrays
-         *
-         * This function copies multiple device arrays to host memory and
-         * interleaves them in AoSoA (Array of Structures of Array) format
-         **/
-        template <class M, typename T, const label_t nVars>
-        __host__ [[nodiscard]] const std::vector<T> toHost(
-            const device::ptrCollection<nVars, T> &devPtrs,
-            const M &mesh)
-        {
-            // Allocate size and all to 0
-            std::vector<T> arr(mesh.nPoints() * nVars, 0);
-
-            // Create a run-time indexable array of pointers
-            const std::array<T *, nVars> ptrs = devPtrs.to_array();
-
-            // Now do the copy
-            for (std::size_t var = 0; var < nVars; var++)
-            {
-                const std::vector<T> f_temp = host::toHost(ptrs[var], mesh.nPoints());
-
-                for (label_t bz = 0; bz < mesh.nzBlocks(); bz++)
-                {
-                    for (label_t by = 0; by < mesh.nyBlocks(); by++)
-                    {
-                        for (label_t bx = 0; bx < mesh.nxBlocks(); bx++)
-                        {
-                            for (label_t tz = 0; tz < block::nz(); tz++)
-                            {
-                                for (label_t ty = 0; ty < block::ny(); ty++)
-                                {
-                                    for (label_t tx = 0; tx < block::nx(); tx++)
-                                    {
-                                        arr[host::idx(tx, ty, tz, bx, by, bz, mesh) + (var * mesh.nPoints())] = f_temp[host::idx(tx, ty, tz, bx, by, bz, mesh)];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return arr;
         }
     }
 
@@ -205,14 +143,9 @@ namespace LBM
          * @throws std::runtime_error if CUDA allocation fails
          **/
         template <typename T>
-        __host__ void allocateMemory(T **ptr, const std::size_t nPoints)
+        __host__ void allocateMemory(T **ptr, const std::size_t nPoints) noexcept
         {
-            const cudaError_t err = cudaMalloc(ptr, sizeof(T) * nPoints);
-
-            if (err != cudaSuccess)
-            {
-                throw std::runtime_error("cudaMalloc failed: " + std::string(cudaGetErrorString(err)));
-            }
+            checkCudaErrors(cudaMalloc(ptr, sizeof(T) * nPoints));
         }
 
         /**
@@ -239,6 +172,18 @@ namespace LBM
         }
 
         /**
+         * @overload Allocates memory on a specific device
+         * @param[in] nPoints Number of elements to allocate
+         * @param[in] deviceID The device on which to allocate the memory
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] T *allocate(const std::size_t nPoints, const deviceIndex_t deviceID) noexcept
+        {
+            checkCudaErrors(cudaSetDevice(deviceID));
+            return allocate<T>(nPoints);
+        }
+
+        /**
          * @brief Copies data from host to device memory
          * @tparam T Data type of the elements
          * @param[out] ptr Destination device pointer
@@ -247,21 +192,27 @@ namespace LBM
          * @note Verbose mode prints copy details
          **/
         template <typename T>
-        __host__ void copy(T *const ptr, const std::vector<T> &f)
+        __host__ void copy(T *const ptr, const std::vector<T> &f) noexcept
         {
-            const cudaError_t err = cudaMemcpy(ptr, f.data(), f.size() * sizeof(T), cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMemcpy(ptr, f.data(), f.size() * sizeof(T), cudaMemcpyHostToDevice));
 
-            if (err != cudaSuccess)
+            if constexpr (verbose())
             {
-                throw std::runtime_error("cudaMemcpyHostToDevice failed: " + std::string(cudaGetErrorString(err)));
+                std::cout << "Copied " << sizeof(T) * f.size() << " bytes of memory in cudaMemcpy to address " << ptr << std::endl;
             }
-            else
-            {
-                if constexpr (verbose())
-                {
-                    std::cout << "Copied " << sizeof(T) * f.size() << " bytes of memory in cudaMemcpy to address " << ptr << std::endl;
-                }
-            }
+        }
+
+        /**
+         * @overload Copies to a specific device
+         * @param[out] ptr Destination device pointer
+         * @param[in] f Source host vector
+         * @param[in] deviceID The device on which to allocate the memory
+         **/
+        template <typename T>
+        __host__ void copy(T *const ptr, const std::vector<T> &f, const deviceIndex_t deviceID) noexcept
+        {
+            checkCudaErrors(cudaSetDevice(deviceID));
+            copy(ptr, f);
         }
 
         /**
@@ -282,6 +233,18 @@ namespace LBM
         }
 
         /**
+         * @overload Allocates and copies to memory on a specific device
+         * @param[in] f Host vector to copy to device
+         * @param[in] deviceID The device on which to allocate the memory
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] T *allocateArray(const std::vector<T> &f, const deviceIndex_t deviceID) noexcept
+        {
+            checkCudaErrors(cudaSetDevice(deviceID));
+            return allocateArray(f);
+        }
+
+        /**
          * @brief Allocates device memory and initializes it with a value
          * @tparam T Data type of the elements
          * @param[in] nPoints Number of elements to allocate
@@ -297,6 +260,19 @@ namespace LBM
             copy(ptr, std::vector<T>(nPoints, val));
 
             return ptr;
+        }
+
+        /**
+         * @brief Allocates device memory and initializes it with a value on a specific device
+         * @param[in] nPoints Number of elements to allocate
+         * @param[in] val Value to initialize all elements with
+         * @param[in] deviceID The device on which to allocate the memory
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] T *allocateArray(const label_t nPoints, const T val, const deviceIndex_t deviceID) noexcept
+        {
+            checkCudaErrors(cudaSetDevice(deviceID));
+            return allocateArray(nPoints, val);
         }
     }
 }

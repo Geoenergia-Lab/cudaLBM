@@ -59,7 +59,7 @@ namespace LBM
      * @tparam VelocitySet Velocity set configuration defining lattice structure
      *
      * This struct provides access to a specific field's value across all
-     * boundary regions (North, South, East, West, Front, Back) and the internal field.
+     * boundary regions (North, South, East, West, Back, Front) and the internal field.
      **/
     template <class VelocitySet>
     class boundaryFields
@@ -75,8 +75,8 @@ namespace LBM
                   boundaryValue<VelocitySet>(fieldName, "South"),
                   boundaryValue<VelocitySet>(fieldName, "East"),
                   boundaryValue<VelocitySet>(fieldName, "West"),
-                  boundaryValue<VelocitySet>(fieldName, "Front"),
                   boundaryValue<VelocitySet>(fieldName, "Back"),
+                  boundaryValue<VelocitySet>(fieldName, "Front"),
                   boundaryValue<VelocitySet>(fieldName, "internalField")},
               fieldName_(fieldName){};
 
@@ -101,11 +101,11 @@ namespace LBM
         {
             return values_[3]();
         }
-        __host__ [[nodiscard]] inline constexpr scalar_t Front() const noexcept
+        __host__ [[nodiscard]] inline constexpr scalar_t Back() const noexcept
         {
             return values_[4]();
         }
-        __host__ [[nodiscard]] inline constexpr scalar_t Back() const noexcept
+        __host__ [[nodiscard]] inline constexpr scalar_t Front() const noexcept
         {
             return values_[5]();
         }
@@ -121,7 +121,7 @@ namespace LBM
         {
             std::cout << fieldName_ << " boundary values:" << std::endl;
 
-            const std::vector<std::string> fieldNames({"North", "South", "East", "West", "Front", "Back", "Internal"});
+            const std::vector<std::string> fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
             for (std::size_t var = 0; var < fieldNames.size(); var++)
             {
                 std::cout << fieldNames[var] << ": " << values_[var]() << std::endl;

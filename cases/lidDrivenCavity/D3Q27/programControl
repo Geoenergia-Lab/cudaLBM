@@ -1,0 +1,30 @@
+/*---------------------------------------------------------------------------*\
+|                                                                             |
+| cudaLBM: CUDA-based moment representation Lattice Boltzmann Method          |
+| Developed at UDESC - State University of Santa Catarina                     |
+| Website: https://www.udesc.br                                               |
+| Github: https://github.com/geoenergiaUDESC/cudaLBM                          |
+|                                                                             |
+\*---------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------*\
+
+caseName        lidDrivenCavity;
+
+Re              10000;
+
+u_inf           0.0256;
+
+L_char          255;
+
+startFrom       latestTime;
+
+startTime       0;
+
+nTimeSteps      20001;
+
+saveInterval    20000;
+
+infoInterval    2000;
+
+\*---------------------------------------------------------------------------*/

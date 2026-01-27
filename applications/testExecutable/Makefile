@@ -6,7 +6,7 @@ SOURCE = testExecutable.cu
 default: clean $(EXECUTABLE)
 
 $(EXECUTABLE):
-	$(NVCXX) $(NVCXX_FLAGS) $(SOURCE) -o $@
+	$(NVCXX) $(NVCXX_FLAGS) -DVERBOSE $(SOURCE) -o $@
 
 install: clean uninstall $(EXECUTABLE)
 	@ mkdir -p $(CUDALBM_BIN_DIR)

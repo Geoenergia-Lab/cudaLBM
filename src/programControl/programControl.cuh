@@ -71,6 +71,7 @@ namespace LBM
               caseName_(string::extractParameter<std::string>(string::readFile("programControl"), "caseName")),
               Re_(initialiseConst<scalar_t>("Re")),
               u_inf_(initialiseConst<scalar_t>("u_inf")),
+              L_char_(initialiseConst<scalar_t>("L_char")),
               nTimeSteps_(string::extractParameter<label_t>(string::readFile("programControl"), "nTimeSteps")),
               saveInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "saveInterval")),
               infoInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "infoInterval")),
@@ -162,6 +163,15 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline constexpr scalar_t u_inf() const noexcept
         {
             return u_inf_;
+        }
+
+        /**
+         * @brief Returns the characteristic velocity
+         * @return The characteristic velocity
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr scalar_t L_char() const noexcept
+        {
+            return L_char_;
         }
 
         /**
@@ -266,6 +276,11 @@ namespace LBM
          * @brief The characteristic velocity
          **/
         const scalar_t u_inf_;
+
+        /**
+         * @brief The characteristic length scale
+         **/
+        const scalar_t L_char_;
 
         /**
          * @brief Total number of simulation time steps, the save interval, info output interval and the latest time step at program start

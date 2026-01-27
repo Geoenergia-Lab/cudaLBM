@@ -57,13 +57,13 @@ namespace LBM
         /**
          * @class array
          * @brief Templated RAII wrapper for host memory management with field initialization
-         * @brief Allocates pinned memory
-         * @tparam pinned Allocate pinned or unpinned host memory
+         * @brief Allocates pinned or paged memory
+         * @tparam AllocationType Allocate pinned or unpinned host memory
          * @tparam T Data type of array elements
          * @tparam VelocitySet Velocity set configuration for LBM simulation
          * @tparam TimeType Instantaneous or time-averaged field
          **/
-        template <const bool pinned, typename T, class VelocitySet, const time::type TimeType>
+        template <const host::mallocType AllocationType, typename T, class VelocitySet, const time::type TimeType>
         class array;
 
         /**
@@ -75,18 +75,31 @@ namespace LBM
          * @tparam TimeType Instantaneous or time-averaged field
          **/
         template <typename T, class VelocitySet, const time::type TimeType>
-        class array<true, T, VelocitySet, TimeType>
+        class array<host::PINNED, T, VelocitySet, TimeType>
         {
         public:
+            /**
+             * @brief Construct from a number of points and zero-initialise everything
+             * @param nPoints The size of the memory in points to allocate
+             **/
             __host__ [[nodiscard]] array(const label_t nPoints)
                 : ptr_(host::allocate<T>(nPoints, 0)),
                   nPoints_(nPoints){};
 
+            /**
+             * @brief Construct from a number of points and uniform-initialise everything
+             * @param nPoints The size of the memory in points to allocate
+             * @param val The value to assign to the array
+             **/
             __host__ [[nodiscard]] array(const label_t nPoints, const T val)
                 : ptr_(host::allocate<T>(nPoints, val)),
                   nPoints_(nPoints){};
 
-            ~array()
+            /**
+             * @brief Destructor - automatically releases device memory
+             * @note Noexcept guarantee: failsafe if cudaFree fails
+             **/
+            ~array() noexcept
             {
                 if constexpr (verbose())
                 {
@@ -99,6 +112,10 @@ namespace LBM
                 }
             }
 
+            /**
+             * @brief Get read-only access to underlying data
+             * @return Const pointer to device memory
+             **/
             __host__ [[nodiscard]] inline constexpr T *operator()() const noexcept
             {
                 return ptr_;
@@ -133,14 +150,63 @@ namespace LBM
                 return ptr_[idx];
             }
 
-            __host__ [[nodiscard]] inline constexpr label_t nPoints() const noexcept
+            /**
+             * @brief Get total number of elements
+             * @return Number of elements in array
+             **/
+            __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
             {
                 return nPoints_;
             }
 
+            /**
+             * @brief Get read-only access to underlying data
+             * @return Const pointer to device memory
+             **/
+            __host__ [[nodiscard]] inline constexpr const T *data() const noexcept
+            {
+                return ptr_;
+            }
+
+            /**
+             * @brief Get mutable access to underlying data
+             * @return Pointer to device memory
+             **/
+            __host__ [[nodiscard]] inline constexpr T *data() noexcept
+            {
+                return ptr_;
+            }
+
+            /**
+             * @brief Copies the data from a collection of pointers on the device to the host
+             * @param devPtrs The collection of pointers to device memory
+             * @param mesh The lattice mesh
+             **/
+            template <const label_t N>
+            __host__ void copy_from_device(const device::ptrCollection<N, T> &devPtrs, const host::latticeMesh &mesh)
+            {
+                // Should check that mesh.nPoints() * N is less than or equal to nPoints_
+
+                if (mesh.nPoints() * N > nPoints_)
+                {
+                    throw std::runtime_error("Insufficient host array size");
+                }
+
+                for (label_t field = 0; field < N; field++)
+                {
+                    host::to_host(devPtrs[field], ptr_, field, mesh.nPoints());
+                }
+            }
+
         private:
+            /**
+             * @brief Pointer to the data
+             **/
             T *const ptrRestrict ptr_;
 
+            /**
+             * @brief Size of the data allocation
+             **/
             const label_t nPoints_;
         };
 
@@ -153,7 +219,7 @@ namespace LBM
          * @tparam TimeType Instantaneous or time-averaged field
          **/
         template <typename T, class VelocitySet, const time::type TimeType>
-        class array<false, T, VelocitySet, TimeType>
+        class array<host::PAGED, T, VelocitySet, TimeType>
         {
         public:
             /**
@@ -275,7 +341,12 @@ namespace LBM
                 }
             }
 
-            // Initialises the array from the caseName
+            /**
+             * @brief Attempts to initialise the data from the case name
+             * @param caseName The name of the case
+             * @param mesh The lattice mesh
+             * @param time The time step to initialise from
+             **/
             __host__ [[nodiscard]] const std::vector<T> initialise_array(
                 const std::string &caseName,
                 const host::latticeMesh &mesh,
@@ -307,218 +378,46 @@ namespace LBM
 
                 std::vector<T> field(mesh.nPoints(), 0);
 
-                for (label_t bz = 0; bz < mesh.nzBlocks(); bz++)
-                {
-                    for (label_t by = 0; by < mesh.nyBlocks(); by++)
+                grid_for(
+                    mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
+                    [&](const label_t bx, const label_t by, const label_t bz,
+                        const label_t tx, const label_t ty, const label_t tz)
                     {
-                        for (label_t bx = 0; bx < mesh.nxBlocks(); bx++)
-                        {
-                            for (label_t tz = 0; tz < block::nz(); tz++)
-                            {
-                                for (label_t ty = 0; ty < block::ny(); ty++)
-                                {
-                                    for (label_t tx = 0; tx < block::nx(); tx++)
-                                    {
-                                        const label_t x = (bx * block::nx()) + tx;
-                                        const label_t y = (by * block::ny()) + ty;
-                                        const label_t z = (bz * block::nz()) + tz;
+                        const label_t x = (bx * block::nx()) + tx;
+                        const label_t y = (by * block::ny()) + ty;
+                        const label_t z = (bz * block::nz()) + tz;
 
-                                        const label_t index = host::idx(tx, ty, tz, bx, by, bz, mesh);
+                        const label_t index = host::idx(tx, ty, tz, bx, by, bz, mesh);
 
-                                        const bool is_west = (x == 0);
-                                        const bool is_east = (x == mesh.nx() - 1);
-                                        const bool is_south = (y == 0);
-                                        const bool is_north = (y == mesh.ny() - 1);
-                                        const bool is_front = (z == 0);
-                                        const bool is_back = (z == mesh.nz() - 1);
+                        const bool is_west = mesh.West(x);
+                        const bool is_east = mesh.East(x);
+                        const bool is_south = mesh.South(y);
+                        const bool is_north = mesh.North(y);
+                        const bool is_back = mesh.Back(z);
+                        const bool is_front = mesh.Front(z);
 
-                                        const label_t boundary_count =
-                                            static_cast<label_t>(is_west) +
-                                            static_cast<label_t>(is_east) +
-                                            static_cast<label_t>(is_south) +
-                                            static_cast<label_t>(is_north) +
-                                            static_cast<label_t>(is_front) +
-                                            static_cast<label_t>(is_back);
-                                        const T value_sum =
-                                            (is_west * bField.West()) +
-                                            (is_east * bField.East()) +
-                                            (is_south * bField.South()) +
-                                            (is_north * bField.North()) +
-                                            (is_front * bField.Front()) +
-                                            (is_back * bField.Back());
+                        const label_t boundary_count =
+                            static_cast<label_t>(is_west) +
+                            static_cast<label_t>(is_east) +
+                            static_cast<label_t>(is_south) +
+                            static_cast<label_t>(is_north) +
+                            static_cast<label_t>(is_back) +
+                            static_cast<label_t>(is_front);
+                        const T value_sum =
+                            (is_west * bField.West()) +
+                            (is_east * bField.East()) +
+                            (is_south * bField.South()) +
+                            (is_north * bField.North()) +
+                            (is_back * bField.Back()) +
+                            (is_front * bField.Front());
 
-                                        field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                        field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
+                    });
 
                 return field;
             }
         };
-
-        /**
-         * @class arrayCollection
-         * @brief Templated container for multiple field arrays with flexible initialization
-         * @tparam T Data type of array elements
-         * @tparam cType Constructor type specification
-         **/
-        template <typename T, const ctorType::type cType>
-        class arrayCollection
-        {
-        public:
-            /**
-             * @brief Construct from program control and variable names
-             * @param[in] programCtrl Program control parameters
-             * @param[in] varNames Names of variables to include in collection
-             * @param[in] mesh Lattice mesh for dimensioning
-             **/
-            __host__ [[nodiscard]] arrayCollection(const programControl &programCtrl, const std::vector<std::string> &varNames, const host::latticeMesh &mesh)
-                : arr_(initialiseVector(programCtrl, mesh)),
-                  varNames_(varNames){};
-
-            /**
-             * @brief Construct from specific time index
-             * @param[in] programCtrl Program control parameters
-             * @param[in] varNames Names of variables to include
-             * @param[in] timeIndex Specific time index to read from
-             **/
-            __host__ [[nodiscard]] arrayCollection(
-                const programControl &programCtrl,
-                const std::vector<std::string> &varNames,
-                const label_t timeIndex)
-                : arr_(initialiseVector(programCtrl, timeIndex)),
-                  varNames_(varNames){};
-
-            /**
-             * @brief Construct from latest available time
-             * @param[in] programCtrl Program control parameters
-             * @param[in] varNames Names of variables to include
-             **/
-            __host__ [[nodiscard]] arrayCollection(
-                const programControl &programCtrl,
-                const std::vector<std::string> &varNames)
-                : arr_(initialiseVector(programCtrl)),
-                  varNames_(varNames){};
-
-            /**
-             * @brief Construct from a file prefix
-             * @param[in] fileNamePrefix The prefix of the file
-             * @param[in] varNames Names of variables to include
-             * @param[in] timeIndex Specific time index to read from
-             **/
-            __host__ [[nodiscard]] arrayCollection(
-                const std::string &fileNamePrefix,
-                const std::vector<std::string> &varNames,
-                const label_t timeIndex)
-                : arr_(initialiseVector(fileNamePrefix, timeIndex)),
-                  varNames_(varNames){};
-
-            /**
-             * @brief Destructor for the host arrayCollection class
-             **/
-            ~arrayCollection() {};
-
-            /**
-             * @brief Get read-only access to underlying data
-             * @return Const reference to data vector
-             **/
-            __host__ [[nodiscard]] inline constexpr const std::vector<T> &arr() const noexcept
-            {
-                return arr_;
-            }
-
-            /**
-             * @brief Get variable names in collection
-             * @return Const reference to variable names vector
-             **/
-            __host__ [[nodiscard]] inline const std::vector<std::string> &varNames() const noexcept
-            {
-                return varNames_;
-            }
-
-        private:
-            /**
-             * @brief The underlying std::vector
-             **/
-            const std::vector<T> arr_;
-
-            /**
-             * @brief Names of the solution variables
-             **/
-            const std::vector<std::string> varNames_;
-
-            /**
-             * @brief Initialize vector from mesh dimensions
-             * @param[in] programCtrl Program control parameters
-             * @param[in] mesh Lattice mesh for dimensioning
-             * @return Initialized data vector
-             * @throws std::runtime_error if indexed files not found
-             **/
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const host::latticeMesh &mesh) const
-            {
-                static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
-
-                // Get the latest time step
-                if (!fileIO::hasIndexedFiles(programCtrl.caseName()))
-                {
-                    throw std::runtime_error("Did not find indexed case files");
-                }
-
-                const std::string fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
-                return fileIO::readFieldFile<T>(fileName);
-            }
-
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const std::string &fileNamePrefix, const label_t timeIndex) const
-            {
-                static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
-
-                // Get the latest time step
-                if (!fileIO::hasIndexedFiles(fileNamePrefix))
-                {
-                    throw std::runtime_error("Did not find indexed case files");
-                }
-                const std::string fileName = fileNamePrefix + "_" + std::to_string(fileIO::timeIndices(fileNamePrefix)[timeIndex]) + ".LBMBin";
-                return fileIO::readFieldFile<T>(fileName);
-            }
-
-            /**
-             * @brief Initialize vector from specific time index
-             * @param[in] programCtrl Program control parameters
-             * @param[in] timeIndex Time index to read from
-             * @return Initialized data vector
-             * @throws std::runtime_error if indexed files not found
-             **/
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const label_t timeIndex) const
-            {
-                static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
-
-                // Get the correct time index
-                if (fileIO::hasIndexedFiles(programCtrl.caseName()))
-                {
-                    const std::string fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::timeIndices(programCtrl.caseName())[timeIndex]) + ".LBMBin";
-                    return fileIO::readFieldFile<T>(fileName);
-                }
-                else
-                {
-                    throw std::runtime_error("Did not find indexed case files");
-                }
-            }
-
-            /**
-             * @brief Initialize vector from latest time
-             * @param[in] programCtrl Program control parameters
-             * @return Initialized data vector
-             **/
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl) const
-            {
-                return initialiseVector(programCtrl, fileIO::getStartIndex(programCtrl, true));
-            }
-        };
     }
-
 }
 
 #endif

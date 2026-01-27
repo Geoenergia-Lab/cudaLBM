@@ -186,10 +186,12 @@ namespace LBM
                  * @param[in] streamsLBM Stream handler for CUDA operations
                  **/
                 __host__ [[nodiscard]] scalar(
+                    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
                     const device::ptrCollection<10, scalar_t> &devPtrs,
                     const streamHandler<N> &streamsLBM) noexcept
-                    : mesh_(mesh),
+                    : hostWriteBuffer_(hostWriteBuffer),
+                      mesh_(mesh),
                       devPtrs_(devPtrs),
                       streamsLBM_(streamsLBM),
                       calculate_(initialiserSwitch(fieldName_)),
@@ -284,14 +286,13 @@ namespace LBM
                  **/
                 __host__ void saveInstantaneous(const label_t timeStep) noexcept
                 {
+                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(k_.ptr()), mesh_);
+
                     fileIO::writeFile<time::instantaneous>(
                         fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNames_,
-                        host::toHost(
-                            device::ptrCollection<1, scalar_t>(
-                                k_.ptr()),
-                            mesh_),
+                        hostWriteBuffer_.data(),
                         timeStep);
                 }
 
@@ -301,14 +302,13 @@ namespace LBM
                  **/
                 __host__ void saveMean(const label_t timeStep) noexcept
                 {
+                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(kMean_.ptr()), mesh_);
+
                     fileIO::writeFile<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,
-                        host::toHost(
-                            device::ptrCollection<1, scalar_t>(
-                                kMean_.ptr()),
-                            mesh_),
+                        hostWriteBuffer_.data(),
                         timeStep);
                 }
 
@@ -349,6 +349,8 @@ namespace LBM
                 }
 
             private:
+                host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer_;
+
                 /**
                  * @brief Field name for instantaneous scalar
                  **/
@@ -397,12 +399,12 @@ namespace LBM
                 /**
                  * @brief Instantaneous total kinetic energy scalar
                  **/
-                device::array<scalar_t, VelocitySet, time::instantaneous> k_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> k_;
 
                 /**
                  * @brief Time-averaged total kinetic energy scalar
                  **/
-                device::array<scalar_t, VelocitySet, time::timeAverage> kMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> kMean_;
             };
         }
     }

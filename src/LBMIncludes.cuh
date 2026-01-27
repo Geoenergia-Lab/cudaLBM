@@ -88,4 +88,7 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
+#define JETFLOW
+// #define LIDDRIVENCAVITY
+
 #endif
