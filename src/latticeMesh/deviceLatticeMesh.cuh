@@ -66,132 +66,81 @@ namespace LBM
         class latticeMesh
         {
         public:
-            __host__ [[nodiscard]] inline constexpr latticeMesh(
-                const label_t deviceID,
-                const label_t nxPoints, const label_t nyPoints, const label_t nzPoints) noexcept
-                : deviceID_(deviceID),
-                  nx_(nxPoints),
-                  ny_(nyPoints),
-                  nz_(nzPoints),
-                  nPoints_(nx_ * ny_ * nz_),
-                  nxBlocks_(nxPoints / block::nx()),
-                  nyBlocks_(nyPoints / block::ny()),
-                  nzBlocks_(nzPoints / block::nz()),
-                  bx0_(0),
-                  by0_(0),
-                  bz0_(0){};
-
             __host__ [[nodiscard]] inline latticeMesh(
-                const label_t deviceID,
-                const label_t nxPoints, const label_t nyPoints, const label_t nzPoints,
-                const label_t bx0, const label_t by0, const label_t bz0) noexcept
-                : deviceID_(deviceID),
-                  nx_(nxPoints),
-                  ny_(nyPoints),
-                  nz_(nzPoints),
-                  nPoints_(nx_ * ny_ * nz_),
-                  nxBlocks_(nxPoints / block::nx()),
-                  nyBlocks_(nyPoints / block::ny()),
-                  nzBlocks_(nzPoints / block::nz()),
-                  bx0_(bx0),
-                  by0_(by0),
-                  bz0_(bz0)
+                const host::latticeMesh &hostMesh,
+                const pointLabel_t &deviceID,
+                const blockLabel_t &nGPUs) noexcept
+                : mesh_(hostMesh),
+                  blockOffsets_({deviceID.x / (hostMesh.nxBlocks() / nGPUs.nx), deviceID.y / (hostMesh.nyBlocks() / nGPUs.ny), deviceID.z / (hostMesh.nzBlocks() / nGPUs.nz)}),
+                  blockSpan_({hostMesh.nxBlocks() / nGPUs.nx, hostMesh.nyBlocks() / nGPUs.ny, hostMesh.nzBlocks() / nGPUs.nz}),
+                  deviceID_(getPartitionDeviceID(blockOffsets_, blockSpan_, nGPUs)),
+                  size_((mesh_.nx() / nGPUs.nx) * (mesh_.ny() / nGPUs.ny) * (mesh_.nz() / nGPUs.nz))
             {
-
-                if (!(block::nx() * nxBlocks_ == nx_))
-                {
-                    errorHandler(ERR_SIZE, "block::nx() * mesh.nxBlocks() not equal to mesh.nx()\nMesh dimensions should be multiples of 8");
-                }
-                if (!(block::ny() * nyBlocks_ == ny_))
-                {
-                    errorHandler(ERR_SIZE, "block::ny() * mesh.nyBlocks() not equal to mesh.ny()\nMesh dimensions should be multiples of 8");
-                }
-                if (!(block::nz() * nzBlocks_ == nz_))
-                {
-                    errorHandler(ERR_SIZE, "block::nz() * mesh.nzBlocks() not equal to mesh.nz()\nMesh dimensions should be multiples of 8");
-                }
-                if (!(block::nx() * nxBlocks_ * block::ny() * nyBlocks_ * block::nz() * nzBlocks_ == nx_ * ny_ * nz_))
-                {
-                    errorHandler(ERR_SIZE, "block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() not equal to mesh.nPoints()\nMesh dimensions should be multiples of 8");
-                }
-
-                // Safety check for the mesh dimensions
-                {
-                    const uint64_t nxTemp = static_cast<uint64_t>(nx_);
-                    const uint64_t nyTemp = static_cast<uint64_t>(ny_);
-                    const uint64_t nzTemp = static_cast<uint64_t>(nz_);
-                    const uint64_t nPointsTemp = nxTemp * nyTemp * nzTemp;
-                    constexpr const uint64_t typeLimit = static_cast<uint64_t>(std::numeric_limits<label_t>::max());
-
-                    // Check that the mesh dimensions won't overflow the type limit for label_t
-                    if (nPointsTemp >= typeLimit)
-                    {
-                        errorHandler(ERR_SIZE,
-                                     "\nMesh size exceeds maximum allowed value:\n"
-                                     "Number of mesh points: " +
-                                         std::to_string(nPointsTemp) +
-                                         "\nLimit of label_t: " +
-                                         std::to_string(typeLimit));
-                    }
-
-                    // Check that the mesh dimensions are not too large for GPU memory
-                    {
-                        // const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[0]);
-                        std::cout << "CLEAN UP THIS PART: MAKE SURE YOU SET THE RIGHT DEVICE ACCORDING TO DEVICEID" << std::endl;
-                        const cudaDeviceProp props = getDeviceProperties(0);
-
-                        const uint64_t totalMemTemp = static_cast<uint64_t>(props.totalGlobalMem);
-                        const uint64_t allocationSize = nPointsTemp * static_cast<uint64_t>(sizeof(scalar_t)) * static_cast<uint64_t>(NUMBER_MOMENTS());
-
-                        if (allocationSize >= totalMemTemp)
-                        {
-                            const double gbAllocation = static_cast<double>(allocationSize / (1024 * 1024 * 1024));
-                            const double gbAvailable = static_cast<double>(totalMemTemp / (1024 * 1024 * 1024));
-
-                            errorHandler(ERR_SIZE,
-                                         "\nInsufficient GPU memory:\n"
-                                         "Attempted to allocate: " +
-                                             std::to_string(allocationSize) +
-                                             " bytes (" + std::to_string(gbAllocation) + " GB)\n"
-                                                                                         "Available GPU memory: " +
-                                             std::to_string(totalMemTemp) +
-                                             " bytes (" + std::to_string(gbAvailable) + " GB)");
-                        }
-                    }
-                }
+                std::cout << "device::latticeMesh[" << deviceID.x << ", " << deviceID.y << ", " << deviceID.z << "]:" << std::endl;
+                std::cout << "{" << std::endl;
+                std::cout << "    deviceID: " << deviceID_ << std::endl;
+                std::cout << "    span(idx): " << size() << std::endl;
+                blockOffsets_.print("blockOffset");
+                blockSpan_.print("blockSpan");
+                std::cout << "};" << std::endl;
             };
 
-            inline void print() const noexcept
+            /**
+             * @brief Get the size of the memory allocation for this partition of the global mesh for a single field
+             **/
+            __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
             {
-                std::cout << "device[" << deviceID_ << "]::latticeMesh:" << std::endl;
-                std::cout << "{" << std::endl;
-                std::cout << "\tnx = " << nx_ << " [" << (bx0_ * block::nx()) << " <= x <= " << ((bx0_ * block::nx()) + nx_) - 1 << "]" << std::endl;
-                std::cout << "\tny = " << ny_ << " [" << (by0_ * block::ny()) << " <= y <= " << ((by0_ * block::ny()) + ny_) - 1 << "]" << std::endl;
-                std::cout << "\tnz = " << nz_ << " [" << (bz0_ * block::nz()) << " <= z <= " << ((bz0_ * block::nz()) + nz_) - 1 << "]" << std::endl;
-                std::cout << "};" << std::endl;
+                return size_;
             }
 
         private:
-            const label_t deviceID_;
-
             /**
-             * @brief The number of lattices in the x, y and z directions
+             * @brief Const reference to the global lattice mesh
              **/
-            const label_t nx_;
-            const label_t ny_;
-            const label_t nz_;
-            const label_t nPoints_;
-
-            const label_t nxBlocks_;
-            const label_t nyBlocks_;
-            const label_t nzBlocks_;
+            const host::latticeMesh &mesh_;
 
             /**
              * @brief Global block offsets: the blocks at which this partition of the mesh begins
              **/
-            const label_t bx0_;
-            const label_t by0_;
-            const label_t bz0_;
+            const blockLabel_t blockOffsets_;
+
+            /**
+             * @brief Device block span: the number of mesh blocks per device
+             **/
+            const blockLabel_t blockSpan_;
+
+            /**
+             * @brief Device index: the flattened index of the device
+             **/
+            const deviceIndex_t deviceID_;
+
+            const label_t size_;
+
+            /**
+             * @brief Computes the device ID assigned to a mesh partition
+             * @param[in] blockOffsets The x, y and z block offsets of the device
+             * @param[in] blockSpan The number of x, y and z block offsets assigned to the device
+             * @param[in] nGPUs The number of GPUs partitioning the domain in the x, y and z directions
+             **/
+            __host__ [[nodiscard]] deviceIndex_t getPartitionDeviceID(
+                const blockLabel_t &blockOffsets,
+                const blockLabel_t &blockSpan,
+                const blockLabel_t &nGPUs) noexcept
+            {
+                // Calculate how many blocks each GPU gets in each dimension
+                // Using ceiling division to distribute blocks as evenly as possible
+                const label_t blocksPerGPUx = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
+                const label_t blocksPerGPUy = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
+                const label_t blocksPerGPUz = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
+
+                // Determine which GPU partition this block belongs to
+                const label_t gpuX = blockOffsets.nx / blocksPerGPUx;
+                const label_t gpuY = blockOffsets.ny / blocksPerGPUy;
+                const label_t gpuZ = blockOffsets.nz / blocksPerGPUz;
+
+                // Calculate and return GPU device ID
+                return static_cast<deviceIndex_t>(gpuX + gpuY * nGPUs.nx + gpuZ * nGPUs.nx * nGPUs.ny);
+            }
         };
     }
 }

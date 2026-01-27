@@ -62,10 +62,22 @@ namespace LBM
 
     /**
      * @brief Verbose logging
-     */
+     **/
     __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
     {
 #ifdef VERBOSE
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    /**
+     * @brief Runtime bounds checking for GPU kernels
+     **/
+    __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
+    {
+#ifdef OOB_CHECK
         return true;
 #else
         return false;
@@ -128,6 +140,11 @@ namespace LBM
         const label_t nx; // < Lattice points in x-direction
         const label_t ny; // < Lattice points in y-direction
         const label_t nz; // < Lattice points in z-direction
+
+        void print(const std::string &name) const noexcept
+        {
+            std::cout << "    " << name << " = [" << nx << ", " << ny << ", " << nz << "];" << std::endl;
+        }
     };
 
     /**

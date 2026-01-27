@@ -118,85 +118,6 @@ namespace LBM
     namespace host
     {
         /**
-         * @brief Compute moment memory index
-         * @tparam mom Moment index [0, NUMBER_MOMENTS())
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index in moment array
-         *
-         * Layout: [bx][by][bz][tz][ty][tx][mom] (mom fastest varying)
-         **/
-        template <const label_t mom>
-        __host__ [[nodiscard]] inline label_t idxMom(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t nxBlocks, const label_t nyBlocks) noexcept
-        {
-            return mom + NUMBER_MOMENTS() * (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (bx + nxBlocks * (by + nyBlocks * bz)))));
-        }
-
-        /**
-         * @overload Compute moment memory index
-         * @tparam mom Moment index [0, NUMBER_MOMENTS())
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index in moment array
-         *
-         * Layout: [bx][by][bz][tz][ty][tx][mom] (mom fastest varying)
-         **/
-        template <const label_t mom, class M>
-        __host__ [[nodiscard]] inline label_t idxMom(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const M &mesh) noexcept
-        {
-            return idxMom<mom>(tx, ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks());
-        }
-
-        /**
-         * @overload Run-time indexing for the moment variable
-         * @param mom Moment index [0, NUMBER_MOMENTS())
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index in moment array
-         *
-         * Layout: [bx][by][bz][tz][ty][tx][mom] (mom fastest varying)
-         **/
-        __host__ [[nodiscard]] inline label_t idxMom(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t mom, const label_t nxBlocks, const label_t nyBlocks) noexcept
-        {
-            return mom + NUMBER_MOMENTS() * (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (bx + nxBlocks * (by + nyBlocks * bz)))));
-        }
-
-        /**
-         * @overload Run-time indexing for the moment variable
-         * @param mom Moment index [0, NUMBER_MOMENTS())
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @param nxBlocks Number of blocks in x-direction
-         * @param nyBlocks Number of blocks in y-direction
-         * @return Linearized index in moment array
-         *
-         * Layout: [bx][by][bz][tz][ty][tx][mom] (mom fastest varying)
-         **/
-        template <class M>
-        __host__ [[nodiscard]] inline label_t idxMom(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t mom, const M &mesh) noexcept
-        {
-            return idxMom(tx, ty, tz, bx, by, bz, mom, mesh.nxBlocks(), mesh.nyBlocks());
-        }
-
-        /**
          * @brief Memory index (host version)
          * @param tx,ty,tz Thread-local coordinates
          * @param bx,by,bz Block indices
@@ -205,7 +126,7 @@ namespace LBM
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        __host__ [[nodiscard]] inline label_t idx(
+        __host__ [[nodiscard]] inline constexpr label_t idx(
             const label_t tx, const label_t ty, const label_t tz,
             const label_t bx, const label_t by, const label_t bz,
             const label_t nxBlocks, const label_t nyBlocks) noexcept
@@ -222,11 +143,11 @@ namespace LBM
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        template <class M>
+        template <class LatticeMesh>
         __host__ [[nodiscard]] inline label_t idx(
             const label_t tx, const label_t ty, const label_t tz,
             const label_t bx, const label_t by, const label_t bz,
-            const M &mesh) noexcept
+            const LatticeMesh &mesh) noexcept
         {
             return idx(tx, ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks());
         }
@@ -341,32 +262,6 @@ namespace LBM
         __device__ [[nodiscard]] inline bool out_of_bounds() noexcept
         {
             return ((threadIdx.x + blockDim.x * blockIdx.x >= device::nx) || (threadIdx.y + blockDim.y * blockIdx.y >= device::ny) || (threadIdx.z + blockDim.z * blockIdx.z >= device::nz));
-        }
-
-        /**
-         * @brief Moment memory index (device version)
-         * @tparam mom Moment index [0, NUMBER_MOMENTS())
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @return Linearized index using device constants device::NUM_BLOCK_X/Y
-         *
-         * Layout: [bx][by][bz][tz][ty][tx][mom] (mom fastest varying)
-         **/
-        template <const label_t mom>
-        __device__ [[nodiscard]] inline label_t idxMom(const label_t tx, const label_t ty, const label_t tz, const label_t bx, const label_t by, const label_t bz) noexcept
-        {
-            return mom + NUMBER_MOMENTS() * (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (bx + device::NUM_BLOCK_X * (by + device::NUM_BLOCK_Y * bz)))));
-        }
-
-        /**
-         * @overload
-         * @param tx Thread coordinates (dim3)
-         * @param bx Block indices (dim3)
-         **/
-        template <const label_t mom>
-        __device__ [[nodiscard]] inline label_t idxMom(const dim3 &tx, const dim3 &bx) noexcept
-        {
-            return idxMom<mom>(tx.x, tx.y, tx.z, bx.x, bx.y, bx.z);
         }
 
         /**

@@ -120,10 +120,24 @@ namespace LBM
              * @brief Constructs a device array from host data
              * @tparam VelocitySet Template parameter for velocity set configuration
              * @param[in] hostArray Source data allocated on host memory
-             * @param[in] mesh Lattice mesh defining array dimensions
              * @post Device memory is allocated and initialized with host data
              **/
             __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
+                : ptr_(device::allocateArray<T>(hostArray.arr())),
+                  name_(hostArray.name()),
+                  mesh_(hostArray.mesh())
+            {
+                initialise_boundary_condition(name_);
+            };
+
+            /**
+             * @brief Constructs a device array on a particular device from host data
+             * @tparam VelocitySet Template parameter for velocity set configuration
+             * @param[in] hostArray Source data allocated on host memory
+             * @param[in] deviceID The index of the device
+             * @post Device memory is allocated and initialized with host data
+             **/
+            __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray, const deviceIndex_t deviceID)
                 : ptr_(device::allocateArray<T>(hostArray.arr())),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh())
@@ -165,6 +179,19 @@ namespace LBM
                   mesh_(mesh)
             {
                 initialise_boundary_condition(name_);
+            };
+
+            __host__ [[nodiscard]] array(
+                const std::string &name,
+                const host::latticeMesh &mesh,
+                const T value,
+                const deviceIndex_t deviceID)
+                : ptr_(device::allocateArray<T>(mesh.nPoints(), value, deviceID)),
+                  name_(name),
+                  mesh_(mesh)
+            {
+                std::cout << "Allocating uniform " << value << " on GPU " << deviceID << std::endl;
+                // initialise_boundary_condition(name_);
             };
 
             /**
