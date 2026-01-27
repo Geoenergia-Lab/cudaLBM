@@ -90,7 +90,7 @@ int main(const int argc, const char *const argv[])
     host::array<host::PINNED, label_t, VelocitySet, time::instantaneous> deviceIndexArray(mesh.nPoints());
 
     // Vector of pointers to device memory
-    std::vector<label_t *> devicePtrs(nxGPUs * nyGPUs * nzGPUs, nullptr);
+    host::array<host::PINNED, label_t *, VelocitySet, time::instantaneous> devicePtrs(nxGPUs * nyGPUs * nzGPUs, nullptr);
 
     // Temporary vector used for partitioning the domain
     std::vector<label_t> temp(nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU, 0);
