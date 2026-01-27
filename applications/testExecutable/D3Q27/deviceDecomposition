@@ -11,7 +11,7 @@
 
 deviceDecomposition
 {
-    nx      1;
+    nx      2;
     ny      1;
     nz      1;
 };

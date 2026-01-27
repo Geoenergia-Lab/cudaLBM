@@ -78,6 +78,7 @@ int main(const int argc, const char *const argv[])
     const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
     const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
     const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
+    const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
     // Number of mesh blocks per GPU
     const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / nxGPUs; // > Set to device::NUM_BLOCK_X
@@ -165,8 +166,110 @@ int main(const int argc, const char *const argv[])
                 // Create stream and launch test kernel
                 const streamHandler<1> streamsLBM;
                 testKernel<<<gridBlock, mesh.threadBlock(), 0, streamsLBM.streams()[0]>>>((devicePtrs[virtualDeviceIndex]), nxBlocksPerGPU, nyBlocksPerGPU, (GPU_x * nxBlocksPerGPU), (GPU_y * nyBlocksPerGPU), (GPU_z * nzBlocksPerGPU), virtualDeviceIndex);
+                checkCudaErrors(cudaDeviceSynchronize());
             }
         }
+    }
+
+    // Attempt to reconstruct from GPU memory
+    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
+    {
+        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        {
+            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
+            {
+                // Get the device index
+                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+
+                // Set the active device
+                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[virtualDeviceIndex])));
+
+                checkCudaErrors(cudaDeviceSynchronize());
+
+                // Copy to the temporary buffer
+                host::to_host(devicePtrs[virtualDeviceIndex], temp.data(), 0, nPointsPerGPU);
+
+                checkCudaErrors(cudaDeviceSynchronize());
+
+                // Place back into host buffer
+                label_t i = 0;
+                for (label_t bz = 0; bz < nzBlocksPerGPU; bz++)
+                {
+                    for (label_t by = 0; by < nyBlocksPerGPU; by++)
+                    {
+                        for (label_t bx = 0; bx < nxBlocksPerGPU; bx++)
+                        {
+                            for (label_t tz = 0; tz < block::nz(); tz++)
+                            {
+                                for (label_t ty = 0; ty < block::ny(); ty++)
+                                {
+                                    for (label_t tx = 0; tx < block::nx(); tx++)
+                                    {
+                                        deviceIndexArray[host::idx(tx, ty, tz, bx + (GPU_x * nxBlocksPerGPU), by + (GPU_y * nyBlocksPerGPU), bz + (GPU_z * nzBlocksPerGPU), mesh)] = temp[i];
+                                        i++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // After reconstruction, verify the data
+    bool verificationFailed = false;
+    for (label_t bz = 0; bz < mesh.nzBlocks(); bz++)
+    {
+        for (label_t by = 0; by < mesh.nyBlocks(); by++)
+        {
+            for (label_t bx = 0; bx < mesh.nxBlocks(); bx++)
+            {
+                for (label_t tz = 0; tz < block::nz(); tz++)
+                {
+                    for (label_t ty = 0; ty < block::ny(); ty++)
+                    {
+                        for (label_t tx = 0; tx < block::nx(); tx++)
+                        {
+                            const label_t idx = host::idx(tx, ty, tz, bx, by, bz, mesh);
+
+                            // Calculate which GPU this point belongs to
+                            const label_t block_x = bx;
+                            const label_t block_y = by;
+                            const label_t block_z = bz;
+
+                            const label_t gpu_x = block_x / nxBlocksPerGPU;
+                            const label_t gpu_y = block_y / nyBlocksPerGPU;
+                            const label_t gpu_z = block_z / nzBlocksPerGPU;
+
+                            // Only check if within valid GPU ranges
+                            if (gpu_x < nxGPUs && gpu_y < nyGPUs && gpu_z < nzGPUs)
+                            {
+                                const label_t expectedGPU = gpu_x + gpu_y * nxGPUs + gpu_z * nxGPUs * nyGPUs;
+                                const label_t expectedValue = expectedGPU + 100;
+
+                                if (deviceIndexArray[idx] != expectedValue)
+                                {
+                                    std::cout << "Verification failed at ("
+                                              << tx << "," << ty << "," << tz
+                                              << ") in block ("
+                                              << bx << "," << by << "," << bz
+                                              << "): expected " << expectedValue
+                                              << ", got " << deviceIndexArray[idx]
+                                              << std::endl;
+                                    verificationFailed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!verificationFailed)
+    {
+        std::cout << "Reconstruction verification passed!" << std::endl;
     }
 
     // Clean up memory used for testing

@@ -86,7 +86,7 @@ namespace LBM
 #define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
     launchBoundsD3Q19 __global__ void testKernel(
-        const label_t *const ptrRestrict deviceIDPtr,
+        label_t *const ptrRestrict deviceIDPtr,
         const label_t NUM_BLOCK_X,
         const label_t NUM_BLOCK_Y,
         const label_t GLOBAL_X_BLOCK_OFFSET,
@@ -104,7 +104,7 @@ namespace LBM
         }
 
         const label_t tx = threadIdx.x;
-        const label_t ty = threadIdx.z;
+        const label_t ty = threadIdx.y;
         const label_t tz = threadIdx.z;
         const label_t bx = blockIdx.x;
         const label_t by = blockIdx.y;
@@ -123,6 +123,8 @@ namespace LBM
         {
             printf("deviceID: %lu\n{\n    blockIdx {%lu, %lu, %lu};\n};\n\n", deviceID, bx + GLOBAL_X_BLOCK_OFFSET, by + GLOBAL_Y_BLOCK_OFFSET, bz + GLOBAL_Z_BLOCK_OFFSET);
         }
+
+        deviceIDPtr[idx] = deviceID + 100;
     }
 }
 #endif
