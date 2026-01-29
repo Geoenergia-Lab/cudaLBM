@@ -122,7 +122,8 @@ namespace LBM
              * @param[in] hostArray Source data allocated on host memory
              * @post Device memory is allocated and initialized with host data
              **/
-            __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
+            template <const host::mallocType MallocType>
+            __host__ [[nodiscard]] array(const host::array<MallocType, T, VelocitySet, TimeType> &hostArray)
                 : ptr_(device::allocateArray<T>(hostArray.arr())),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh())
@@ -137,12 +138,13 @@ namespace LBM
              * @param[in] deviceID The index of the device
              * @post Device memory is allocated and initialized with host data
              **/
-            __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray, const deviceIndex_t deviceID)
-                : ptr_(device::allocateArray<T>(hostArray.arr())),
+            template <const host::mallocType MallocType>
+            __host__ [[nodiscard]] array(const host::array<MallocType, T, VelocitySet, TimeType> &hostArray, const deviceIndex_t deviceID)
+                : ptr_(device::allocateArray<T>(hostArray.arr(), deviceID)),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh())
             {
-                initialise_boundary_condition(name_);
+                initialise_boundary_condition(name_, deviceID);
             };
 
             /**
@@ -294,7 +296,8 @@ namespace LBM
              * @param[in] hostArray The host::array to be copied to the device
              * @return A pointer to the copied data
              **/
-            __host__ [[nodiscard]] T *to_device(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
+            template <const host::mallocType MallocType>
+            __host__ [[nodiscard]] T *to_device(const host::array<MallocType, T, VelocitySet, TimeType> &hostArray)
             {
                 return device::allocateArray<T>(hostArray.arr());
             }
@@ -327,6 +330,11 @@ namespace LBM
              **/
             __host__ static void initialise_boundary_condition(const std::string &name) noexcept
             {
+#ifdef MULTI_GPU
+
+                static_assert(false, "device::array::initialise_boundary_condition not implemented for multi GPU yet");
+
+#else
                 if ((name == "u") || (name == "v") || (name == "w"))
                 {
                     const label_t i = name_to_index(name);
@@ -345,6 +353,21 @@ namespace LBM
                     copyToSymbol(device::U_Back, Back(), i);
                     copyToSymbol(device::U_Front, Front(), i);
                 }
+#endif
+            }
+
+            __host__ static void initialise_boundary_condition(const std::string &name, const deviceIndex_t deviceID) noexcept
+            {
+                // Set the device and synchronise
+                checkCudaErrors(cudaDeviceSynchronize());
+                checkCudaErrors(cudaSetDevice(deviceID));
+                checkCudaErrors(cudaDeviceSynchronize());
+
+                // Set the boundary conditions
+                initialise_boundary_condition(name);
+
+                // Synchronise and return
+                checkCudaErrors(cudaDeviceSynchronize());
             }
         };
     }

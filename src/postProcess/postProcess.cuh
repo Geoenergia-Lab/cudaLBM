@@ -75,6 +75,12 @@ namespace LBM
         {
             std::vector<T> coords(mesh.nx() * mesh.ny() * mesh.nz());
 
+#ifdef MULTI_GPU
+
+            static_assert(false, "postProcess::meshCoordinates not implemented for multi GPU yet");
+
+#else
+
             global_for<pointLabel_t{0, 0, 0}>(
                 mesh.nx(), mesh.ny(), mesh.nz(),
                 [&](const label_t x, const label_t y, const label_t z)
@@ -85,6 +91,8 @@ namespace LBM
                     coords[3 * idx + 1] = static_cast<T>((static_cast<double>(mesh.L().y) * static_cast<double>(y * static_cast<label_t>(mesh.ny() > 1))) / static_cast<double>(mesh.ny() - static_cast<label_t>(mesh.ny() > 1)));
                     coords[3 * idx + 2] = static_cast<T>((static_cast<double>(mesh.L().z) * static_cast<double>(z * static_cast<label_t>(mesh.nz() > 1))) / static_cast<double>(mesh.nz() - static_cast<label_t>(mesh.nz() > 1)));
                 });
+
+#endif
 
             return coords;
         }

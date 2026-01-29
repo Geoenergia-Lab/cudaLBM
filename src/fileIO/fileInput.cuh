@@ -788,6 +788,9 @@ namespace LBM
 
             std::vector<std::vector<T>> soa(nFields, std::vector<scalar_t>(nNodes, 0));
 
+#ifdef MULTI_GPU
+            static_assert(false, "deinterleaveAoS not implemented for multi GPU yet");
+#else
             grid_for(
                 mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
                 [&](const label_t bx, const label_t by, const label_t bz,
@@ -806,6 +809,7 @@ namespace LBM
                         soa[field][idxGlobal] = fMom[idx + (field * mesh.nPoints())];
                     }
                 });
+#endif
 
             return soa;
         }

@@ -68,6 +68,12 @@ namespace LBM
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
 
+#ifdef MULTI_GPU
+
+        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
+
+#else
+
         const label_t nx = mesh.nx();
         const label_t ny = mesh.ny();
         const label_t nz = mesh.nz();
@@ -93,6 +99,8 @@ namespace LBM
             }
         }
         return integral_f;
+
+#endif
     }
 
     /**
@@ -104,6 +112,12 @@ namespace LBM
         const LatticeMesh &mesh)
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
+
+#ifdef MULTI_GPU
+
+        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
+
+#else
 
         const label_t nx = mesh.nx();
         const label_t ny = mesh.ny();
@@ -130,6 +144,8 @@ namespace LBM
             }
         }
         return integral_f;
+
+#endif
     }
 
     /**
@@ -141,6 +157,12 @@ namespace LBM
         const LatticeMesh &mesh)
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
+
+#ifdef MULTI_GPU
+
+        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
+
+#else
 
         const label_t nx = mesh.nx();
         const label_t ny = mesh.ny();
@@ -167,6 +189,8 @@ namespace LBM
             }
         }
         return integral_f;
+
+#endif
     }
 }
 

@@ -129,11 +129,11 @@ namespace LBM
 
                 // Safety check for the mesh dimensions
                 {
-                    const uint64_t nxTemp = static_cast<uint64_t>(nx_);
-                    const uint64_t nyTemp = static_cast<uint64_t>(ny_);
-                    const uint64_t nzTemp = static_cast<uint64_t>(nz_);
-                    const uint64_t nPointsTemp = nxTemp * nyTemp * nzTemp;
-                    constexpr const uint64_t typeLimit = static_cast<uint64_t>(std::numeric_limits<label_t>::max());
+                    const uintmax_t nxTemp = static_cast<uintmax_t>(nx_);
+                    const uintmax_t nyTemp = static_cast<uintmax_t>(ny_);
+                    const uintmax_t nzTemp = static_cast<uintmax_t>(nz_);
+                    const uintmax_t nPointsTemp = nxTemp * nyTemp * nzTemp;
+                    constexpr const uintmax_t typeLimit = static_cast<uintmax_t>(std::numeric_limits<label_t>::max());
 
                     // Check that the mesh dimensions won't overflow the type limit for label_t
                     if (nPointsTemp >= typeLimit)
@@ -146,11 +146,16 @@ namespace LBM
                                          std::to_string(typeLimit));
                     }
 
+#ifdef MULTI_GPU
+
+                    static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+
+#else
                     // Check that the mesh dimensions are not too large for GPU memory
                     {
                         const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[0]);
-                        const uint64_t totalMemTemp = static_cast<uint64_t>(props.totalGlobalMem);
-                        const uint64_t allocationSize = nPointsTemp * static_cast<uint64_t>(sizeof(scalar_t)) * static_cast<uint64_t>(NUMBER_MOMENTS());
+                        const uintmax_t totalMemTemp = static_cast<uintmax_t>(props.totalGlobalMem);
+                        const uintmax_t allocationSize = nPointsTemp * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
 
                         if (allocationSize >= totalMemTemp)
                         {
@@ -167,8 +172,14 @@ namespace LBM
                                              " bytes (" + std::to_string(gbAvailable) + " GB)");
                         }
                     }
+#endif
                 }
 
+#ifdef MULTI_GPU
+
+                static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+
+#else
                 // Allocate programControl symbols on the GPU (clean up later)
                 {
                     const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
@@ -192,6 +203,7 @@ namespace LBM
                 copyToSymbol(device::NUM_BLOCK_X, nxBlocks());
                 copyToSymbol(device::NUM_BLOCK_Y, nyBlocks());
                 copyToSymbol(device::NUM_BLOCK_Z, nzBlocks());
+#endif
             };
 
             // Constructor to initialise a cut plane
