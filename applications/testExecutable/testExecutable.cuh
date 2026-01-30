@@ -66,14 +66,14 @@ namespace LBM
 
 #ifdef JETFLOW
     using BoundaryConditions = jetFlow;
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
 #endif
 
 #ifdef LIDDRIVENCAVITY
     using BoundaryConditions = lidDrivenCavity;
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
-    __host__ __device__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif
 
     using VelocitySet = D3Q19;
@@ -84,6 +84,19 @@ namespace LBM
 
     __host__ [[nodiscard]] inline consteval label_t MIN_BLOCKS_PER_MP() noexcept { return 2; }
 #define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
+
+    template <typename T>
+    __device__ inline void print(const T deviceID, const T bx, const T GLOBAL_X_BLOCK_OFFSET, const T by, const T GLOBAL_Y_BLOCK_OFFSET, const T bz, const T GLOBAL_Z_BLOCK_OFFSET) noexcept
+    {
+        if constexpr (sizeof(T) == 8)
+        {
+            printf("deviceID: %lu\n{\n    blockIdx {%lu, %lu, %lu};\n};\n\n", deviceID, bx + GLOBAL_X_BLOCK_OFFSET, by + GLOBAL_Y_BLOCK_OFFSET, bz + GLOBAL_Z_BLOCK_OFFSET);
+        }
+        else
+        {
+            printf("deviceID: %u\n{\n    blockIdx {%u, %u, %u};\n};\n\n", deviceID, bx + GLOBAL_X_BLOCK_OFFSET, by + GLOBAL_Y_BLOCK_OFFSET, bz + GLOBAL_Z_BLOCK_OFFSET);
+        }
+    }
 
     launchBoundsD3Q19 __global__ void testKernel(
         label_t *const ptrRestrict deviceIDPtr,
@@ -110,7 +123,7 @@ namespace LBM
         const label_t by = blockIdx.y;
         const label_t bz = blockIdx.z;
 
-        const label_t idx = (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (bx + NUM_BLOCK_X * (by + NUM_BLOCK_Y * bz)))));
+        const label_t idx = (tx + block::nx<label_t>() * (ty + block::ny<label_t>() * (tz + block::nz<label_t>() * (bx + NUM_BLOCK_X * (by + NUM_BLOCK_Y * bz)))));
 
         const label_t deviceID = deviceIDPtr[idx];
 
@@ -121,7 +134,7 @@ namespace LBM
 
         if ((threadIdx.x == 0) && (threadIdx.y == 0) && (threadIdx.z == 0))
         {
-            printf("deviceID: %lu\n{\n    blockIdx {%lu, %lu, %lu};\n};\n\n", deviceID, bx + GLOBAL_X_BLOCK_OFFSET, by + GLOBAL_Y_BLOCK_OFFSET, bz + GLOBAL_Z_BLOCK_OFFSET);
+            print(deviceID, bx, GLOBAL_X_BLOCK_OFFSET, by, GLOBAL_Y_BLOCK_OFFSET, bz, GLOBAL_Z_BLOCK_OFFSET);
         }
 
         deviceIDPtr[idx] = deviceID + 100;

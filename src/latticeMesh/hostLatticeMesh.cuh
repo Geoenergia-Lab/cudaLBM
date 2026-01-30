@@ -363,22 +363,22 @@ namespace LBM
                 return (z == nz_ - 1);
             }
 
-            template <const axis::type alpha>
-            __host__ [[nodiscard]] inline constexpr label_t nDevices() const noexcept
+            template <const axis::type alpha, typename T = label_t>
+            __host__ [[nodiscard]] inline constexpr T nDevices() const noexcept
             {
                 if constexpr (alpha == axis::X)
                 {
-                    return nDevices_.nx;
+                    return static_cast<T>(nDevices_.nx);
                 }
 
                 if constexpr (alpha == axis::Y)
                 {
-                    return nDevices_.ny;
+                    return static_cast<T>(nDevices_.ny);
                 }
 
                 if constexpr (alpha == axis::Z)
                 {
-                    return nDevices_.nz;
+                    return static_cast<T>(nDevices_.nz);
                 }
             }
 
