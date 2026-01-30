@@ -72,8 +72,6 @@ namespace LBM
                 const std::vector<std::string> &solutionVarNames) noexcept
             {
                 // For a structured grid, we need different calculations
-                // const label_t numNodes = mesh.nx() * mesh.ny() * mesh.nz();
-                // const label_t numCells = (mesh.nx() - 1) * (mesh.ny() - 1) * (mesh.nz() - 1);
                 const std::size_t numVars = solutionVars.size();
 
                 // Get points in the correct order for structured grid (i fastest, then j, then k)
@@ -83,9 +81,9 @@ namespace LBM
                 uint64_t currentOffset = 0;
 
                 // Calculate extents - note the -1 for the maximum indices
-                const label_t dimX = mesh.nx() - 1;
-                const label_t dimY = mesh.ny() - 1;
-                const label_t dimZ = mesh.nz() - 1;
+                const std::size_t dimX = mesh.nx<std::size_t>() - 1;
+                const std::size_t dimY = mesh.ny<std::size_t>() - 1;
+                const std::size_t dimZ = mesh.nz<std::size_t>() - 1;
 
                 xml << "<?xml version=\"1.0\"?>\n";
                 xml << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
@@ -97,7 +95,7 @@ namespace LBM
                 for (std::size_t i = 0; i < numVars; ++i)
                 {
                     xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << solutionVarNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(uint64_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    currentOffset += sizeof(std::size_t) + solutionVars[i].size() * sizeof(scalar_t);
                 }
                 xml << "      </PointData>\n";
 
@@ -105,7 +103,7 @@ namespace LBM
                 xml << "      <Points>\n";
                 xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"" << 3 << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
                 xml << "      </Points>\n";
-                currentOffset += sizeof(uint64_t) + points.size() * sizeof(scalar_t);
+                currentOffset += sizeof(std::size_t) + points.size() * sizeof(scalar_t);
 
                 // NO Cells section for StructuredGrid - this is the key difference!
 
@@ -141,7 +139,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const std::vector<std::string> &solutionVarNames)
             {
-                const uint64_t numNodes = static_cast<uint64_t>(mesh.nx()) * static_cast<uint64_t>(mesh.ny()) * static_cast<uint64_t>(mesh.nz());
+                const std::size_t numNodes = (mesh.nx<std::size_t>()) * (mesh.ny<std::size_t>()) * (mesh.nz<std::size_t>());
                 const std::size_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())

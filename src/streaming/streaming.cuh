@@ -86,7 +86,7 @@ namespace LBM
          * shared memory for efficient access during the streaming step.
          * It uses compile-time loop unrolling for optimal performance.
          **/
-        template <class VelocitySet, const label_t N>
+        template <class VelocitySet, const std::size_t N>
         __device__ static inline void save(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, N> &s_pop,
@@ -123,7 +123,7 @@ namespace LBM
          * periodic boundary conditions to handle data exchange between threads
          * at block boundaries. It implements the D3Q19 streaming pattern.
          **/
-        template <class VelocitySet, const label_t N>
+        template <class VelocitySet, const std::size_t N>
         __device__ static inline void pull(
             thread::array<scalar_t, VelocitySet::Q()> &pop,
             const thread::array<scalar_t, N> &s_pop) noexcept

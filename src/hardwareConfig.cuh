@@ -61,7 +61,8 @@ namespace LBM
         /**
          * @brief Threads per block in x-dimension (compile-time constant)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t nx() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T nx() noexcept
         {
 #ifdef SCALAR_PRECISION_32
             return 8;
@@ -73,7 +74,8 @@ namespace LBM
         /**
          * @brief Threads per block in y-dimension (compile-time constant)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t ny() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T ny() noexcept
         {
 #ifdef SCALAR_PRECISION_32
             return 8;
@@ -85,7 +87,8 @@ namespace LBM
         /**
          * @brief Threads per block in z-dimension (compile-time constant)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t nz() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T nz() noexcept
         {
 #ifdef SCALAR_PRECISION_32
             return 8;
@@ -97,15 +100,17 @@ namespace LBM
         /**
          * @brief Total threads per block (nx * ny * nz)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t size() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T size() noexcept
         {
-            return nx() * ny() * nz();
+            return nx<T>() * ny<T>() * nz<T>();
         }
 
         /**
          * @brief Padding for the shared memory
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t padding() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T padding() noexcept
         {
             return 33;
         }
@@ -113,9 +118,10 @@ namespace LBM
         /**
          * @brief Stride for the shared memory
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t stride() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T stride() noexcept
         {
-            return size() + padding();
+            return size<T>() + padding<T>();
         }
 
         /**

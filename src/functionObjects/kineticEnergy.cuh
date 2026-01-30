@@ -96,7 +96,8 @@ namespace LBM
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    // MODIFY FOR MULTI GPU: idx must be multi GPU aware
+                    const label_t idx = device::idx();
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -128,7 +129,8 @@ namespace LBM
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    // MODIFY FOR MULTI GPU: idx must be multi GPU aware
+                    const label_t idx = device::idx();
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -157,7 +159,8 @@ namespace LBM
                     const device::ptrCollection<1, scalar_t> KPtrs)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    // MODIFY FOR MULTI GPU: idx must be multi GPU aware
+                    const label_t idx = device::idx();
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];

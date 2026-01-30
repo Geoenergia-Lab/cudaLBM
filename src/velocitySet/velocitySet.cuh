@@ -172,11 +172,11 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop) noexcept
         {
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
-            constexpr const label_t N = number_non_zero(c_AB);
+            constexpr const std::size_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
-            constexpr const thread::array<label_t, N> indices = non_zero_indices<N>(c_AB);
+            constexpr const thread::array<std::size_t, N> indices = non_zero_indices<N>(c_AB);
 
-            return [&]<const label_t... Is>(std::index_sequence<Is...>)
+            return [&]<const std::size_t... Is>(std::index_sequence<Is...>)
             {
                 return (process_momentum_element<C[Is]>(pop[indices[Is]]) + ...);
             }(std::make_index_sequence<N>{});
@@ -196,11 +196,11 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop, const BoundaryNormal &boundaryNormal) noexcept
         {
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
-            constexpr const label_t N = number_non_zero(c_AB);
+            constexpr const std::size_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
-            constexpr const thread::array<label_t, N> indices = non_zero_indices<N>(c_AB);
+            constexpr const thread::array<std::size_t, N> indices = non_zero_indices<N>(c_AB);
 
-            return [&]<const label_t... Is>(std::index_sequence<Is...>)
+            return [&]<const std::size_t... Is>(std::index_sequence<Is...>)
             {
                 return (process_momentum_element<C[Is], VelocitySet, indices[Is]>(pop[indices[Is]], boundaryNormal) + ...);
             }(std::make_index_sequence<N>{});

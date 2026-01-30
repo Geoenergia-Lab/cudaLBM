@@ -73,28 +73,25 @@ namespace LBM
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshCoordinates(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const pointVector &L = mesh.L();
+            std::vector<T> coords(mesh.nx<std::size_t>() * mesh.ny<std::size_t>() * mesh.nz<std::size_t>() * 3);
 
-            const label_t numNodes = nx * ny * nz;
-            std::vector<T> coords(numNodes * 3);
+#ifdef MULTI_GPU
 
-            for (label_t k = 0; k < nz; ++k)
-            {
-                for (label_t j = 0; j < ny; ++j)
+            static_assert(false, "postProcess::meshCoordinates not implemented for multi GPU yet");
+
+#else
+            global_for<pointLabel_t{0, 0, 0}>(
+                mesh.nx<std::size_t>(), mesh.ny<std::size_t>(), mesh.nz<std::size_t>(),
+                [&](const std::size_t x, const std::size_t y, const std::size_t z)
                 {
-                    for (label_t i = 0; i < nx; ++i)
-                    {
-                        const label_t idx = k * ny * nx + j * nx + i;
-                        // Do the conversion in double, then cast to the desired type
-                        coords[3 * idx + 0] = static_cast<T>((static_cast<double>(L.x) * static_cast<double>(i * static_cast<label_t>(nx > 1))) / static_cast<double>(nx - static_cast<label_t>(nx > 1)));
-                        coords[3 * idx + 1] = static_cast<T>((static_cast<double>(L.y) * static_cast<double>(j * static_cast<label_t>(ny > 1))) / static_cast<double>(ny - static_cast<label_t>(ny > 1)));
-                        coords[3 * idx + 2] = static_cast<T>((static_cast<double>(L.z) * static_cast<double>(k * static_cast<label_t>(nz > 1))) / static_cast<double>(nz - static_cast<label_t>(nz > 1)));
-                    }
-                }
-            }
+                    const std::size_t idx = host::idxScalarGlobal<std::size_t>(x, y, z, mesh.nx<std::size_t>(), mesh.ny<std::size_t>());
+                    // Do the conversion in double, then cast to the desired type
+                    coords[3 * idx + 0] = static_cast<T>((static_cast<double>(mesh.L().x) * static_cast<double>(x * static_cast<std::size_t>(mesh.nx() > 1))) / static_cast<double>(mesh.nx<std::size_t>() - static_cast<std::size_t>(mesh.nx() > 1)));
+                    coords[3 * idx + 1] = static_cast<T>((static_cast<double>(mesh.L().y) * static_cast<double>(y * static_cast<std::size_t>(mesh.ny() > 1))) / static_cast<double>(mesh.ny<std::size_t>() - static_cast<std::size_t>(mesh.ny() > 1)));
+                    coords[3 * idx + 2] = static_cast<T>((static_cast<double>(mesh.L().z) * static_cast<double>(z * static_cast<std::size_t>(mesh.nz() > 1))) / static_cast<double>(mesh.nz<std::size_t>() - static_cast<std::size_t>(mesh.nz() > 1)));
+                });
+
+#endif
 
             return coords;
         }
@@ -109,37 +106,26 @@ namespace LBM
         template <const bool one_based, typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshConnectivity(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
-
-            std::vector<IndexType> connectivity(numElements * 8);
-            label_t cell_idx = 0;
+            std::vector<IndexType> connectivity((mesh.nx<std::size_t>() - 1) * (mesh.ny<std::size_t>() - 1) * (mesh.nz<std::size_t>() - 1) * 8);
             constexpr const label_t offset = one_based ? 1 : 0;
-
-            for (label_t k = 0; k < nz - 1; ++k)
-            {
-                for (label_t j = 0; j < ny - 1; ++j)
+            global_for<pointLabel_t{1, 1, 1}>(
+                mesh.nx<std::size_t>(), mesh.ny<std::size_t>(), mesh.nz<std::size_t>(),
+                [&](const std::size_t x, const std::size_t y, const std::size_t z)
                 {
-                    for (label_t i = 0; i < nx - 1; ++i)
-                    {
-                        const label_t base = k * nx * ny + j * nx + i;
-                        const label_t stride_y = nx;
-                        const label_t stride_z = nx * ny;
+                    const std::size_t base = host::idxScalarGlobal(x, y, z, mesh.nx<std::size_t>(), mesh.ny<std::size_t>());
+                    const std::size_t cell_idx = host::idxScalarGlobal(x, y, z, mesh.nx<std::size_t>() - 1, mesh.ny<std::size_t>() - 1);
+                    const std::size_t stride_y = mesh.nx<std::size_t>();
+                    const std::size_t stride_z = mesh.nx<std::size_t>() * mesh.ny<std::size_t>();
 
-                        connectivity[cell_idx * 8 + 0] = static_cast<IndexType>(base + offset);
-                        connectivity[cell_idx * 8 + 1] = static_cast<IndexType>(base + 1 + offset);
-                        connectivity[cell_idx * 8 + 2] = static_cast<IndexType>(base + stride_y + 1 + offset);
-                        connectivity[cell_idx * 8 + 3] = static_cast<IndexType>(base + stride_y + offset);
-                        connectivity[cell_idx * 8 + 4] = static_cast<IndexType>(base + stride_z + offset);
-                        connectivity[cell_idx * 8 + 5] = static_cast<IndexType>(base + stride_z + 1 + offset);
-                        connectivity[cell_idx * 8 + 6] = static_cast<IndexType>(base + stride_z + stride_y + 1 + offset);
-                        connectivity[cell_idx * 8 + 7] = static_cast<IndexType>(base + stride_z + stride_y + offset);
-                        ++cell_idx;
-                    }
-                }
-            }
+                    connectivity[cell_idx * 8 + 0] = static_cast<IndexType>(base + offset);
+                    connectivity[cell_idx * 8 + 1] = static_cast<IndexType>(base + 1 + offset);
+                    connectivity[cell_idx * 8 + 2] = static_cast<IndexType>(base + stride_y + 1 + offset);
+                    connectivity[cell_idx * 8 + 3] = static_cast<IndexType>(base + stride_y + offset);
+                    connectivity[cell_idx * 8 + 4] = static_cast<IndexType>(base + stride_z + offset);
+                    connectivity[cell_idx * 8 + 5] = static_cast<IndexType>(base + stride_z + 1 + offset);
+                    connectivity[cell_idx * 8 + 6] = static_cast<IndexType>(base + stride_z + stride_y + 1 + offset);
+                    connectivity[cell_idx * 8 + 7] = static_cast<IndexType>(base + stride_z + stride_y + offset);
+                });
 
             return connectivity;
         }
@@ -153,14 +139,14 @@ namespace LBM
         template <typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshOffsets(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
+            const std::size_t nx = mesh.nx<std::size_t>();
+            const std::size_t ny = mesh.ny<std::size_t>();
+            const std::size_t nz = mesh.nz<std::size_t>();
+            const std::size_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
 
             std::vector<IndexType> offsets(numElements);
 
-            for (label_t i = 0; i < numElements; ++i)
+            for (std::size_t i = 0; i < numElements; ++i)
             {
                 offsets[i] = static_cast<IndexType>((i + 1) * 8);
             }

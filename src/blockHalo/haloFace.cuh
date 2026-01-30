@@ -254,6 +254,7 @@ namespace LBM
                     [&](const label_t bx, const label_t by, const label_t bz,
                         const label_t tx, const label_t ty, const label_t tz)
                     {
+                        // MODIFY FOR MULTI GPU: idx must be GPU-aware
                         const label_t base = host::idx(tx, ty, tz, bx, by, bz, mesh);
 
                         // Contiguous moment access
@@ -300,6 +301,7 @@ namespace LBM
             {
                 constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, side>();
 
+                // MODIFY FOR MULTI GPU: idxPop must be multi GPU aware
                 host::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto q)
                     {

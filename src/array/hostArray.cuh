@@ -378,6 +378,63 @@ namespace LBM
 
                 std::vector<T> field(mesh.nPoints(), 0);
 
+#ifdef MULTI_GPU
+
+                const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>(); // > Set to device::NUM_BLOCK_X
+                const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>(); // > Set to device::NUM_BLOCK_Y
+                const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>(); // > Set to device::NUM_BLOCK_Z
+
+                // This is the loop we should be using for multi GPU, I think
+                for (label_t GPU_z = 0; GPU_z < mesh.nDevices<axis::Z>(); GPU_z++)
+                {
+                    for (label_t GPU_y = 0; GPU_y < mesh.nDevices<axis::Y>(); GPU_y++)
+                    {
+                        for (label_t GPU_x = 0; GPU_x < mesh.nDevices<axis::X>(); GPU_x++)
+                        {
+                            // const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+                            // const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
+                            // Fill this GPU's contiguous segment
+                            grid_for(
+                                nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
+                                [&](const label_t bx, const label_t by, const label_t bz,
+                                    const label_t tx, const label_t ty, const label_t tz)
+                                {
+                                    // Calculate global coordinates
+                                    const label_t x = tx + block::nx() * (bx + (GPU_x * nxBlocksPerGPU));
+                                    const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
+                                    const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
+
+                                    // MODIFY FOR MULTI GPU
+                                    const label_t index = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
+
+                                    const bool is_west = mesh.West(x);
+                                    const bool is_east = mesh.East(x);
+                                    const bool is_south = mesh.South(y);
+                                    const bool is_north = mesh.North(y);
+                                    const bool is_back = mesh.Back(z);
+                                    const bool is_front = mesh.Front(z);
+
+                                    const label_t boundary_count =
+                                        static_cast<label_t>(is_west) +
+                                        static_cast<label_t>(is_east) +
+                                        static_cast<label_t>(is_south) +
+                                        static_cast<label_t>(is_north) +
+                                        static_cast<label_t>(is_back) +
+                                        static_cast<label_t>(is_front);
+                                    const T value_sum =
+                                        (is_west * bField.West()) +
+                                        (is_east * bField.East()) +
+                                        (is_south * bField.South()) +
+                                        (is_north * bField.North()) +
+                                        (is_back * bField.Back()) +
+                                        (is_front * bField.Front());
+
+                                    field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
+                                });
+                        }
+                    }
+                }
+#else
                 grid_for(
                     mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
                     [&](const label_t bx, const label_t by, const label_t bz,
@@ -413,7 +470,7 @@ namespace LBM
 
                         field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
                     });
-
+#endif
                 return field;
             }
         };

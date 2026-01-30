@@ -58,6 +58,7 @@ switch (boundaryNormal.nodeType())
 // Round inflow + no-slip
 case normalVector::BACK():
 {
+    // MODIFY THIS FOR MULTI GPU
     const label_t x = threadIdx.x + block::nx() * blockIdx.x;
     const label_t y = threadIdx.y + block::ny() * blockIdx.y;
 

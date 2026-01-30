@@ -195,6 +195,8 @@ namespace LBM
      **/
     template <const label_t label>
     using label_constant = const integralConstant<label_t, label>;
+    template <const std::size_t label>
+    using size_constant = const integralConstant<std::size_t, label>;
     template <const label_t label>
     using q_i = const integralConstant<label_t, label>;
     template <const label_t label>

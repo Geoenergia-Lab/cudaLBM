@@ -60,12 +60,18 @@ namespace LBM
          * @param f The field to be differentiated
          * @param mesh The lattice mesh
          **/
-        template <const label_t order_, typename TReturn, typename T, class M>
+        template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<TReturn> dfdx(
             const std::vector<T> &f,
-            const M &mesh)
+            const LatticeMesh &mesh)
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
+
+#ifdef MULTI_GPU
+
+            static_assert(false, "derivative::dfdx not implemented for multi GPU yet");
+
+#else
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -141,6 +147,8 @@ namespace LBM
                 }
             }
             return dfdx;
+
+#endif
         }
 
         /**
@@ -149,12 +157,18 @@ namespace LBM
          * @param f The field to be differentiated
          * @param mesh The lattice mesh
          **/
-        template <const label_t order_, typename TReturn, typename T, class M>
+        template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<TReturn> dfdy(
             const std::vector<T> &f,
-            const M &mesh)
+            const LatticeMesh &mesh)
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
+
+#ifdef MULTI_GPU
+
+            static_assert(false, "derivative::dfdy not implemented for multi GPU yet");
+
+#else
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -229,6 +243,8 @@ namespace LBM
                 }
             }
             return dfdy;
+
+#endif
         }
 
         /**
@@ -237,12 +253,18 @@ namespace LBM
          * @param f The field to be differentiated
          * @param mesh The lattice mesh
          **/
-        template <const label_t order_, typename TReturn, typename T, class M>
+        template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<TReturn> dfdz(
             const std::vector<T> &f,
-            const M &mesh)
+            const LatticeMesh &mesh)
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
+
+#ifdef MULTI_GPU
+
+            static_assert(false, "derivative::dfdz not implemented for multi GPU yet");
+
+#else
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -316,7 +338,10 @@ namespace LBM
                     }
                 }
             }
+
             return dfdz;
+
+#endif
         }
     }
 }

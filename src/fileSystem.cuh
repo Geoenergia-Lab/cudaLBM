@@ -65,7 +65,7 @@ namespace LBM
          * @return The equivalent value in mebibytes as type T
          */
         template <typename T>
-        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const label_t nBytes) noexcept
+        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const uintmax_t nBytes) noexcept
         {
             return static_cast<T>(static_cast<double>(nBytes) / (static_cast<double>(1024 * 1024)));
         }
@@ -104,13 +104,13 @@ namespace LBM
          * @param[in] dir The directory to query
          * @return The available storage space in bytes on a dir
          **/
-        __host__ [[nodiscard]] label_t availableDiskSpace(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] uintmax_t availableDiskSpace(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             std::error_code ec;
 
             const std::filesystem::space_info si = std::filesystem::space(diskName(dir), ec);
 
-            return static_cast<label_t>(si.available);
+            return si.available;
         }
 
         /**
@@ -119,7 +119,7 @@ namespace LBM
          * @param[in] dir The directory in which we wish to write
          * @return True if there is enough space, false otherwise
          **/
-        __host__ [[nodiscard]] bool hasEnoughSpace(const label_t nBytes, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] bool hasEnoughSpace(const uintmax_t nBytes, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             return (nBytes < availableDiskSpace(dir));
         }
@@ -145,7 +145,7 @@ namespace LBM
          * @return The estimated disk space required for field data in bytes
          */
         template <const bool hasFields, const fileFormat_t fileFormat>
-        __host__ [[nodiscard]] inline constexpr std::size_t fieldsDiskUsage(const label_t nx, const label_t ny, const label_t nz, const label_t nVars) noexcept
+        __host__ [[nodiscard]] inline constexpr uintmax_t fieldsDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
         {
             if constexpr (hasFields)
             {
@@ -153,19 +153,19 @@ namespace LBM
 
                 if constexpr (fileFormat == BINARY)
                 {
-                    return static_cast<std::size_t>(nVars) * static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) * static_cast<std::size_t>(nz) * static_cast<std::size_t>(sizeof(scalar_t));
+                    return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * static_cast<uintmax_t>(sizeof(scalar_t));
                 }
                 else
                 {
                     if constexpr (std::is_same_v<scalar_t, double>)
                     {
                         // Handle double
-                        return static_cast<std::size_t>(nVars) * static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) * static_cast<std::size_t>(nz) * 25;
+                        return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * 25;
                     }
                     else
                     {
                         // Handle float
-                        return static_cast<std::size_t>(nVars) * static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) * static_cast<std::size_t>(nz) * 15;
+                        return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * 15;
                     }
                 }
             }
@@ -184,12 +184,12 @@ namespace LBM
          * @param[in] nz Number of grid points in z-direction
          * @return The estimated disk space required for element data in bytes
          */
-        template <const bool hasElements, const label_t labelsPerElement>
-        __host__ [[nodiscard]] inline constexpr std::size_t elementsDiskUsage(const label_t nx, const label_t ny, const label_t nz) noexcept
+        template <const bool hasElements, const uintmax_t labelsPerElement>
+        __host__ [[nodiscard]] inline constexpr uintmax_t elementsDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
         {
             if constexpr (hasElements)
             {
-                return labelsPerElement * static_cast<std::size_t>(nx - 1) * static_cast<std::size_t>(ny - 1) * static_cast<std::size_t>(nz - 1) * static_cast<std::size_t>(sizeof(label_t));
+                return labelsPerElement * static_cast<uintmax_t>(nx - 1) * static_cast<uintmax_t>(ny - 1) * static_cast<uintmax_t>(nz - 1) * static_cast<uintmax_t>(sizeof(label_t));
             }
             else
             {
@@ -211,7 +211,7 @@ namespace LBM
          * @return The total estimated disk space required in bytes
          */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets>
-        __host__ [[nodiscard]] inline constexpr std::size_t expectedDiskUsage(const label_t nx, const label_t ny, const label_t nz, const label_t nVars) noexcept
+        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
         {
             return fieldsDiskUsage<hasFields, fileFormat>(nx, ny, nz, nVars) + fieldsDiskUsage<hasPoints, fileFormat>(nx, ny, nz, 3) + elementsDiskUsage<hasElements, 8>(nx, ny, nz) + elementsDiskUsage<hasOffsets, 1>(nx, ny, nz);
         }
@@ -228,10 +228,10 @@ namespace LBM
          * @param[in] nVars Number of field variables
          * @return The total estimated disk space required in bytes
          */
-        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
-        __host__ [[nodiscard]] inline constexpr std::size_t expectedDiskUsage(const Mesh &mesh, const label_t nVars) noexcept
+        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh, typename T>
+        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const LatticeMesh &mesh, const T nVars) noexcept
         {
-            return expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(mesh.nx(), mesh.ny(), mesh.nz(), nVars);
+            return expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), static_cast<uintmax_t>(nVars));
         }
 
         /**
@@ -246,11 +246,11 @@ namespace LBM
          * @param[in] nVars Number of field variables
          * @return True if sufficient disk space is available, false otherwise
          */
-        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
-        __host__ [[nodiscard]] bool diskSpaceCheck(const Mesh &mesh, const label_t nVars)
+        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
+        __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const uintmax_t nVars)
         {
             // Calculated the approximate required space
-            const label_t requiredDiskSpace = expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(mesh.nx(), mesh.ny(), mesh.nz(), nVars);
+            const uintmax_t requiredDiskSpace = expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), nVars);
 
             // Check enough space is available
             return fileSystem::hasEnoughSpace(requiredDiskSpace);
@@ -269,14 +269,14 @@ namespace LBM
          * @param[in] fileName Name of the file being written (for error message)
          * @throws std::runtime_error if insufficient disk space is available
          */
-        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class Mesh>
-        __host__ void diskSpaceAssertion(const Mesh &mesh, const label_t nVars, const std::string &fileName)
+        template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
+        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const std::string &fileName)
         {
-            const label_t requiredDiskSpace = expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(mesh.nx(), mesh.ny(), mesh.nz(), nVars);
+            const uintmax_t requiredDiskSpace = expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), static_cast<uintmax_t>(nVars));
 
-            if (!diskSpaceCheck<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(mesh, nVars))
+            if (!diskSpaceCheck<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(mesh, static_cast<uintmax_t>(nVars)))
             {
-                const label_t availableSpace = fileSystem::availableDiskSpace();
+                const uintmax_t availableSpace = fileSystem::availableDiskSpace();
                 throw std::runtime_error("Insufficient disk space to write file " + fileName + "\nRequired: " + std::to_string(requiredDiskSpace) + "\nAvailable: " + std::to_string(availableSpace));
             }
         }

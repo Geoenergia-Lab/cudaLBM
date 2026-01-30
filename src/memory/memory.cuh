@@ -186,6 +186,26 @@ namespace LBM
         /**
          * @brief Copies data from host to device memory
          * @tparam T Data type of the elements
+         * @param[out] devicePtr Destination device pointer
+         * @param[in] hostPtr Source host pointer
+         * @param[in] nPoints The number of points of T to copy to the device
+         * @throws std::runtime_error if CUDA memory copy fails
+         * @note Verbose mode prints copy details
+         **/
+        template <typename T>
+        __host__ void copy(T *const devicePtr, const T *const ptrRestrict hostPtr, const std::size_t nPoints) noexcept
+        {
+            checkCudaErrors(cudaMemcpy(devicePtr, hostPtr, nPoints * sizeof(T), cudaMemcpyHostToDevice));
+
+            if constexpr (verbose())
+            {
+                std::cout << "Copied " << sizeof(T) * nPoints << " bytes of memory in cudaMemcpy to address " << devicePtr << std::endl;
+            }
+        }
+
+        /**
+         * @brief Copies data from host to device memory
+         * @tparam T Data type of the elements
          * @param[out] ptr Destination device pointer
          * @param[in] f Source host vector
          * @throws std::runtime_error if CUDA memory copy fails
@@ -194,12 +214,7 @@ namespace LBM
         template <typename T>
         __host__ void copy(T *const ptr, const std::vector<T> &f) noexcept
         {
-            checkCudaErrors(cudaMemcpy(ptr, f.data(), f.size() * sizeof(T), cudaMemcpyHostToDevice));
-
-            if constexpr (verbose())
-            {
-                std::cout << "Copied " << sizeof(T) * f.size() << " bytes of memory in cudaMemcpy to address " << ptr << std::endl;
-            }
+            copy(ptr, f.data(), f.size());
         }
 
         /**
@@ -212,7 +227,7 @@ namespace LBM
         __host__ void copy(T *const ptr, const std::vector<T> &f, const deviceIndex_t deviceID) noexcept
         {
             checkCudaErrors(cudaSetDevice(deviceID));
-            copy(ptr, f);
+            copy(ptr, f.data(), f.size());
         }
 
         /**

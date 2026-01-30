@@ -85,7 +85,8 @@ namespace LBM
                   L_(
                       {string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lx"),
                        string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Ly"),
-                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")})
+                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")}),
+                  nDevices_(initialise_device_list("deviceDecomposition"))
             {
                 std::cout << "latticeMesh:" << std::endl;
                 std::cout << "{" << std::endl;
@@ -128,11 +129,11 @@ namespace LBM
 
                 // Safety check for the mesh dimensions
                 {
-                    const uint64_t nxTemp = static_cast<uint64_t>(nx_);
-                    const uint64_t nyTemp = static_cast<uint64_t>(ny_);
-                    const uint64_t nzTemp = static_cast<uint64_t>(nz_);
-                    const uint64_t nPointsTemp = nxTemp * nyTemp * nzTemp;
-                    constexpr const uint64_t typeLimit = static_cast<uint64_t>(std::numeric_limits<label_t>::max());
+                    const uintmax_t nxTemp = static_cast<uintmax_t>(nx_);
+                    const uintmax_t nyTemp = static_cast<uintmax_t>(ny_);
+                    const uintmax_t nzTemp = static_cast<uintmax_t>(nz_);
+                    const uintmax_t nPointsTemp = nxTemp * nyTemp * nzTemp;
+                    constexpr const uintmax_t typeLimit = static_cast<uintmax_t>(std::numeric_limits<label_t>::max());
 
                     // Check that the mesh dimensions won't overflow the type limit for label_t
                     if (nPointsTemp >= typeLimit)
@@ -145,11 +146,16 @@ namespace LBM
                                          std::to_string(typeLimit));
                     }
 
+#ifdef MULTI_GPU
+
+                    static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+
+#else
                     // Check that the mesh dimensions are not too large for GPU memory
                     {
                         const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[0]);
-                        const uint64_t totalMemTemp = static_cast<uint64_t>(props.totalGlobalMem);
-                        const uint64_t allocationSize = nPointsTemp * static_cast<uint64_t>(sizeof(scalar_t)) * static_cast<uint64_t>(NUMBER_MOMENTS());
+                        const uintmax_t totalMemTemp = static_cast<uintmax_t>(props.totalGlobalMem);
+                        const uintmax_t allocationSize = nPointsTemp * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
 
                         if (allocationSize >= totalMemTemp)
                         {
@@ -166,8 +172,14 @@ namespace LBM
                                              " bytes (" + std::to_string(gbAvailable) + " GB)");
                         }
                     }
+#endif
                 }
 
+#ifdef MULTI_GPU
+
+                static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+
+#else
                 // Allocate programControl symbols on the GPU (clean up later)
                 {
                     const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
@@ -191,6 +203,7 @@ namespace LBM
                 copyToSymbol(device::NUM_BLOCK_X, nxBlocks());
                 copyToSymbol(device::NUM_BLOCK_Y, nyBlocks());
                 copyToSymbol(device::NUM_BLOCK_Z, nzBlocks());
+#endif
             };
 
             // Constructor to initialise a cut plane
@@ -202,7 +215,8 @@ namespace LBM
                   L_(
                       {string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lx"),
                        string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Ly"),
-                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")}){};
+                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")}),
+                  nDevices_(initialise_device_list("deviceDecomposition")){};
 
             __host__ [[nodiscard]] latticeMesh(const blockLabel_t meshDimensions) noexcept
                 : nx_(meshDimensions.nx),
@@ -212,42 +226,49 @@ namespace LBM
                   L_(
                       {string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lx"),
                        string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Ly"),
-                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")}){};
+                       string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lz")}),
+                  nDevices_(initialise_device_list("deviceDecomposition")){};
 
             __host__ [[nodiscard]] latticeMesh(const host::latticeMesh &mesh, const blockLabel_t meshDimensions) noexcept
                 : nx_(meshDimensions.nx),
                   ny_(meshDimensions.ny),
                   nz_(meshDimensions.nz),
                   nPoints_(nx_ * ny_ * nz_),
-                  L_(mesh.L()){};
+                  L_(mesh.L()),
+                  nDevices_(initialise_device_list("deviceDecomposition")){};
 
             __host__ [[nodiscard]] latticeMesh(const host::latticeMesh &mesh) noexcept
                 : nx_(mesh.nx()),
                   ny_(mesh.ny()),
                   nz_(mesh.nz()),
                   nPoints_(nx_ * ny_ * nz_),
-                  L_(mesh.L()){};
+                  L_(mesh.L()),
+                  nDevices_(initialise_device_list("deviceDecomposition")){};
 
             /**
              * @name Grid Dimension Accessors
              * @brief Provide access to grid dimensions
              * @return Dimension value in specified direction
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nx() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nx() const noexcept
             {
-                return nx_;
+                return static_cast<T>(nx_);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t ny() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T ny() const noexcept
             {
-                return ny_;
+                return static_cast<T>(ny_);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nz() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nz() const noexcept
             {
-                return nz_;
+                return static_cast<T>(nz_);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nPoints() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nPoints() const noexcept
             {
-                return nPoints_;
+                return static_cast<T>(nPoints_);
             }
 
             /**
@@ -255,21 +276,25 @@ namespace LBM
              * @brief Provide access to CUDA block decomposition
              * @return Number of blocks in specified direction
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nxBlocks() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nxBlocks() const noexcept
             {
                 return nx_ / block::nx();
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nyBlocks() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nyBlocks() const noexcept
             {
                 return ny_ / block::ny();
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nzBlocks() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nzBlocks() const noexcept
             {
                 return nz_ / block::nz();
             }
-            __device__ __host__ [[nodiscard]] inline constexpr label_t nBlocks() const noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] inline constexpr T nBlocks() const noexcept
             {
-                return (nx_ / block::nx()) * (ny_ / block::ny()) * (nz_ / block::nz());
+                return (nx<T>() / block::nx<T>()) * (ny<T>() / block::ny<T>()) * (nz<T>() / block::nz<T>());
             }
 
             /**
@@ -278,7 +303,7 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] static inline consteval dim3 threadBlock() noexcept
             {
-                return {block::nx(), block::ny(), block::nz()};
+                return {block::nx<uint32_t>(), block::ny<uint32_t>(), block::nz<uint32_t>()};
             }
 
             /**
@@ -338,6 +363,25 @@ namespace LBM
                 return (z == nz_ - 1);
             }
 
+            template <const axis::type alpha>
+            __host__ [[nodiscard]] inline constexpr label_t nDevices() const noexcept
+            {
+                if constexpr (alpha == axis::X)
+                {
+                    return nDevices_.nx;
+                }
+
+                if constexpr (alpha == axis::Y)
+                {
+                    return nDevices_.ny;
+                }
+
+                if constexpr (alpha == axis::Z)
+                {
+                    return nDevices_.nz;
+                }
+            }
+
         private:
             /**
              * @brief The number of lattices in the x, y and z directions
@@ -351,6 +395,18 @@ namespace LBM
              * @brief Physical dimensions of the domain
              **/
             const pointVector L_;
+
+            /**
+             * @brief Number of devices in the x, y and z directions
+             **/
+            const blockLabel_t nDevices_;
+
+            __host__ [[nodiscard]] static blockLabel_t initialise_device_list(const std::string &fileName) noexcept
+            {
+                return {string::extractParameter<label_t>(string::readFile(fileName), "nx"),
+                        string::extractParameter<label_t>(string::readFile(fileName), "ny"),
+                        string::extractParameter<label_t>(string::readFile(fileName), "nz")};
+            }
         };
     }
 }

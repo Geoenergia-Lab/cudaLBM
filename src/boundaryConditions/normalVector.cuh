@@ -299,7 +299,14 @@ namespace LBM
          **/
         __device__ [[nodiscard]] inline static uint8_t computeBitmask() noexcept
         {
-            return computeBitmask(threadIdx.x + blockDim.x * blockIdx.x, threadIdx.y + blockDim.y * blockIdx.y, threadIdx.z + blockDim.z * blockIdx.z);
+            constexpr const blockLabel_t blockOffset{0, 0, 0};
+
+            // This is correct. Just need to make blockOffset a per-GPU constant
+            const label_t x = threadIdx.x + (block::nx() * (blockIdx.x + blockOffset.nx));
+            const label_t y = threadIdx.y + (block::ny() * (blockIdx.y + blockOffset.ny));
+            const label_t z = threadIdx.z + (block::nz() * (blockIdx.z + blockOffset.nz));
+
+            return computeBitmask(x, y, z);
         }
 
         /**

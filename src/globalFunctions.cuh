@@ -153,9 +153,43 @@ namespace LBM
     }
 
     /**
+     * @brief Nested loop over global grid indices
+     * @param nx Number of points in x-dimension
+     * @param ny Number of points in y-dimension
+     * @param nz Number of points in z-dimension
+     * @param f Function called for each (bx, by, bz, tx, ty, tz)
+     *
+     * Example:
+     * @code
+     * global_for(nx, ny, nz, [&](label_t x, y, z) {
+     *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
+     * });
+     * @endcode
+     **/
+    template <const pointLabel_t Indent, typename F>
+    __host__ void global_for(
+        const std::size_t nx,
+        const std::size_t ny,
+        const std::size_t nz,
+        const F &&f) noexcept
+    {
+        for (std::size_t z = 0; z < nz - static_cast<std::size_t>(Indent.z); z++)
+        {
+            for (std::size_t y = 0; y < ny - static_cast<std::size_t>(Indent.y); y++)
+            {
+                for (std::size_t x = 0; x < nx - static_cast<std::size_t>(Indent.x); x++)
+                {
+                    f(x, y, z);
+                }
+            }
+        }
+    }
+
+    /**
      * @brief Number of hydrodynamic moments
      **/
-    __device__ __host__ [[nodiscard]] inline consteval label_t NUMBER_MOMENTS() { return 10; }
+    template <typename T = label_t>
+    __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() { return 10; }
 
     /**
      * @brief Host-side indexing operations
@@ -183,6 +217,25 @@ namespace LBM
          * @brief Memory index (host version)
          * @param tx,ty,tz Thread-local coordinates
          * @param bx,by,bz Block indices
+         * @param gpuX,gpuY,gpuZ GPU indices
+         * @param nxBlocks,nyBlocks Number of blocks in the x and y directions
+         * @param[in] XBLOCKS_PER_GPU,YBLOCKS_PER_GPU,ZBLOCKS_PER_GPU Number of blocks per GPU in x, y and z directions
+         * @return Linearized index using mesh constants
+         **/
+        __host__ [[nodiscard]] inline constexpr label_t idx(
+            const label_t tx, const label_t ty, const label_t tz,
+            const label_t bx, const label_t by, const label_t bz,
+            const label_t gpuX, const label_t gpuY, const label_t gpuZ,
+            const label_t nxBlocks, const label_t nyBlocks,
+            const label_t XBLOCKS_PER_GPU, const label_t YBLOCKS_PER_GPU, const label_t ZBLOCKS_PER_GPU) noexcept
+        {
+            return (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * ((gpuX * XBLOCKS_PER_GPU + bx) + nxBlocks * ((gpuY * YBLOCKS_PER_GPU + by) + nyBlocks * (gpuZ * ZBLOCKS_PER_GPU + bz))))));
+        }
+
+        /**
+         * @brief Memory index (host version)
+         * @param tx,ty,tz Thread-local coordinates
+         * @param bx,by,bz Block indices
          * @param mesh The mesh
          * @return Linearized index using mesh constants
          *
@@ -203,9 +256,10 @@ namespace LBM
          * @param nx,ny Global dimensions
          * @return Linearized index: x + nx*(y + ny*z)
          **/
-        __host__ [[nodiscard]] inline label_t idxScalarGlobal(
-            const label_t x, const label_t y, const label_t z,
-            const label_t nx, const label_t ny) noexcept
+        template <typename T = label_t>
+        __host__ [[nodiscard]] inline T idxScalarGlobal(
+            const T x, const T y, const T z,
+            const T nx, const T ny) noexcept
         {
             return x + (nx * (y + (ny * z)));
         }
@@ -306,7 +360,8 @@ namespace LBM
          **/
         __device__ [[nodiscard]] inline bool out_of_bounds() noexcept
         {
-            return ((threadIdx.x + blockDim.x * blockIdx.x >= device::nx) || (threadIdx.y + blockDim.y * blockIdx.y >= device::ny) || (threadIdx.z + blockDim.z * blockIdx.z >= device::nz));
+            // MODIFY THIS FOR MULTI GPU
+            return ((threadIdx.x + block::nx() * blockIdx.x >= device::nx) || (threadIdx.y + block::ny() * blockIdx.y >= device::ny) || (threadIdx.z + block::nz() * blockIdx.z >= device::nz));
         }
 
         /**

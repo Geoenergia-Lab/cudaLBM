@@ -91,4 +91,6 @@ SourceFiles
 #define JETFLOW
 // #define LIDDRIVENCAVITY
 
+// #define MULTI_GPU
+
 #endif

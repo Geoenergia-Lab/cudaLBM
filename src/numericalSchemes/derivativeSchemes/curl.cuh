@@ -62,12 +62,12 @@ namespace LBM
          * @param w The z component of the vector
          * @param mesh The lattice mesh
          **/
-        template <const label_t order_, typename T, class M>
+        template <const label_t order_, typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<std::vector<T>> curl(
             const std::vector<T> &u,
             const std::vector<T> &v,
             const std::vector<T> &w,
-            const M &mesh)
+            const LatticeMesh &mesh)
         {
             // Calculate the derivatives
             const std::vector<double> dwdy = dfdy<order_, double>(w, mesh);

@@ -104,6 +104,7 @@ namespace LBM
             }
         }
 
+        // MODIFY FOR MULTI GPU
         const label_t idx = device::idx();
 
         // Prefetch devPtrs into L2
