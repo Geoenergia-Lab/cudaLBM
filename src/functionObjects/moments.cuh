@@ -76,7 +76,7 @@ namespace LBM
                     const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
 
                     // Read from global memory
-                    thread::array<scalar_t, NUMBER_MOMENTS<false>()> m;
+                    thread::array<scalar_t, NUMBER_MOMENTS<false, std::size_t>()> m;
                     device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
                         [&](const auto n)
                         {
@@ -84,7 +84,7 @@ namespace LBM
                         });
 
                     // Read the mean values from global memory
-                    thread::array<scalar_t, NUMBER_MOMENTS<false>()> mMean;
+                    thread::array<scalar_t, NUMBER_MOMENTS<false, std::size_t>()> mMean;
                     device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
                         [&](const auto n)
                         {
@@ -92,7 +92,7 @@ namespace LBM
                         });
 
                     // Update the mean value and write back to global
-                    const thread::array<scalar_t, NUMBER_MOMENTS<false>()> meanNew = timeAverage(mMean, m, invNewCount);
+                    const thread::array<scalar_t, NUMBER_MOMENTS<false, std::size_t>()> meanNew = timeAverage(mMean, m, invNewCount);
                     device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
                         [&](const auto n)
                         {

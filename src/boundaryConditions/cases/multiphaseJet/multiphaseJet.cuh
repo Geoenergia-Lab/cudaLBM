@@ -43,31 +43,37 @@ Namespace
     LBM
 
 SourceFiles
-    multiphaseJet.cuh
+    jetFlow.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_multiphaseJet_CUH
-#define __MBLBM_multiphaseJet_CUH
+#ifndef __MBLBM_jetFlow_CUH
+#define __MBLBM_jetFlow_CUH
 
 namespace LBM
 {
     /**
-     * @class multiphaseJet
-     * @brief Applies boundary conditions for multiphase jet simulations using moment representation
+     * @brief New definition of the inlet plane
+     * **/
+    __device__ __host__ [[nodiscard]] inline consteval bool new_inlet() noexcept { return false; }
+
+    /**
+     * @class jetFlow
+     *
+     * @brief Applies boundary conditions for turbulent jet simulations using moment representation
      *
      * This class implements the boundary condition treatment for the D3Q19 lattice
-     * model in multiphase jet flow simulations. It handles static wall, inflow, and
+     * model in turbulent jet flow simulations. It handles static wall, inflow, and
      * outflow boundaries using moment-based boundary conditions derived from the
      * regularized LBM approach.
      **/
-    class multiphaseJet
+    class jetFlow
     {
     public:
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval multiphaseJet(){};
+        __device__ __host__ [[nodiscard]] inline consteval jetFlow(){};
 
         /**
          * @brief Calculate moment variables at boundary nodes
@@ -81,6 +87,12 @@ namespace LBM
          * (jet) boundary located at the BACK face of the domain and the outflow
          * boundary located at the FRONT face.
          *
+         * This method implements the moment-based boundary condition treatment for
+         * the D3Q19 lattice model. It handles various boundary types including:
+         * - Static wall boundaries (all velocity components zero)
+         * - Moving lid boundaries (prescribed tangential velocity)
+         * - Corner and edge cases with specialized treatment
+         *
          * The method uses the regularized LBM approach to reconstruct boundary
          * moments from available population information, ensuring mass conservation
          * and appropriate stress conditions at boundaries.
@@ -92,53 +104,7 @@ namespace LBM
             const normalVector &boundaryNormal,
             const scalar_t *const ptrRestrict shared_buffer) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
-            static_assert((PhaseVelocitySet::Q() == 7), "Error: boundaryConditions::calculate_moments only supports D3Q7 for phase field.");
-
-            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
-            const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
-
-            switch (boundaryNormal.nodeType())
-            {
-            // Round inflow + no-slip
-            case normalVector::BACK():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t y = threadIdx.y + block::ny() * blockIdx.y;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
-
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                 // uy
-                moments[m_i<3>()] = is_jet * device::u_inf;                   // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                 // mxy
-                moments[m_i<6>()] = mxz;                                      // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
-
-                return;
-            }
-
-// Static back face outside of the jet
-#include "include/static.cuh"
-
-// Periodic
-#include "include/periodic.cuh"
-
-// Outflow (zero-gradient) at front face
-#include "include/IRBCNeumann.cuh"
-            }
+#include "jetBoundaryCondition.cuh"
         }
 
         template <class VelocitySet, class PhaseVelocitySet, const label_t N>
@@ -148,53 +114,7 @@ namespace LBM
             const normalVector &boundaryNormal,
             const thread::array<scalar_t, N> &shared_buffer) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
-            static_assert((PhaseVelocitySet::Q() == 7), "Error: boundaryConditions::calculate_moments only supports D3Q7 for phase field.");
-
-            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, NO_DIRECTION, NO_DIRECTION>(pop, boundaryNormal);
-            const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
-
-            switch (boundaryNormal.nodeType())
-            {
-            // Round inflow + no-slip
-            case normalVector::BACK():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t y = threadIdx.y + block::ny() * blockIdx.y;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
-
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                 // uy
-                moments[m_i<3>()] = is_jet * device::u_inf;                   // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                 // mxy
-                moments[m_i<6>()] = mxz;                                      // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
-
-                return;
-            }
-
-// Static back face outside of the jet
-#include "include/static.cuh"
-
-// Periodic
-#include "include/periodic.cuh"
-
-// Outflow (zero-gradient) at front face
-#include "include/IRBCNeumann.cuh"
-            }
+#include "jetBoundaryCondition.cuh"
         }
 
     private:

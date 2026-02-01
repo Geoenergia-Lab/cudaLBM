@@ -47,8 +47,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_lidDrivenCavity_CUH
-#define __MBLBM_lidDrivenCavity_CUH
+#ifndef __MBLBM_LIDDRIVENCAVITY_CUH
+#define __MBLBM_LIDDRIVENCAVITY_CUH
 
 __device__ __host__ [[nodiscard]] inline consteval bool check_n_boundaries() noexcept { return false; }
 
@@ -109,8 +109,8 @@ namespace LBM
                     boundaryNormal.isEast<scalar_t>(),
                     boundaryNormal.isNorth<scalar_t>(),
                     boundaryNormal.isSouth<scalar_t>(),
-                    boundaryNormal.isFront<scalar_t>(),
-                    boundaryNormal.isBack<scalar_t>()};
+                    boundaryNormal.isBack<scalar_t>(),
+                    boundaryNormal.isFront<scalar_t>()};
 
                 moments[m_i<1>()] = U<X>(boundarySwitches, nBoundaries);
                 moments[m_i<2>()] = U<Y>(boundarySwitches, nBoundaries);
@@ -533,16 +533,18 @@ namespace LBM
          * @tparam index Index of the velocity component to compute
          * @return Velocity component value
          **/
-        template <const axisDirection alpha>
+        template <const type alpha>
         __device__ static inline constexpr scalar_t U(const thread::array<scalar_t, 6> &boundarySwitches, const scalar_t n_boundaries) noexcept
         {
+            assertions::validate<alpha, NOT_NULL>();
+
             // Calculate the boundary velocity value
             return ((boundarySwitches[0] * device::U_West[alpha]) +
                     (boundarySwitches[1] * device::U_East[alpha]) +
                     (boundarySwitches[2] * device::U_North[alpha]) +
                     (boundarySwitches[3] * device::U_South[alpha]) +
-                    (boundarySwitches[4] * device::U_Front[alpha]) +
-                    (boundarySwitches[5] * device::U_Back[alpha])) /
+                    (boundarySwitches[4] * device::U_Back[alpha]) +
+                    (boundarySwitches[5] * device::U_Front[alpha])) /
                    n_boundaries;
         }
     };

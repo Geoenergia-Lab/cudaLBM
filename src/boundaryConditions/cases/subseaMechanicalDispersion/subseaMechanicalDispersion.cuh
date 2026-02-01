@@ -115,17 +115,17 @@ namespace LBM
                 const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
                 const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                 // uy
-                moments[m_i<3>()] = is_jet * device::u_inf;                   // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                 // mxy
-                moments[m_i<6>()] = mxz;                                      // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
+                moments[m_i<0>()] = rho;                                // rho
+                moments[m_i<1>()] = static_cast<scalar_t>(0);           // ux
+                moments[m_i<2>()] = static_cast<scalar_t>(0);           // uy
+                moments[m_i<3>()] = is_jet * 0.016;                     // uz
+                moments[m_i<4>()] = static_cast<scalar_t>(0);           // mxx
+                moments[m_i<5>()] = static_cast<scalar_t>(0);           // mxy
+                moments[m_i<6>()] = mxz;                                // mxz
+                moments[m_i<7>()] = static_cast<scalar_t>(0);           // myy
+                moments[m_i<8>()] = myz;                                // myz
+                moments[m_i<9>()] = is_jet * (0.016 * 0.016);           // mzz
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1); // phi
 
                 return;
             }
@@ -144,17 +144,17 @@ namespace LBM
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
                 const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = is_jet * device::u_inf;                   // uy
-                moments[m_i<3>()] = static_cast<scalar_t>(0);                 // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = mxy;                                      // mxy
-                moments[m_i<6>()] = static_cast<scalar_t>(0);                 // mxz
-                moments[m_i<7>()] = is_jet * (device::u_inf * device::u_inf); // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = static_cast<scalar_t>(0);                 // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);       // phi
+                moments[m_i<0>()] = rho;                                // rho
+                moments[m_i<1>()] = static_cast<scalar_t>(0);           // ux
+                moments[m_i<2>()] = is_jet * 0.016;                     // uy
+                moments[m_i<3>()] = static_cast<scalar_t>(0);           // uz
+                moments[m_i<4>()] = static_cast<scalar_t>(0);           // mxx
+                moments[m_i<5>()] = mxy;                                // mxy
+                moments[m_i<6>()] = static_cast<scalar_t>(0);           // mxz
+                moments[m_i<7>()] = is_jet * (0.016 * 0.016);           // myy
+                moments[m_i<8>()] = myz;                                // myz
+                moments[m_i<9>()] = static_cast<scalar_t>(0);           // mzz
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0); // phi
 
                 return;
             }
@@ -200,17 +200,17 @@ namespace LBM
                 const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
                 const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                 // uy
-                moments[m_i<3>()] = is_jet * device::u_inf;                   // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                 // mxy
-                moments[m_i<6>()] = mxz;                                      // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                 // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = is_jet * (device::u_inf * device::u_inf); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);       // phi
+                moments[m_i<0>()] = rho;                                // rho
+                moments[m_i<1>()] = static_cast<scalar_t>(0);           // ux
+                moments[m_i<2>()] = static_cast<scalar_t>(0);           // uy
+                moments[m_i<3>()] = is_jet * 0.016;                     // uz
+                moments[m_i<4>()] = static_cast<scalar_t>(0);           // mxx
+                moments[m_i<5>()] = static_cast<scalar_t>(0);           // mxy
+                moments[m_i<6>()] = mxz;                                // mxz
+                moments[m_i<7>()] = static_cast<scalar_t>(0);           // myy
+                moments[m_i<8>()] = myz;                                // myz
+                moments[m_i<9>()] = is_jet * (0.016 * 0.016);           // mzz
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1); // phi
 
                 return;
             }
@@ -229,17 +229,17 @@ namespace LBM
                 const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
                 const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
-                moments[m_i<0>()] = rho;                                      // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                 // ux
-                moments[m_i<2>()] = is_jet * device::u_inf;                   // uy
-                moments[m_i<3>()] = static_cast<scalar_t>(0);                 // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                 // mxx
-                moments[m_i<5>()] = mxy;                                      // mxy
-                moments[m_i<6>()] = static_cast<scalar_t>(0);                 // mxz
-                moments[m_i<7>()] = is_jet * (device::u_inf * device::u_inf); // myy
-                moments[m_i<8>()] = myz;                                      // myz
-                moments[m_i<9>()] = static_cast<scalar_t>(0);                 // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);       // phi
+                moments[m_i<0>()] = rho;                                // rho
+                moments[m_i<1>()] = static_cast<scalar_t>(0);           // ux
+                moments[m_i<2>()] = is_jet * 0.016;                     // uy
+                moments[m_i<3>()] = static_cast<scalar_t>(0);           // uz
+                moments[m_i<4>()] = static_cast<scalar_t>(0);           // mxx
+                moments[m_i<5>()] = mxy;                                // mxy
+                moments[m_i<6>()] = static_cast<scalar_t>(0);           // mxz
+                moments[m_i<7>()] = is_jet * (0.016 * 0.016);           // myy
+                moments[m_i<8>()] = myz;                                // myz
+                moments[m_i<9>()] = static_cast<scalar_t>(0);           // mzz
+                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0); // phi
 
                 return;
             }
