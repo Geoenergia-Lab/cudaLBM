@@ -93,8 +93,8 @@ SourceFiles
 // #define LIDDRIVENCAVITY
 
 // Multiphase boundary conditions defines
-// #define MULTIPHASEJET
-#define SUBSEAMECHANICALDISPERSION
+#define MULTIPHASEJET
+// #define SUBSEAMECHANICALDISPERSION
 
 // Multi GPU define
 // #define MULTI_GPU

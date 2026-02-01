@@ -37,10 +37,10 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Applies static boundary conditions
+    Edge and corner definitions along the inlet plane of the jet.
 
 SourceFiles
-    static.cuh
+    inletEdgesAndCorners.cuh
 
 Notes
     This file is intended to be included directly inside a switch-case block.
@@ -148,7 +148,7 @@ case normalVector::WEST_BACK():
 {
 
     // Incoming moments
-    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     moments[m_i<0>()] = (static_cast<scalar_t>(36) * mxz_I * device::omega * rho_I - static_cast<scalar_t>(36) * mxz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
     moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // ux
@@ -169,7 +169,7 @@ case normalVector::EAST_BACK():
 {
 
     // Incoming moments
-    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     moments[m_i<0>()] = (-static_cast<scalar_t>(36) * mxz_I * device::omega * rho_I + static_cast<scalar_t>(36) * mxz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
     moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // ux
@@ -190,7 +190,7 @@ case normalVector::SOUTH_BACK():
 {
 
     // Incoming moments
-    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     moments[m_i<0>()] = (static_cast<scalar_t>(36) * myz_I * device::omega * rho_I - static_cast<scalar_t>(36) * myz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
     moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // ux
@@ -211,7 +211,7 @@ case normalVector::NORTH_BACK():
 {
 
     // Incoming moments
-    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     moments[m_i<0>()] = (-static_cast<scalar_t>(36) * myz_I * device::omega * rho_I + static_cast<scalar_t>(36) * myz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
     moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // ux

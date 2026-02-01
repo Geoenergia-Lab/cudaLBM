@@ -37,10 +37,10 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Applies IRBC Neumann-type boundary conditions
+    Face, edge and corner definitions along the outlet plane of the jet.
 
 SourceFiles
-    IRBCNeumann.cuh
+    outlet.cuh
 
 Notes
     This file is intended to be included directly inside a switch-case block.
@@ -148,8 +148,8 @@ case normalVector::WEST_FRONT():
     moments[m_i<10>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<10>()]; // phi
 
     // Incoming moments
-    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     // IRBC-Neumann
     if constexpr (VelocitySet::Q() == 19)
@@ -186,8 +186,8 @@ case normalVector::EAST_FRONT():
     moments[m_i<10>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<10>()]; // phi
 
     // Incoming moments
-    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     // IRBC-Neumann
     if constexpr (VelocitySet::Q() == 19)
@@ -224,8 +224,8 @@ case normalVector::SOUTH_FRONT():
     moments[m_i<10>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<10>()]; // phi
 
     // Incoming moments
-    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     // IRBC-Neumann
     if constexpr (VelocitySet::Q() == 19)
@@ -262,8 +262,8 @@ case normalVector::NORTH_FRONT():
     moments[m_i<10>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<10>()]; // phi
 
     // Incoming moments
-    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     // IRBC-Neumann
     if constexpr (VelocitySet::Q() == 19)
@@ -300,11 +300,11 @@ case normalVector::FRONT():
     moments[m_i<10>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<10>()]; // phi
 
     // Incoming moments
-    const scalar_t mxx_I = velocitySet::calculate_moment<VelocitySet, X, X>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t myy_I = velocitySet::calculate_moment<VelocitySet, Y, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, X, Y>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, X, Z>(pop, boundaryNormal) * inv_rho_I;
-    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, Y, Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxx_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::X>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myy_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     // IRBC-Neumann
     if constexpr (VelocitySet::Q() == 19)

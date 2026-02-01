@@ -60,12 +60,11 @@ namespace LBM
     /**
      * @class jetFlow
      *
-     * @brief Applies boundary conditions for turbulent jet simulations using moment representation
+     * @brief Applies boundary conditions for jet flow simulations using moment representation
      *
      * This class implements the boundary condition treatment for the D3Q19 lattice
-     * model in turbulent jet flow simulations. It handles static wall, inflow, and
-     * outflow boundaries using moment-based boundary conditions derived from the
-     * regularized LBM approach.
+     * model in jet flow simulations. It handles static wall, inflow, and outflow
+     * boundaries using moment-based boundary conditions derived from the regularized LBM approach.
      **/
     class jetFlow
     {

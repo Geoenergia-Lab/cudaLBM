@@ -47,16 +47,11 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_jetFlow_CUH
-#define __MBLBM_jetFlow_CUH
+#ifndef __MBLBM_multiphaseJet_CUH
+#define __MBLBM_multiphaseJet_CUH
 
 namespace LBM
 {
-    /**
-     * @brief New definition of the inlet plane
-     * **/
-    __device__ __host__ [[nodiscard]] inline consteval bool new_inlet() noexcept { return false; }
-
     /**
      * @class jetFlow
      *
@@ -67,13 +62,13 @@ namespace LBM
      * outflow boundaries using moment-based boundary conditions derived from the
      * regularized LBM approach.
      **/
-    class jetFlow
+    class multiphaseJet
     {
     public:
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval jetFlow(){};
+        __device__ __host__ [[nodiscard]] inline consteval multiphaseJet(){};
 
         /**
          * @brief Calculate moment variables at boundary nodes

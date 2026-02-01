@@ -37,7 +37,7 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Edge and corner definitions along the outlet plane of the jet.
+    Face, edge and corner definitions along the outlet plane of the jet.
 
 SourceFiles
     outlet.cuh
