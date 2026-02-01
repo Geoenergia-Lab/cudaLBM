@@ -65,14 +65,28 @@ SourceFiles
 
 namespace LBM
 {
+    /**
+     * @brief Boundary conditions aliases
+     **/
+#ifdef MULTIPHASEJET
+    using BoundaryConditions = multiphaseJet;
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
+#endif
+
+#ifdef SUBSEAMECHANICALDISPERSION
+    using BoundaryConditions = subseaMechanicalDispersion;
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
+#endif
 
     using VelocitySet = D3Q19;
     using PhaseVelocitySet = D3Q7;
     using Collision = secondOrder;
 
     // Aliases use the standard halo methods
-    using HydroHalo = device::halo<VelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
-    using PhaseHalo = device::halo<PhaseVelocitySet, multiphase::periodicX(), multiphase::periodicY()>;
+    using HydroHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
+    using PhaseHalo = device::halo<PhaseVelocitySet, periodicX(), periodicY()>;
 
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept
     {
@@ -205,7 +219,7 @@ namespace LBM
 
             if (boundaryNormal.isBoundary())
             {
-                multiphase::BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
+                BoundaryConditions::calculate_moments<VelocitySet, PhaseVelocitySet>(pop, moments, boundaryNormal, shared_buffer);
             }
         }
 

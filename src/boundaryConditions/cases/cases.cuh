@@ -50,54 +50,17 @@ SourceFiles
 #ifndef __MBLBM_CASES_CUH
 #define __MBLBM_CASES_CUH
 
-// Monophase boundary conditions defines
-#define MONOPHASEJET
-// #define LIDDRIVENCAVITY
-
-#include "monophaseJet/monophaseJet.cuh"
+// Monophase includes
+#include "jetFlow/jetFlow.cuh"
 #include "lidDrivenCavity/lidDrivenCavity.cuh"
 
-// Multiphase boundary conditions defines
-// #define MULTIPHASEJET
-#define SUBSEAMECHANICALDISPERSION
-
+// Multiphase includes
 #include "multiphaseJet/multiphaseJet.cuh"
 #include "subseaMechanicalDispersion/subseaMechanicalDispersion.cuh"
 
 namespace LBM
 {
-    /**
-     * @brief Monophase boundary conditions aliases
-     **/
-#ifdef MONOPHASEJET
-    using BoundaryConditions = monophaseJet;
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
-#endif
 
-#ifdef LIDDRIVENCAVITY
-    using BoundaryConditions = lidDrivenCavity;
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
-#endif
-
-    /**
-     * @brief Multiphase boundary conditions aliases
-     **/
-    namespace multiphase
-    {
-#ifdef MULTIPHASEJET
-        using BoundaryConditions = multiphaseJet;
-        __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-        __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
-#endif
-
-#ifdef SUBSEAMECHANICALDISPERSION
-        using BoundaryConditions = subseaMechanicalDispersion;
-        __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-        __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
-#endif
-    }
 }
 
 #endif

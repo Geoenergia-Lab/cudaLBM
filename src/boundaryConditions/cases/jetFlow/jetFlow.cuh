@@ -43,30 +43,30 @@ Namespace
     LBM
 
 SourceFiles
-    monophaseJet.cuh
+    jetFlow.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_monophaseJet_CUH
-#define __MBLBM_monophaseJet_CUH
+#ifndef __MBLBM_jetFlow_CUH
+#define __MBLBM_jetFlow_CUH
 
 namespace LBM
 {
     /**
-     * @class monophaseJet
+     * @class jetFlow
      * @brief Applies boundary conditions for jet simulations using moment representation
      *
      * This class implements the boundary condition treatment for monophase jet flow simulations.
      * It handles a round inflow with no-slip outside of the circle, periodic laterals and outflow
      * boundaries using moment-based boundary conditions derived from the regularized LBM approach.
      **/
-    class monophaseJet
+    class jetFlow
     {
     public:
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval monophaseJet(){};
+        __device__ __host__ [[nodiscard]] inline consteval jetFlow(){};
 
         /**
          * @brief Calculate moment variables at boundary nodes

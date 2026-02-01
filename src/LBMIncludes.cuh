@@ -88,4 +88,12 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
+// Monophase boundary conditions defines
+#define JETFLOW
+// #define LIDDRIVENCAVITY
+
+// Multiphase boundary conditions defines
+// #define MULTIPHASEJET
+#define SUBSEAMECHANICALDISPERSION
+
 #endif
