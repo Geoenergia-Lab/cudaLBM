@@ -37,22 +37,23 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Implementation of the multiphase moment representation with the D3Q19 velocity set
+    Implementation of the multiphase moment representation with the D3Q19
+    velocity set for hydrodynamics and D3Q7 for phase field evolution
 
 Namespace
     LBM
 
 SourceFiles
-    multiphaseD3Q19.cu
+    phaseFieldD3Q19.cu
 
 \*---------------------------------------------------------------------------*/
 
-// #define MULTIPHASE_GLOBAL
+// #define PHASEFIELD_GLOBAL
 
-#if defined(MULTIPHASE_GLOBAL)
-#include "multiphaseD3Q19global.cuh" // Uses four extra global pointers
+#if defined(PHASEFIELD_GLOBAL)
+#include "phaseFieldD3Q19global.cuh" // Uses four extra global pointers
 #else
-#include "multiphaseD3Q19shared.cuh" // Reduced global memory footprint
+#include "phaseFieldD3Q19shared.cuh" // Reduced global memory footprint
 #endif
 
 using namespace LBM;
@@ -131,7 +132,7 @@ int main(const int argc, const char *const argv[])
     device::haloSingle<VelocitySet, periodicX(), periodicY()> fBlockHalo(mesh, programCtrl);      // Hydrodynamic halo
     device::haloSingle<PhaseVelocitySet, periodicX(), periodicY()> gBlockHalo(mesh, programCtrl); // Phase field halo
 
-    kernelSetup<smem_alloc_size()>(multiphaseStream);
+    kernelSetup<smem_alloc_size()>(phaseFieldStream);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -163,25 +164,25 @@ int main(const int argc, const char *const argv[])
             [&](const auto stream)
             {
 #if defined(MULTIPHASE_GLOBAL)
-                multiphaseStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
+                phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
                     devPtrs, normx.ptr(), normy.ptr(), normz.ptr(),
                     fBlockHalo.ghostConst(),
                     gBlockHalo.ghostConst());
 
-                computeNormals<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
+                phaseFieldNormals<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
                     phi.ptr(), normx.ptr(), normy.ptr(), normz.ptr(), ind.ptr());
 
-                multiphaseCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
+                phaseFieldCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
                     devPtrs, normx.ptr(), normy.ptr(), normz.ptr(), ind.ptr(), phi.ptr(),
                     fBlockHalo.ghost(),
                     gBlockHalo.ghost());
 #else
-                multiphaseStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
+                phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
                     devPtrs,
                     fBlockHalo.ghostConst(),
                     gBlockHalo.ghostConst());
 
-                multiphaseCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
+                phaseFieldCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
                     devPtrs,
                     fBlockHalo.ghost(),
                     gBlockHalo.ghost());

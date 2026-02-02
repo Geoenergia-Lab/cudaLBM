@@ -18,7 +18,7 @@ $(error CUDALBM_CUDA_DIR is not set. Please run "source bashrc" in the project d
 endif
 
 TOOL_SUBDIRS = applications/computeVersion
-GPU_SUBDIRS = applications/multiphaseD3Q19 applications/momentBasedD3Q19 applications/momentBasedD3Q27 applications/fieldConvert applications/fieldCalculate
+GPU_SUBDIRS = applications/phaseFieldD3Q19 applications/momentBasedD3Q19 applications/momentBasedD3Q27 applications/fieldConvert applications/fieldCalculate
 SUBDIRS = $(TOOL_SUBDIRS) $(GPU_SUBDIRS)
 
 .PHONY: all clean install uninstall $(SUBDIRS) directories

@@ -1,7 +1,7 @@
 include ../../common.mk
 
-EXECUTABLE = multiphaseD3Q19
-SOURCE = multiphaseD3Q19.cu
+EXECUTABLE = phaseFieldD3Q19
+SOURCE = phaseFieldD3Q19.cu
 
 default: clean $(EXECUTABLE)
 

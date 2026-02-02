@@ -37,18 +37,19 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Main kernels for the multiphase moment representation with the D3Q19 velocity set
+    Main kernels for the multiphase moment representation with the D3Q19
+    velocity set for hydrodynamics and D3Q7 for phase field evolution
 
 Namespace
     LBM
 
 SourceFiles
-    multiphaseD3Q19shared.cuh
+    phaseFieldD3Q19shared.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_MULTIPHASED3Q19_CUH
-#define __MBLBM_MULTIPHASED3Q19_CUH
+#ifndef __MBLBM_PHASEFIELDD3Q19_CUH
+#define __MBLBM_PHASEFIELDD3Q19_CUH
 
 #include "../../src/LBMIncludes.cuh"
 #include "../../src/LBMTypedefs.cuh"
@@ -104,7 +105,7 @@ namespace LBM
      * @param gBlockHalo Object containing pointers to the individual block halo faces used to exchange the phase population densities
      * @note Currently only immutable halos are used due to kernel split
      **/
-    launchBoundsD3Q19 __global__ void multiphaseStream(
+    launchBoundsD3Q19 __global__ void phaseFieldStream(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, const scalar_t> ghostHydro,
         const device::ptrCollection<6, const scalar_t> ghostPhase)
@@ -315,7 +316,7 @@ namespace LBM
      * @param gBlockHalo Object containing pointers to the individual block halo faces used to exchange the phase population densities
      * @note Currently only immutable halos are used due to kernel split
      **/
-    launchBoundsD3Q19 __global__ void multiphaseCollide(
+    launchBoundsD3Q19 __global__ void phaseFieldCollide(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, scalar_t> ghostHydro,
         const device::ptrCollection<6, scalar_t> ghostPhase)
