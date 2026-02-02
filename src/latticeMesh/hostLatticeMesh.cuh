@@ -199,13 +199,15 @@ namespace LBM
                     {
                         const scalar_t tt_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp * static_cast<scalar_t>(0.5);
                         const scalar_t tt_omegaVar_t3Temp = tt_omegaVarTemp * static_cast<scalar_t>(3);
-                        // Weber defined at programControl
+
+                        // Weber is define at case programControl
                         const scalar_t sigmaTemp = (programCtrl.u_inf() * programCtrl.u_inf() * programCtrl.L_char()) / programCtrl.We();
-                        const scalar_t gammaTemp = static_cast<scalar_t>(1);
+
+                        // This gamma definition hardcodes tau_g = 1 and phase field cs2 = 1/4
+                        const scalar_t gammaTemp = static_cast<scalar_t>(2) / programCtrl.interfaceWidth();
 
                         copyToSymbol(device::tt_omegaVar, tt_omegaVarTemp);
                         copyToSymbol(device::tt_omegaVar_t3, tt_omegaVar_t3Temp);
-                        copyToSymbol(device::We, programCtrl.We());
                         copyToSymbol(device::sigma, sigmaTemp);
                         copyToSymbol(device::gamma, gammaTemp);
 

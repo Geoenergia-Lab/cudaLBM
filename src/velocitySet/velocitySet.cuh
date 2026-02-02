@@ -156,7 +156,7 @@ namespace LBM
          * - Diagonal second-order moments: scaled by scale_ii()
          * - Off-diagonal second-order moments: scaled by scale_ij()
          **/
-        __device__ static inline void scale(thread::array<scalar_t, 10> &moments) noexcept
+        __device__ static inline void scale(thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments) noexcept
         {
             // Scale the moments correctly
             moments[m_i<1>()] = scale_i<scalar_t>() * (moments[m_i<1>()]);
@@ -181,7 +181,7 @@ namespace LBM
          *
          * @note The phase field phi (moment of index 10) is not scaled
          **/
-        __device__ static inline void scale(thread::array<scalar_t, 11> &moments) noexcept
+        __device__ static inline void scale(thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments) noexcept
         {
             // Scale the moments correctly
             moments[m_i<1>()] = scale_i<scalar_t>() * (moments[m_i<1>()]);

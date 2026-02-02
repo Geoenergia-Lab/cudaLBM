@@ -87,8 +87,6 @@ namespace LBM
      * which includes 7 discrete velocity directions in 3D space. It contains:
      * - Velocity components (cx, cy, cz) for each direction
      * - Weight coefficients for each direction
-     * - Methods for moment calculation and population reconstruction
-     * - Equilibrium distribution functions
      **/
     class D3Q7 : private velocitySet
     {

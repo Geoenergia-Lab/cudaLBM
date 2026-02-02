@@ -89,7 +89,7 @@ int main(const int argc, const char *const argv[])
 
     // Phase field arrays
     device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> phi("phi", mesh, programCtrl);
-#if defined(MULTIPHASE_GLOBAL)
+#if defined(PHASEFIELD_GLOBAL)
     device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normx("normx", mesh, programCtrl);
     device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normy("normy", mesh, programCtrl);
     device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normz("normz", mesh, programCtrl);
@@ -163,7 +163,7 @@ int main(const int argc, const char *const argv[])
         host::constexpr_for<0, NStreams()>(
             [&](const auto stream)
             {
-#if defined(MULTIPHASE_GLOBAL)
+#if defined(PHASEFIELD_GLOBAL)
                 phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
                     devPtrs, normx.ptr(), normy.ptr(), normz.ptr(),
                     fBlockHalo.ghostConst(),

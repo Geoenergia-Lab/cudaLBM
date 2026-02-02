@@ -356,7 +356,6 @@ namespace LBM
         // Extra for multiphase
         __device__ __constant__ scalar_t tt_omegaVar;
         __device__ __constant__ scalar_t tt_omegaVar_t3;
-        __device__ __constant__ scalar_t We;
         __device__ __constant__ scalar_t sigma;
         __device__ __constant__ scalar_t gamma;
 
