@@ -146,11 +146,27 @@ namespace LBM
                     [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
                     {
                         const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+                        if constexpr (verbose())
+                        {
+                            std::cout << "Freeing ptr[" << virtualDeviceIndex << "];" << std::endl;
+                        }
                         checkCudaErrors(cudaFree(ptr_[virtualDeviceIndex]));
+                        if constexpr (verbose())
+                        {
+                            std::cout << "Freed ptr[" << virtualDeviceIndex << "];" << std::endl;
+                        }
                     });
 
                 // Now free the host memory allocated to store the pointers
+                if constexpr (verbose())
+                {
+                    std::cout << "Freeing host pointer collection" << std::endl;
+                }
                 checkCudaErrors(cudaFreeHost(ptr_));
+                if constexpr (verbose())
+                {
+                    std::cout << "Freed host pointer collection" << std::endl;
+                }
             }
 
             /**

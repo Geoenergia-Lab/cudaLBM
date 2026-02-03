@@ -107,7 +107,7 @@ namespace LBM
              * @tparam VelocitySet The velocity set type used in LBM
              * @tparam N The number of streams (compile-time constant)
              **/
-            template <class VelocitySet, const label_t N>
+            template <class VelocitySet>
             class collection
             {
             public:
@@ -121,7 +121,7 @@ namespace LBM
                     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
                     const device::ptrCollection<10, scalar_t> &devPtrs,
-                    const streamHandler<N> &streamsLBM) noexcept
+                    const streamHandler &streamsLBM) noexcept
                     : hostWriteBuffer_(hostWriteBuffer),
                       mesh_(mesh),
                       devPtrs_(devPtrs),
@@ -182,24 +182,41 @@ namespace LBM
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
 
-                    // Calculate the mean
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            moments::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {rhoMean_.ptr(),
-                                 uMean_.ptr(),
-                                 vMean_.ptr(),
-                                 wMean_.ptr(),
-                                 mxxMean_.ptr(),
-                                 mxyMean_.ptr(),
-                                 mxzMean_.ptr(),
-                                 myyMean_.ptr(),
-                                 myzMean_.ptr(),
-                                 mzzMean_.ptr()},
-                                invNewCount);
-                        });
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        moments::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {rhoMean_.ptr(),
+                             uMean_.ptr(),
+                             vMean_.ptr(),
+                             wMean_.ptr(),
+                             mxxMean_.ptr(),
+                             mxyMean_.ptr(),
+                             mxzMean_.ptr(),
+                             myyMean_.ptr(),
+                             myzMean_.ptr(),
+                             mzzMean_.ptr()},
+                            invNewCount);
+                    }
+
+                    // // Calculate the mean
+                    // host::constexpr_for<0, N>(
+                    //     [&](const auto stream)
+                    //     {
+                    //         moments::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                    //             devPtrs_,
+                    //             {rhoMean_.ptr(),
+                    //              uMean_.ptr(),
+                    //              vMean_.ptr(),
+                    //              wMean_.ptr(),
+                    //              mxxMean_.ptr(),
+                    //              mxyMean_.ptr(),
+                    //              mxzMean_.ptr(),
+                    //              myyMean_.ptr(),
+                    //              myzMean_.ptr(),
+                    //              mzzMean_.ptr()},
+                    //             invNewCount);
+                    //     });
                 }
 
                 /**
@@ -320,7 +337,7 @@ namespace LBM
                 /**
                  * @brief Stream handler for CUDA operations
                  **/
-                const streamHandler<N> &streamsLBM_;
+                const streamHandler &streamsLBM_;
 
                 /**
                  * @brief Flag for instantaneous calculation

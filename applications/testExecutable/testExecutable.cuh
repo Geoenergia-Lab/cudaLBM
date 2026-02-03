@@ -125,7 +125,14 @@ namespace LBM
 
         const label_t idx = (tx + block::nx<label_t>() * (ty + block::ny<label_t>() * (tz + block::nz<label_t>() * (bx + NUM_BLOCK_X * (by + NUM_BLOCK_Y * bz)))));
 
+        if ((threadIdx.x == 7) && (threadIdx.y == 7) && (threadIdx.z == 7))
+        {
+            printf("Accessing idx %lu\n", static_cast<uint64_t>(idx));
+        }
+
         const label_t deviceID = deviceIDPtr[idx];
+
+        // return;
 
         if (!(deviceID == correctDevice))
         {
