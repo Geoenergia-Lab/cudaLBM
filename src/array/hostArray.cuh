@@ -82,18 +82,22 @@ namespace LBM
              * @brief Construct from a number of points and zero-initialise everything
              * @param nPoints The size of the memory in points to allocate
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints)
+            __host__ [[nodiscard]] array(const label_t nPoints, const host::latticeMesh &mesh)
                 : ptr_(host::allocate<T>(nPoints, 0)),
-                  nPoints_(nPoints){};
+                  nPoints_(nPoints),
+                  mesh_(mesh),
+                  name_(""){};
 
             /**
              * @brief Construct from a number of points and uniform-initialise everything
              * @param nPoints The size of the memory in points to allocate
              * @param val The value to assign to the array
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints, const T val)
+            __host__ [[nodiscard]] array(const label_t nPoints, const T val, const host::latticeMesh &mesh)
                 : ptr_(host::allocate<T>(nPoints, val)),
-                  nPoints_(nPoints){};
+                  nPoints_(nPoints),
+                  mesh_(mesh),
+                  name_(""){};
 
             /**
              * @brief Destructor - automatically releases device memory
@@ -198,6 +202,24 @@ namespace LBM
                 }
             }
 
+            /**
+             * @brief Get the mesh
+             * @return Const reference to mesh
+             **/
+            __host__ [[nodiscard]] inline constexpr const host::latticeMesh &mesh() const noexcept
+            {
+                return mesh_;
+            }
+
+            /**
+             * @brief Get field name identifier
+             * @return Const reference to name string
+             **/
+            __host__ [[nodiscard]] inline constexpr const std::string &name() const noexcept
+            {
+                return name_;
+            }
+
         private:
             /**
              * @brief Pointer to the data
@@ -208,6 +230,13 @@ namespace LBM
              * @brief Size of the data allocation
              **/
             const label_t nPoints_;
+
+            /**
+             * @brief Reference to the lattice mesh
+             **/
+            const host::latticeMesh &mesh_;
+
+            const std::string name_;
         };
 
         /**

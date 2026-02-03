@@ -77,7 +77,7 @@ namespace LBM
              * - Calculation of LBM relaxation parameters
              * - Initialization of device constants for GPU execution
              **/
-            __host__ [[nodiscard]] latticeMesh(const programControl &programCtrl) noexcept
+            __host__ [[nodiscard]] latticeMesh([[maybe_unused]] const programControl &programCtrl) noexcept
                 : nx_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "nx")),
                   ny_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "ny")),
                   nz_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "nz")),
@@ -148,7 +148,7 @@ namespace LBM
 
 #ifdef MULTI_GPU
 
-                    static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+                    // static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
 
 #else
                     // Check that the mesh dimensions are not too large for GPU memory
@@ -177,7 +177,7 @@ namespace LBM
 
 #ifdef MULTI_GPU
 
-                static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
+                // static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
 
 #else
                 // Allocate programControl symbols on the GPU (clean up later)

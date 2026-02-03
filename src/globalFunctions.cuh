@@ -108,6 +108,57 @@ namespace LBM
     }
 
     /**
+     * @brief Raise a variable to a compile-time constant integer power
+     * @tparam N The power
+     * @tparam T The arithmetic type
+     * @param[in] var The variable to exponent
+     **/
+    template <const std::size_t N, typename T>
+    __device__ __host__ [[nodiscard]] inline constexpr T pow(T &&var)
+    {
+        static_assert(N >= 0, "Power must be non-negative");
+        using ReturnType = std::decay_t<T>;
+
+        if constexpr (N == 0)
+        {
+            return ReturnType{0};
+        }
+        else if constexpr (N == 1)
+        {
+            return std::forward<T>(var);
+        }
+        else
+        {
+            return []<std::size_t... Is>(std::index_sequence<Is...>, auto &&v)
+            {
+                // Multiply v by itself N times
+                return ((static_cast<void>(Is), v) * ...);
+            }(std::make_index_sequence<N>{}, std::forward<T>(var));
+        }
+    }
+
+    template <typename F, typename T>
+    __host__ void gpu_for(
+        const T nxGPUs,
+        const T nyGPUs,
+        const T nzGPUs,
+        const F &&f) noexcept
+    {
+        // Loops for block indices
+        for (T GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
+        {
+            for (T GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+            {
+                for (T GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
+                {
+                    // Execute the arbitrary loop body
+                    f(GPU_x, GPU_y, GPU_z);
+                }
+            }
+        }
+    }
+
+    /**
      * @brief Nested loop over block and thread indices
      * @param nxBlocks Number of blocks in x-dimension
      * @param nyBlocks Number of blocks in y-dimension

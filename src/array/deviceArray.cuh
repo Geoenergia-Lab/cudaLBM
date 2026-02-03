@@ -116,6 +116,64 @@ namespace LBM
         class array<field::FULL_FIELD, T, VelocitySet, TimeType>
         {
         public:
+#ifdef MULTI_GPU
+            __host__ [[nodiscard]] array(const host::array<host::PAGED, T, VelocitySet, TimeType> &hostArray)
+                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.arr())),
+                  name_(hostArray.name()),
+                  mesh_(hostArray.mesh()){
+                      // initialise_boundary_condition(name_);
+                  };
+
+            __host__ [[nodiscard]] array(const host::array<host::PINNED, T, VelocitySet, TimeType> &hostArray)
+                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data())),
+                  name_(hostArray.name()),
+                  mesh_(hostArray.mesh()){
+                      // initialise_boundary_condition(name_);
+                  };
+
+            /**
+             * @brief Destructor - automatically releases device memory
+             * @note Noexcept guarantee: failsafe if cudaFree fails
+             **/
+            ~array() noexcept
+            {
+                const label_t nxGPUs = mesh_.nDevices<axis::X>();
+                const label_t nyGPUs = mesh_.nDevices<axis::Y>();
+                const label_t nzGPUs = mesh_.nDevices<axis::Z>();
+
+                gpu_for(
+                    nxGPUs, nyGPUs, nzGPUs,
+                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                    {
+                        const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+                        checkCudaErrors(cudaFree(ptr_[virtualDeviceIndex]));
+                    });
+
+                // Now free the host memory allocated to store the pointers
+                checkCudaErrors(cudaFreeHost(ptr_));
+            }
+
+            /**
+             * @brief Get read-only access to underlying data
+             * @return Const pointer to device memory
+             **/
+            template <typename Idx>
+            __device__ __host__ [[nodiscard]] inline const T *ptr(const Idx idx) const noexcept
+            {
+                return ptr_[idx];
+            }
+
+            /**
+             * @brief Get mutable access to underlying data
+             * @return Pointer to device memory
+             **/
+            template <typename Idx>
+            __device__ __host__ [[nodiscard]] inline T *ptr(const Idx idx) noexcept
+            {
+                return ptr_[idx];
+            }
+#else
+
             /**
              * @brief Constructs a device array from host data
              * @tparam VelocitySet Template parameter for velocity set configuration
@@ -275,11 +333,83 @@ namespace LBM
                 return TimeType;
             }
 
+#endif
+
         private:
+#ifdef MULTI_GPU
+            T **const ptrRestrict ptr_;
+
+            __host__ [[nodiscard]] static T **allocate_on_devices(
+                const host::latticeMesh &mesh,
+                const T *hostArrayGlobal)
+            {
+                const label_t nxGPUs = mesh.nDevices<axis::X>();
+                const label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+
+                const std::size_t nDevices = mesh.nDevices<axis::X, std::size_t>() * mesh.nDevices<axis::Y, std::size_t>() * mesh.nDevices<axis::Z, std::size_t>();
+
+                T **hostPtrsToDevice = host::allocate<T *>(nDevices, nullptr);
+
+                gpu_for(
+                    nxGPUs, nyGPUs, nzGPUs,
+                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                    {
+                        const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+                        hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z);
+                    });
+
+                return hostPtrsToDevice;
+            }
+
+            __host__ [[nodiscard]] static T **allocate_on_devices(
+                const host::latticeMesh &mesh,
+                const std::vector<T> &hostArrayGlobal)
+            {
+                allocate_on_devices(mesh, hostArrayGlobal.data());
+            }
+
+            // Creates a partition of the mesh and allocates it to a particular GPU
+            __host__ [[nodiscard]] static T *allocate_device_segment(
+                const host::latticeMesh &mesh,
+                const T *hostArrayGlobal,
+                const label_t GPU_x,
+                const label_t GPU_y,
+                const label_t GPU_z)
+            {
+                const label_t nxGPUs = mesh.nDevices<axis::X>();
+                const label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+                const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
+                const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
+                const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
+                const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
+                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
+
+                T *devPtr = device::allocate<T>(nPointsPerGPU, static_cast<deviceIndex_t>(virtualDeviceIndex));
+
+                device::copy(devPtr, &(hostArrayGlobal[startIndex]), nPointsPerGPU);
+
+                return devPtr;
+            }
+
+            // Creates a partition of the mesh and allocates it to a particular GPU
+            __host__ [[nodiscard]] static T *allocate_device_segment(
+                const host::latticeMesh &mesh,
+                const std::vector<T> &hostArrayGlobal,
+                const label_t GPU_x,
+                const label_t GPU_y,
+                const label_t GPU_z)
+            {
+                return allocate_device_segment(mesh, hostArrayGlobal.data(), GPU_x, GPU_y, GPU_z);
+            }
+#else
             /**
              * @brief Pointer to the data
              **/
             T *const ptrRestrict ptr_;
+#endif
 
             /**
              * @brief Names of the solution variables
@@ -332,7 +462,7 @@ namespace LBM
             {
 #ifdef MULTI_GPU
 
-                static_assert(false, "device::array::initialise_boundary_condition not implemented for multi GPU yet");
+                // static_assert(false, "device::array::initialise_boundary_condition not implemented for multi GPU yet");
 
 #else
                 if ((name == "u") || (name == "v") || (name == "w"))

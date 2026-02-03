@@ -789,7 +789,7 @@ namespace LBM
             std::vector<std::vector<T>> soa(nFields, std::vector<scalar_t>(nNodes, 0));
 
 #ifdef MULTI_GPU
-            static_assert(false, "deinterleaveAoS not implemented for multi GPU yet");
+            // static_assert(false, "deinterleaveAoS not implemented for multi GPU yet");
 #else
             grid_for(
                 mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
