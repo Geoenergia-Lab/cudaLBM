@@ -374,7 +374,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] const std::vector<T> initialConditions(const host::latticeMesh &mesh, const std::string &fieldName)
             {
-                const boundaryFields<VelocitySet> bField(fieldName);
+                const boundaryFields<VelocitySet, true> bField(fieldName);
 
                 std::vector<T> field(mesh.nPoints(), 0);
 

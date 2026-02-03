@@ -62,7 +62,7 @@ namespace LBM
      * handling both direct numerical values and equilibrium-based calculations.
      * It automatically applies appropriate scaling based on field type.
      **/
-    template <class VelocitySet>
+    template <class VelocitySet, const bool Scaled>
     class boundaryValue
     {
     public:
@@ -172,15 +172,36 @@ namespace LBM
                     }
                     if ((fieldName == "u") | (fieldName == "v") | (fieldName == "w"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_i<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_i<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                     if ((fieldName == "m_xx") | (fieldName == "m_yy") | (fieldName == "m_zz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ii<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ii<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                     if ((fieldName == "m_xy") | (fieldName == "m_xz") | (fieldName == "m_yz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ij<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ij<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                 }
 

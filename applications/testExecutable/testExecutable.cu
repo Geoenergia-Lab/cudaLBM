@@ -131,7 +131,7 @@ int main(const int argc, const char *const argv[])
                 const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
 
                 // Allocate memory on the GPU
-                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, programCtrl.deviceList().size() - 1)])));
+                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, static_cast<label_t>(programCtrl.deviceList().size() - 1))])));
                 checkCudaErrors(cudaMalloc(&(devicePtrs[virtualDeviceIndex]), nPointsPerGPU * sizeof(label_t)));
                 std::cout << "GPU " << virtualDeviceIndex << ": Allocated " << nPointsPerGPU
                           << " elements of size " << sizeof(label_t) << std::endl;
@@ -169,7 +169,7 @@ int main(const int argc, const char *const argv[])
                 const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
 
                 // Set the active device
-                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, programCtrl.deviceList().size() - 1)])));
+                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, static_cast<label_t>(programCtrl.deviceList().size() - 1))])));
                 checkCudaErrors(cudaDeviceSynchronize());
 
                 // Copy back from device to the contiguous segment
@@ -250,6 +250,7 @@ int main(const int argc, const char *const argv[])
     if (!verificationFailed)
     {
         std::cout << "Reconstruction verification passed!" << std::endl;
+        std::cout << std::endl;
     }
 
     // Create a temporary 2D array to reconstruct the z=0 plane

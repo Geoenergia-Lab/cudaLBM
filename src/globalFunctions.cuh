@@ -78,7 +78,7 @@ namespace LBM
     namespace host
     {
         template <const label_t Start, const label_t End, typename F>
-        __host__ inline constexpr void constexpr_for(F &&f)
+        __host__ inline constexpr void constexpr_for(F &&f) noexcept
         {
             if constexpr (Start < End)
             {
@@ -94,7 +94,7 @@ namespace LBM
     namespace device
     {
         template <const label_t Start, const label_t End, typename F>
-        __device__ inline constexpr void constexpr_for(F &&f)
+        __device__ inline constexpr void constexpr_for(F &&f) noexcept
         {
             if constexpr (Start < End)
             {
@@ -121,26 +121,26 @@ namespace LBM
      * });
      * @endcode
      **/
-    template <typename F>
+    template <typename F, typename T>
     __host__ void grid_for(
-        const label_t nxBlocks,
-        const label_t nyBlocks,
-        const label_t nzBlocks,
+        const T nxBlocks,
+        const T nyBlocks,
+        const T nzBlocks,
         const F &&f) noexcept
     {
         // Loops for block indices
-        for (label_t bz = 0; bz < nzBlocks; bz++)
+        for (T bz = 0; bz < nzBlocks; bz++)
         {
-            for (label_t by = 0; by < nyBlocks; by++)
+            for (T by = 0; by < nyBlocks; by++)
             {
-                for (label_t bx = 0; bx < nxBlocks; bx++)
+                for (T bx = 0; bx < nxBlocks; bx++)
                 {
                     // Loops for thread indices
-                    for (label_t tz = 0; tz < block::nz(); tz++)
+                    for (T tz = 0; tz < block::nz<T>(); tz++)
                     {
-                        for (label_t ty = 0; ty < block::ny(); ty++)
+                        for (T ty = 0; ty < block::ny<T>(); ty++)
                         {
-                            for (label_t tx = 0; tx < block::nx(); tx++)
+                            for (T tx = 0; tx < block::nx<T>(); tx++)
                             {
                                 // Execute the arbitrary loop body
                                 f(bx, by, bz, tx, ty, tz);
@@ -166,18 +166,18 @@ namespace LBM
      * });
      * @endcode
      **/
-    template <const pointLabel_t Indent, typename F>
+    template <const pointLabel_t Indent, typename F, typename T>
     __host__ void global_for(
-        const std::size_t nx,
-        const std::size_t ny,
-        const std::size_t nz,
+        const T nx,
+        const T ny,
+        const T nz,
         const F &&f) noexcept
     {
-        for (std::size_t z = 0; z < nz - static_cast<std::size_t>(Indent.z); z++)
+        for (T z = 0; z < nz - static_cast<T>(Indent.z); z++)
         {
-            for (std::size_t y = 0; y < ny - static_cast<std::size_t>(Indent.y); y++)
+            for (T y = 0; y < ny - static_cast<T>(Indent.y); y++)
             {
-                for (std::size_t x = 0; x < nx - static_cast<std::size_t>(Indent.x); x++)
+                for (T x = 0; x < nx - static_cast<T>(Indent.x); x++)
                 {
                     f(x, y, z);
                 }
@@ -205,12 +205,13 @@ namespace LBM
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        __host__ [[nodiscard]] inline constexpr label_t idx(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t nxBlocks, const label_t nyBlocks) noexcept
+        template <typename T = label_t>
+        __host__ [[nodiscard]] inline constexpr T idx(
+            const T tx, const T ty, const T tz,
+            const T bx, const T by, const T bz,
+            const T nxBlocks, const T nyBlocks) noexcept
         {
-            return (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (bx + nxBlocks * (by + nyBlocks * bz)))));
+            return (tx + block::nx<T>() * (ty + block::ny<T>() * (tz + block::nz<T>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
         }
 
         /**

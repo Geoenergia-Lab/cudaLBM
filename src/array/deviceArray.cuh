@@ -339,12 +339,12 @@ namespace LBM
                 {
                     const label_t i = name_to_index(name);
 
-                    const boundaryValue<VelocitySet> North(name, "North");
-                    const boundaryValue<VelocitySet> South(name, "South");
-                    const boundaryValue<VelocitySet> East(name, "East");
-                    const boundaryValue<VelocitySet> West(name, "West");
-                    const boundaryValue<VelocitySet> Back(name, "Back");
-                    const boundaryValue<VelocitySet> Front(name, "Front");
+                    const boundaryValue<VelocitySet, false> North(name, "North");
+                    const boundaryValue<VelocitySet, false> South(name, "South");
+                    const boundaryValue<VelocitySet, false> East(name, "East");
+                    const boundaryValue<VelocitySet, false> West(name, "West");
+                    const boundaryValue<VelocitySet, false> Back(name, "Back");
+                    const boundaryValue<VelocitySet, false> Front(name, "Front");
 
                     copyToSymbol(device::U_North, North(), i);
                     copyToSymbol(device::U_South, South(), i);

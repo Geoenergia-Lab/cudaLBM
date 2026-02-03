@@ -61,7 +61,7 @@ namespace LBM
      * This struct provides access to a specific field's value across all
      * boundary regions (North, South, East, West, Back, Front) and the internal field.
      **/
-    template <class VelocitySet>
+    template <class VelocitySet, const bool Scaled>
     class boundaryFields
     {
     public:
@@ -71,13 +71,13 @@ namespace LBM
          **/
         __host__ [[nodiscard]] boundaryFields(const std::string &fieldName)
             : values_{
-                  boundaryValue<VelocitySet>(fieldName, "North"),
-                  boundaryValue<VelocitySet>(fieldName, "South"),
-                  boundaryValue<VelocitySet>(fieldName, "East"),
-                  boundaryValue<VelocitySet>(fieldName, "West"),
-                  boundaryValue<VelocitySet>(fieldName, "Back"),
-                  boundaryValue<VelocitySet>(fieldName, "Front"),
-                  boundaryValue<VelocitySet>(fieldName, "internalField")},
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "North"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "South"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "East"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "West"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "Back"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "Front"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "internalField")},
               fieldName_(fieldName){};
 
         /**
@@ -132,7 +132,7 @@ namespace LBM
         /**
          * @brief Field values for all regions
          **/
-        const boundaryValue<VelocitySet> values_[7];
+        const boundaryValue<VelocitySet, Scaled> values_[7];
 
         /**
          * @brief Name of the field
