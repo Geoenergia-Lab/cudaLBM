@@ -288,6 +288,10 @@ namespace LBM
          **/
         __device__ __host__ static inline void reconstruct(thread::array<scalar_t, vs::Q()> &pop, const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
         {
+            // --- ISOTHERMAL OFF ---
+            // const scalar_t Delta_m = static_cast<scalar_t>(0.0);
+
+            // --- ISOTHERMAL ON ---
             const scalar_t Delta_m = static_cast<scalar_t>(1.0)/static_cast<scalar_t>(3.0) * 
                (moments[m_i<1>()] * moments[m_i<1>()] + 
                 moments[m_i<2>()] * moments[m_i<2>()] +

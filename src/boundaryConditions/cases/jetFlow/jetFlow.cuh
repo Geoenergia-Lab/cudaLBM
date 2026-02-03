@@ -56,6 +56,8 @@ namespace LBM
      * @brief New definition of the inlet plane
      * **/
     __device__ __host__ [[nodiscard]] inline consteval bool new_inlet() noexcept { return false; }
+    __device__ [[nodiscard]] inline consteval scalar_t u_inlet() noexcept { return static_cast<scalar_t>(0.016);}
+
 
     /**
      * @class jetFlow
