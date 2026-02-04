@@ -146,7 +146,6 @@ case normalVector::EAST_NORTH_BACK():
 
 case normalVector::WEST_BACK():
 {
-
     // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
@@ -167,7 +166,6 @@ case normalVector::WEST_BACK():
 
 case normalVector::EAST_BACK():
 {
-
     // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
@@ -188,7 +186,6 @@ case normalVector::EAST_BACK():
 
 case normalVector::SOUTH_BACK():
 {
-
     // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
@@ -209,7 +206,6 @@ case normalVector::SOUTH_BACK():
 
 case normalVector::NORTH_BACK():
 {
-
     // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 

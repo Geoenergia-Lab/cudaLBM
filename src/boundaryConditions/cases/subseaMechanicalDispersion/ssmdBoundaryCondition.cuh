@@ -40,7 +40,7 @@ Description
     Header file to avoid repeated definition of the boundary condition function
 
 SourceFiles
-    jetBoundaryCondition.cuh
+    ssmdBoundaryCondition.cuh
 
 Notes
     This file is intended to be included directly inside a switch-case block.
@@ -49,13 +49,14 @@ Notes
 \*---------------------------------------------------------------------------*/
 
 assertions::velocitySet::validate<VelocitySet>();
+assertions::velocitySet::validate<PhaseVelocitySet>();
 
 const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
 const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
 
 switch (boundaryNormal.nodeType())
 {
-// Round inflow + no-slip
+// Oil inflow + no-slip
 case normalVector::BACK():
 {
     // MODIFY THIS FOR MULTI GPU
@@ -79,10 +80,11 @@ case normalVector::BACK():
         moments[m_i<7>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[1]); // myy
         moments[m_i<8>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[2]); // myz
         moments[m_i<9>()] = is_jet * (rho * device::U_Back[2] * device::U_Back[2]); // mzz
+        moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);                     // phi
     }
     else
     {
-        const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
+        const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - y_pos()) * (static_cast<scalar_t>(y) - y_pos()) < r2());
         const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
         const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
@@ -100,13 +102,65 @@ case normalVector::BACK():
         moments[m_i<7>()] = static_cast<scalar_t>(0);                               // myy
         moments[m_i<8>()] = myz;                                                    // myz
         moments[m_i<9>()] = is_jet * (rho * device::U_Back[2] * device::U_Back[2]); // mzz
+        moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);                     // phi
+    }
+
+    return;
+}
+// Water inflow + no-slip
+case normalVector::SOUTH():
+{
+    // MODIFY THIS FOR MULTI GPU
+    const label_t x = threadIdx.x + block::nx() * blockIdx.x;
+    const label_t z = threadIdx.z + block::nz() * blockIdx.z;
+
+    const scalar_t dx = static_cast<scalar_t>(x) - center_x();
+    const scalar_t dz = static_cast<scalar_t>(z) - center_z();
+
+    if constexpr (new_inlet())
+    {
+        const scalar_t is_jet = static_cast<scalar_t>(((dx * dx) + (dz * dz)) < r2());
+        const scalar_t rho = rho0<scalar_t>();
+        moments[m_i<0>()] = rho;                                                      // rho
+        moments[m_i<1>()] = is_jet * device::U_South[0];                              // ux
+        moments[m_i<2>()] = is_jet * device::U_South[1];                              // uy
+        moments[m_i<3>()] = is_jet * device::U_South[2];                              // uz
+        moments[m_i<4>()] = is_jet * (rho * device::U_South[0] * device::U_South[0]); // mxx
+        moments[m_i<5>()] = is_jet * (rho * device::U_South[0] * device::U_South[1]); // mxy
+        moments[m_i<6>()] = is_jet * (rho * device::U_South[0] * device::U_South[2]); // mxz
+        moments[m_i<7>()] = is_jet * (rho * device::U_South[1] * device::U_South[1]); // myy
+        moments[m_i<8>()] = is_jet * (rho * device::U_South[1] * device::U_South[2]); // myz
+        moments[m_i<9>()] = is_jet * (rho * device::U_South[2] * device::U_South[2]); // mzz
+        moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);                       // phi
+    }
+    else
+    {
+        const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - z_pos()) * (static_cast<scalar_t>(z) - z_pos()) < r2());
+        const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
+        const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+
+        const scalar_t rho = rho0<scalar_t>();
+        const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
+        const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
+
+        moments[m_i<0>()] = rho;                                                      // rho
+        moments[m_i<1>()] = is_jet * device::U_South[0];                              // ux
+        moments[m_i<2>()] = is_jet * device::U_South[1];                              // uy
+        moments[m_i<3>()] = is_jet * device::U_South[2];                              // uz
+        moments[m_i<4>()] = static_cast<scalar_t>(0);                                 // mxx
+        moments[m_i<5>()] = mxy;                                                      // mxy
+        moments[m_i<6>()] = static_cast<scalar_t>(0);                                 // mxz
+        moments[m_i<7>()] = is_jet * (rho * device::U_South[1] * device::U_South[1]); // myy
+        moments[m_i<8>()] = myz;                                                      // myz
+        moments[m_i<9>()] = static_cast<scalar_t>(0);                                 // mzz
+        moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);                       // phi
     }
 
     return;
 }
 
-// Lateral boundary faces and edges
-#include "include/lateralFacesAndEdges.cuh"
+// Lateral boundary faces
+#include "include/lateralFaces.cuh"
 
 // Outlet face, edges and corners
 #include "include/outlet.cuh"

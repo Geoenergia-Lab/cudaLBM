@@ -25,7 +25,7 @@ startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      10001;
+nTimeSteps      100001;
 
 saveInterval    1000;
 

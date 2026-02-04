@@ -37,13 +37,13 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    A class applying boundary conditions to the turbulent jet case
+    A class applying boundary conditions to the subsea mechanical dispersion flow case
 
 Namespace
     LBM
 
 SourceFiles
-    multiphaseJet.cuh
+    subseaMechanicalDispersion.cuh
 
 \*---------------------------------------------------------------------------*/
 
@@ -54,12 +54,12 @@ namespace LBM
 {
     /**
      * @class subseaMechanicalDispersion
+     *
      * @brief Applies boundary conditions for subsea mechanical dispersion simulations using moment representation
      *
-     * This class implements the boundary condition treatment for the D3Q19 lattice
-     * model in multiphase subsea mechanical dispersion flow simulations. It handles static wall, inflow, and
-     * outflow boundaries using moment-based boundary conditions derived from the
-     * regularized LBM approach.
+     * This class implements the boundary condition treatment for subsea mechanical dispersion flow simulations.
+     * It handles static wall, inflow, and outflow boundaries using moment-based boundary conditions
+     * derived from the regularized LBM approach.
      **/
     class subseaMechanicalDispersion
     {
@@ -77,9 +77,8 @@ namespace LBM
          * @param[in] boundaryNormal Normal vector information at boundary node
          *
          * This method implements the moment-based boundary condition treatment
-         * for the D3Q19 lattice model. Currently, it handles both the inflow
-         * (jet) boundary located at the BACK face of the domain and the outflow
-         * boundary located at the FRONT face.
+         * Currently, it handles both the inflow (jet) boundary located at the BACK and SOUTH faces
+         * of the domain and the outflow boundary located at the FRONT and NORTH faces.
          *
          * The method uses the regularized LBM approach to reconstruct boundary
          * moments from available population information, ensuring mass conservation
@@ -92,82 +91,7 @@ namespace LBM
             const normalVector &boundaryNormal,
             const scalar_t *const ptrRestrict shared_buffer) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
-            static_assert((PhaseVelocitySet::Q() == 7), "Error: boundaryConditions::calculate_moments only supports D3Q7 for phase field.");
-
-            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
-            const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
-
-            switch (boundaryNormal.nodeType())
-            {
-            // Oil inflow + no-slip
-            case normalVector::BACK():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t y = threadIdx.y + block::ny() * blockIdx.y;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - y_pos()) * (static_cast<scalar_t>(y) - y_pos()) < r2());
-
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                                                    // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                                               // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                                               // uy
-                moments[m_i<3>()] = is_jet * static_cast<scalar_t>(0.016);                                  // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                                               // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                                               // mxy
-                moments[m_i<6>()] = mxz;                                                                    // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                                               // myy
-                moments[m_i<8>()] = myz;                                                                    // myz
-                moments[m_i<9>()] = is_jet * (static_cast<scalar_t>(0.016) * static_cast<scalar_t>(0.016)); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);                                     // phi
-
-                return;
-            }
-            // Water inflow + no-slip
-            case normalVector::SOUTH():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t z = threadIdx.z + block::nz() * blockIdx.z;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - z_pos()) * (static_cast<scalar_t>(z) - z_pos()) < r2());
-
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                                                    // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                                               // ux
-                moments[m_i<2>()] = is_jet * static_cast<scalar_t>(0.016);                                  // uy
-                moments[m_i<3>()] = static_cast<scalar_t>(0);                                               // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                                               // mxx
-                moments[m_i<5>()] = mxy;                                                                    // mxy
-                moments[m_i<6>()] = static_cast<scalar_t>(0);                                               // mxz
-                moments[m_i<7>()] = is_jet * (static_cast<scalar_t>(0.016) * static_cast<scalar_t>(0.016)); // myy
-                moments[m_i<8>()] = myz;                                                                    // myz
-                moments[m_i<9>()] = static_cast<scalar_t>(0);                                               // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);                                     // phi
-
-                return;
-            }
-
-// Static boundaries
-#include "include/static.cuh"
-
-// Periodic
-#include "include/periodic.cuh"
-
-// Outflow (zero-gradient) at front face
-#include "include/IRBCNeumann.cuh"
-            }
+#include "ssmdBoundaryCondition.cuh"
         }
 
         template <class VelocitySet, class PhaseVelocitySet, const label_t N>
@@ -177,82 +101,7 @@ namespace LBM
             const normalVector &boundaryNormal,
             const thread::array<scalar_t, N> &shared_buffer) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: boundaryConditions::calculate_moments only supports D3Q19 and D3Q27.");
-            static_assert((PhaseVelocitySet::Q() == 7), "Error: boundaryConditions::calculate_moments only supports D3Q7 for phase field.");
-
-            const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
-            const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
-
-            switch (boundaryNormal.nodeType())
-            {
-            // Oil inflow + no-slip
-            case normalVector::BACK():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t y = threadIdx.y + block::ny() * blockIdx.y;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - y_pos()) * (static_cast<scalar_t>(y) - y_pos()) < r2());
-
-                const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                                                    // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                                               // ux
-                moments[m_i<2>()] = static_cast<scalar_t>(0);                                               // uy
-                moments[m_i<3>()] = is_jet * static_cast<scalar_t>(0.016);                                  // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                                               // mxx
-                moments[m_i<5>()] = static_cast<scalar_t>(0);                                               // mxy
-                moments[m_i<6>()] = mxz;                                                                    // mxz
-                moments[m_i<7>()] = static_cast<scalar_t>(0);                                               // myy
-                moments[m_i<8>()] = myz;                                                                    // myz
-                moments[m_i<9>()] = is_jet * (static_cast<scalar_t>(0.016) * static_cast<scalar_t>(0.016)); // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(1);                                     // phi
-
-                return;
-            }
-            // Water inflow + no-slip
-            case normalVector::SOUTH():
-            {
-                const label_t x = threadIdx.x + block::nx() * blockIdx.x;
-                const label_t z = threadIdx.z + block::nz() * blockIdx.z;
-
-                const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(z) - z_pos()) * (static_cast<scalar_t>(z) - z_pos()) < r2());
-
-                const scalar_t mxy_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Y>(pop, boundaryNormal) * inv_rho_I;
-                const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-
-                const scalar_t rho = static_cast<scalar_t>(1);
-                const scalar_t mxy = static_cast<scalar_t>(2) * mxy_I * rho_I / rho;
-                const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
-
-                moments[m_i<0>()] = rho;                                                                    // rho
-                moments[m_i<1>()] = static_cast<scalar_t>(0);                                               // ux
-                moments[m_i<2>()] = is_jet * static_cast<scalar_t>(0.016);                                  // uy
-                moments[m_i<3>()] = static_cast<scalar_t>(0);                                               // uz
-                moments[m_i<4>()] = static_cast<scalar_t>(0);                                               // mxx
-                moments[m_i<5>()] = mxy;                                                                    // mxy
-                moments[m_i<6>()] = static_cast<scalar_t>(0);                                               // mxz
-                moments[m_i<7>()] = is_jet * (static_cast<scalar_t>(0.016) * static_cast<scalar_t>(0.016)); // myy
-                moments[m_i<8>()] = myz;                                                                    // myz
-                moments[m_i<9>()] = static_cast<scalar_t>(0);                                               // mzz
-                moments[m_i<10>()] = is_jet * static_cast<scalar_t>(0);                                     // phi
-
-                return;
-            }
-
-// Static boundaries
-#include "include/static.cuh"
-
-// Periodic
-#include "include/periodic.cuh"
-
-// Outflow (zero-gradient) at front face
-#include "include/IRBCNeumann.cuh"
-            }
+#include "ssmdBoundaryCondition.cuh"
         }
 
     private:

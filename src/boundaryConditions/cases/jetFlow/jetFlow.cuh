@@ -37,7 +37,7 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    A class applying boundary conditions to the turbulent jet case
+    A class applying boundary conditions to the jet case
 
 Namespace
     LBM
@@ -62,9 +62,9 @@ namespace LBM
      *
      * @brief Applies boundary conditions for jet flow simulations using moment representation
      *
-     * This class implements the boundary condition treatment for the D3Q19 lattice
-     * model in jet flow simulations. It handles static wall, inflow, and outflow
-     * boundaries using moment-based boundary conditions derived from the regularized LBM approach.
+     * This class implements the boundary condition treatment for jet flow simulations.
+     * It handles static wall, inflow, and outflow boundaries using moment-based boundary conditions
+     * derived from the regularized LBM approach.
      **/
     class jetFlow
     {
@@ -82,15 +82,8 @@ namespace LBM
          * @param[in] boundaryNormal Normal vector information at boundary node
          *
          * This method implements the moment-based boundary condition treatment
-         * for the D3Q19 lattice model. Currently, it handles both the inflow
-         * (jet) boundary located at the BACK face of the domain and the outflow
-         * boundary located at the FRONT face.
-         *
-         * This method implements the moment-based boundary condition treatment for
-         * the D3Q19 lattice model. It handles various boundary types including:
-         * - Static wall boundaries (all velocity components zero)
-         * - Moving lid boundaries (prescribed tangential velocity)
-         * - Corner and edge cases with specialized treatment
+         * Currently, it handles both the inflow (jet) boundary located at the BACK face
+         * of the domain and the outflow boundary located at the FRONT face.
          *
          * The method uses the regularized LBM approach to reconstruct boundary
          * moments from available population information, ensuring mass conservation

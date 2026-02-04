@@ -50,9 +50,6 @@ SourceFiles
 \*---------------------------------------------------------------------------*/
 
 case normalVector::WEST():
-{
-    return;
-}
 case normalVector::EAST():
 {
     return;
