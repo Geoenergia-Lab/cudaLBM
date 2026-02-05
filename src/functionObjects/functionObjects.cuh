@@ -66,6 +66,8 @@ namespace LBM
             {"momentsMean", {"rhoMean", "uMean", "vMean", "wMean", "m_xxMean", "m_xyMean", "m_xzMean", "m_yyMean", "m_yzMean", "m_zzMean"}},
             {"S", {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"}},
             {"SMean", {"S_xxMean", "S_xyMean", "S_xzMean", "S_yyMean", "S_yzMean", "S_zzMean"}},
+            {"SPrime", {"S_xxPrime", "S_xyPrime", "S_xzPrime", "S_yyPrime", "S_yzPrime", "S_zzPrime"}},
+            {"SPrimeMean", {"S_xxPrimeMean", "S_xyPrimeMean", "S_xzPrimeMean", "S_yyPrimeMean", "S_yzPrimeMean", "S_zzPrimeMean"}},
             {"k", {"k"}},
             {"kMean", {"kMean"}}};
 
@@ -103,7 +105,7 @@ namespace LBM
          **/
         __host__ [[nodiscard]] bool initialiserSwitch(const std::string &objectName)
         {
-            return std::filesystem::exists("functionObjects") ? string::containsString(string::trim<true>(string::eraseBraces(string::extractBlock(string::readFile("functionObjects"), "functionObjectList"))), objectName) : false;
+            return std::filesystem::exists("functionObjects") ? string::containsString(string::trim<string::TRIM_SEMICOLON>(string::eraseBraces(string::extractBlock(string::readFile("functionObjects"), "functionObjectList"))), objectName) : false;
         }
 
         /**

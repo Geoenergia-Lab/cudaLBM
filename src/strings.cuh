@@ -57,6 +57,12 @@ namespace LBM
 {
     namespace string
     {
+        typedef enum Enum : bool
+        {
+            UNTRIMMED_SEMICOLON = 0,
+            TRIM_SEMICOLON = 1
+        } trimSemicolon;
+
         /**
          * @brief Left-side concatenates a string to each element of a vector of strings.
          * @param[in] S The vector of strings to which the string will be concatenated.
@@ -178,7 +184,7 @@ namespace LBM
          * @return Trimmed string, or empty string if only whitespace.
          * @note Handles space, tab, newline, carriage return, form feed, and vertical tab.
          **/
-        template <const bool trimSemicolon>
+        template <const trimSemicolon Trim>
         __host__ [[nodiscard]] const std::string trim(const std::string &str)
         {
             const std::size_t start = str.find_first_not_of(" \t\n\r\f\v");
@@ -188,7 +194,7 @@ namespace LBM
                 return "";
             }
 
-            if constexpr (trimSemicolon)
+            if constexpr (Trim == TRIM_SEMICOLON)
             {
                 return str.substr(start, str.find_last_not_of(" \t\n\r\f\v;") - start + 1);
             }
@@ -203,14 +209,14 @@ namespace LBM
          * @param str The vector of strings to trim.
          * @return A new vector with each string trimmed.
          **/
-        template <const bool trimSemicolon>
+        template <const trimSemicolon Trim>
         __host__ [[nodiscard]] const std::vector<std::string> trim(const std::vector<std::string> &str)
         {
             std::vector<std::string> strTrimmed(str.size(), "");
 
             for (std::size_t s = 0; s < str.size(); s++)
             {
-                strTrimmed[s] = trim<trimSemicolon>(str[s]);
+                strTrimmed[s] = trim<Trim>(str[s]);
             }
 
             return strTrimmed;
@@ -264,13 +270,13 @@ namespace LBM
             for (std::size_t i = startLine; i < lines.size(); ++i)
             {
                 const std::string processedLine = removeComments(lines[i]);
-                const std::string trimmedLine = trim<false>(processedLine);
+                const std::string trimmedLine = trim<UNTRIMMED_SEMICOLON>(processedLine);
 
                 // Check if line starts with the block name
                 if (trimmedLine.compare(0, blockName.length(), blockName) == 0)
                 {
                     // Extract the rest of the line after the block name
-                    const std::string rest = trim<false>(trimmedLine.substr(blockName.length()));
+                    const std::string rest = trim<UNTRIMMED_SEMICOLON>(trimmedLine.substr(blockName.length()));
 
                     // Check if the next token is empty or a brace
                     if (rest.empty() || rest == "{" || rest[0] == '{')
@@ -337,7 +343,7 @@ namespace LBM
                 for (std::size_t i = blockLine + 1; i < lines.size(); ++i)
                 {
                     const std::string processedLine = removeComments(lines[i]);
-                    const std::string trimmedLine = trim<false>(processedLine);
+                    const std::string trimmedLine = trim<UNTRIMMED_SEMICOLON>(processedLine);
 
                     // Check for closing brace before opening brace
                     if (processedLine.find('}') != std::string::npos)

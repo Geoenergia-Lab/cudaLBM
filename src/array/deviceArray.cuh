@@ -275,6 +275,11 @@ namespace LBM
                 return TimeType;
             }
 
+            __host__ [[nodiscard]] inline label_t nTimeAverageSteps() const noexcept
+            {
+                return nTimeAverageSteps_;
+            }
+
         private:
             /**
              * @brief Pointer to the data
@@ -290,6 +295,20 @@ namespace LBM
              * @brief Reference to the mesh
              **/
             const host::latticeMesh &mesh_;
+
+            label_t nTimeAverageSteps_;
+
+            __host__ [[nodiscard]] static label_t initialise_n_time_average_steps() noexcept
+            {
+                if constexpr (TimeType == time::instantaneous)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return 1;
+                }
+            }
 
             /**
              * @brief Copies the underlying std::vector of a host::array type to the device

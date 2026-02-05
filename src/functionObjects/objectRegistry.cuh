@@ -199,6 +199,20 @@ namespace LBM
                     [&object](const label_t label)
                     { object.calculateMean(label); });
             }
+            if (object.calculatePrime())
+            {
+                // std::cout << "Pushing back " << object.fieldName() << ".calculateMean" << std::endl;
+                calls.push_back(
+                    [&object](const label_t label)
+                    { object.calculatePrime(label); });
+            }
+            if (object.calculatePrimeMean())
+            {
+                // std::cout << "Pushing back " << object.fieldName() << ".calculateMean" << std::endl;
+                calls.push_back(
+                    [&object](const label_t label)
+                    { object.calculatePrimeMean(label); });
+            }
         }
 
         /**
@@ -232,7 +246,6 @@ namespace LBM
             {
                 if (object.calculate())
                 {
-                    // std::cout << "Pushing back saveInstantaneous" << std::endl;
                     calls.push_back(
                         [&object](const label_t label)
                         { object.saveInstantaneous(label); });
@@ -240,10 +253,21 @@ namespace LBM
             }
             if (object.calculateMean())
             {
-                // std::cout << "Pushing back " << object.fieldName() << ".calculateMean" << std::endl;
                 calls.push_back(
                     [&object](const label_t label)
                     { object.saveMean(label); });
+            }
+            if (object.calculatePrime())
+            {
+                calls.push_back(
+                    [&object](const label_t label)
+                    { object.savePrime(label); });
+            }
+            if (object.calculatePrimeMean())
+            {
+                calls.push_back(
+                    [&object](const label_t label)
+                    { object.savePrimeMean(label); });
             }
         }
     };

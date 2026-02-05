@@ -88,8 +88,8 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
-#define JETFLOW
-// #define LIDDRIVENCAVITY
+// #define JETFLOW
+#define LIDDRIVENCAVITY
 
 // #define MULTI_GPU
 

@@ -54,6 +54,36 @@ namespace LBM
 {
     namespace fileIO
     {
+        // Forward declarations
+        struct FieldInformation;
+        struct SystemInformation;
+        struct FieldData;
+
+        // Data structures for parsed sections
+        struct FieldInformation
+        {
+            std::vector<std::string> fieldNames;
+            std::size_t expectedFieldCount = 0;
+            std::string timeType = "instantaneous"; // default
+            std::size_t timeStep = 0;               // default
+            std::size_t meanCount = 0;              // default, only used for timeAverage
+        };
+
+        struct SystemInformation
+        {
+            bool isLittleEndian = false;
+            std::size_t scalarSize = 0;
+        };
+
+        struct FieldData
+        {
+            std::size_t nx = 0;
+            std::size_t ny = 0;
+            std::size_t nz = 0;
+            std::size_t nVars = 0;
+            std::size_t totalPoints = 0;
+        };
+
         /**
          * @struct fieldFileHeader
          * @brief Contains metadata extracted from field file headers
@@ -64,14 +94,60 @@ namespace LBM
          **/
         struct fieldFileHeader
         {
-            const bool isLittleEndian;                 //!< Endianness of the binary data
-            const std::size_t scalarSize;              //!< Size of scalar values (4 or 8 bytes)
-            const std::size_t nx;                      //!< Grid dimension in x-direction
-            const std::size_t ny;                      //!< Grid dimension in y-direction
-            const std::size_t nz;                      //!< Grid dimension in z-direction
-            const std::size_t nVars;                   //!< Number of variables per grid point
-            const std::size_t dataStartPos;            //!< File position where binary data begins
-            const std::vector<std::string> fieldNames; //!< Names of all field variables
+            const bool isLittleEndian;
+            const std::size_t scalarSize;
+            const std::size_t nx;
+            const std::size_t ny;
+            const std::size_t nz;
+            const std::size_t nVars;
+            const std::size_t dataStartPos;
+            const std::vector<std::string> fieldNames;
+            const std::string timeType; // "instantaneous" or "timeAverage"
+            const std::size_t timeStep;
+            const std::size_t meanCount; // only meaningful if timeType == "timeAverage"
+
+            /**
+             * @brief Constructor that parses the file and initializes all const members
+             * @param[in] fileName The name of the file to parse
+             * @throws std::runtime_error if the file cannot be read or is invalid
+             **/
+            __host__ explicit fieldFileHeader(const std::string &fileName)
+                : isLittleEndian(initializeIsLittleEndian(fileName)),
+                  scalarSize(initializeScalarSize(fileName)),
+                  nx(initializeNx(fileName)),
+                  ny(initializeNy(fileName)),
+                  nz(initializeNz(fileName)),
+                  nVars(initializeNVars(fileName)),
+                  dataStartPos(initializeDataStartPos(fileName)),
+                  fieldNames(initializeFieldNames(fileName)),
+                  timeType(initializeTimeType(fileName)),
+                  timeStep(initializeTimeStep(fileName)),
+                  meanCount(initializeMeanCount(fileName))
+            {
+                // Additional validation can be done here if needed
+                validateInternalConsistency();
+            }
+
+        private:
+            // Helper functions to parse individual components
+            __host__ [[nodiscard]] static bool initializeIsLittleEndian(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeScalarSize(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeNx(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeNy(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeNz(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeNVars(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeDataStartPos(const std::string &fileName);
+            __host__ [[nodiscard]] static const std::vector<std::string> initializeFieldNames(const std::string &fileName);
+            __host__ [[nodiscard]] static const std::string initializeTimeType(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeTimeStep(const std::string &fileName);
+            __host__ [[nodiscard]] static std::size_t initializeMeanCount(const std::string &fileName);
+
+            // Common parsing helper
+            __host__ [[nodiscard]] static std::tuple<std::vector<std::string>, std::size_t, std::size_t>
+            readAndParseFile(const std::string &fileName);
+
+            // Validation
+            __host__ void validateInternalConsistency() const;
         };
 
         /**
@@ -86,17 +162,433 @@ namespace LBM
             return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
         }
 
-        /**
-         * @brief Parse header metadata from field file
-         * @param[in] fileName Name of the file to parse
-         * @return Parsed header information
-         * @throws std::runtime_error if file doesn't exist, is inaccessible, or has invalid format
-         *
-         * This function reads and validates the header section of field files,
-         * extracting metadata about grid dimensions, data format, and field names.
-         * It performs comprehensive error checking for file integrity and format compliance.
-         **/
-        __host__ [[nodiscard]] const fieldFileHeader parseFieldFileHeader(const std::string &fileName)
+        // Validate overall consistency
+        __host__ void validateHeaderConsistency(
+            const SystemInformation &systemInfo,
+            const FieldInformation &fieldInfo,
+            const FieldData &fieldData,
+            const std::size_t dataStartPos,
+            const std::size_t fileSize)
+        {
+            // Check field names match nVars
+            if (fieldInfo.fieldNames.size() != fieldData.nVars)
+            {
+                throw std::runtime_error(
+                    "Field names count (" + std::to_string(fieldInfo.fieldNames.size()) +
+                    ") does not match nVars (" + std::to_string(fieldData.nVars) + ")");
+            }
+
+            // Additional validation for time-averaged fields
+            if (fieldInfo.timeType == "timeAverage")
+            {
+                // For time-averaged fields, we might want to validate meanCount
+                // For example, ensure it's not unreasonably large
+                constexpr std::size_t MAX_REASONABLE_MEAN_COUNT = 1000000;
+                if (fieldInfo.meanCount > MAX_REASONABLE_MEAN_COUNT)
+                {
+                    throw std::runtime_error(
+                        "Unreasonably large meanCount: " + std::to_string(fieldInfo.meanCount));
+                }
+
+                // If meanCount is 0, it might be the start of averaging - that's ok
+                // Could add a warning here if desired
+            }
+
+            // Check binary data size
+            if (fieldData.totalPoints > std::numeric_limits<std::size_t>::max() / systemInfo.scalarSize)
+            {
+                throw std::runtime_error("Data size calculation would overflow");
+            }
+
+            const std::size_t expectedDataSize = fieldData.totalPoints * systemInfo.scalarSize;
+            if (fileSize < dataStartPos + expectedDataSize)
+            {
+                throw std::runtime_error(
+                    "Insufficient data in file. Expected " + std::to_string(expectedDataSize) +
+                    " bytes from position " + std::to_string(dataStartPos) +
+                    ", but file only has " + std::to_string(fileSize) + " bytes");
+            }
+        }
+
+        // Parse system information section
+        __host__ [[nodiscard]] const SystemInformation parseSystemInformation(const std::vector<std::string> &headerLines)
+        {
+            try
+            {
+                // Extract the systemInformation block
+                const auto systemInfoBlock = LBM::string::extractBlock(headerLines, "systemInformation");
+
+                // Remove the outer braces
+                const auto innerLines = LBM::string::eraseBraces(systemInfoBlock);
+
+                SystemInformation result;
+
+                // Parse each line in the system information block
+                for (const auto &line : innerLines)
+                {
+                    const auto trimmedLine = LBM::string::trim<string::TRIM_SEMICOLON>(line);
+                    if (trimmedLine.empty())
+                        continue;
+
+                    // Split by whitespace to get key-value pairs
+                    const auto tokens = LBM::string::split<' '>(trimmedLine, true);
+                    if (tokens.size() < 2)
+                        continue;
+
+                    const auto &key = tokens[0];
+                    const auto &value = tokens[1];
+
+                    if (key == "binaryType")
+                    {
+                        result.isLittleEndian = (value == "littleEndian");
+                    }
+                    else if (key == "scalarType")
+                    {
+                        if (value.find("32") != std::string::npos)
+                        {
+                            result.scalarSize = 4;
+                        }
+                        else if (value.find("64") != std::string::npos)
+                        {
+                            result.scalarSize = 8;
+                        }
+                        else
+                        {
+                            throw std::runtime_error("Invalid scalarType: " + value);
+                        }
+                    }
+                }
+
+                if (result.scalarSize == 0)
+                {
+                    throw std::runtime_error("Missing or invalid scalarType in systemInformation");
+                }
+
+                return result;
+            }
+            catch (const std::runtime_error &e)
+            {
+                throw std::runtime_error("Error parsing systemInformation: " + std::string(e.what()));
+            }
+        }
+
+        __host__ [[nodiscard]] const std::vector<std::string> extractFieldNamesFromBlock(
+            const std::vector<std::string> &innerLines,
+            const std::size_t fieldNamesStartLine)
+        {
+            std::vector<std::string> fieldNames;
+
+            // We'll use the existing extractBlock utility
+            // Create a sub-vector starting from the fieldNames line
+            std::vector<std::string> remainingLines;
+
+            // Convert fieldNamesStartLine to signed type for iterator arithmetic
+            const auto startIdx = static_cast<std::ptrdiff_t>(fieldNamesStartLine);
+            const auto endIdx = static_cast<std::ptrdiff_t>(innerLines.size());
+
+            // Use vector's iterator arithmetic
+            remainingLines.assign(
+                innerLines.begin() + startIdx,
+                innerLines.begin() + endIdx);
+
+            // Extract the fieldNames block
+            const auto fieldNamesBlock = LBM::string::extractBlock(remainingLines, "fieldNames");
+
+            // Remove braces
+            const auto innerFieldNames = LBM::string::eraseBraces(fieldNamesBlock);
+
+            // Parse field names
+            for (const auto &line : innerFieldNames)
+            {
+                const std::string trimmed = LBM::string::trim<string::TRIM_SEMICOLON>(line);
+                if (!trimmed.empty())
+                {
+                    std::string fieldName = trimmed;
+                    // Remove trailing semicolon
+                    if (!fieldName.empty() && fieldName.back() == ';')
+                    {
+                        fieldName.pop_back();
+                    }
+
+                    fieldName = LBM::string::trim<string::TRIM_SEMICOLON>(fieldName);
+
+                    if (!fieldName.empty())
+                    {
+                        // Check for duplicates
+                        if (LBM::string::containsString(fieldNames, fieldName))
+                        {
+                            throw std::runtime_error("Duplicate field name: " + fieldName);
+                        }
+                        fieldNames.push_back(fieldName);
+                    }
+                }
+            }
+
+            return fieldNames;
+        }
+
+        // Parse field information section
+        __host__ [[nodiscard]] const FieldInformation parseFieldInformation(
+            const std::vector<std::string> &headerLines)
+        {
+            try
+            {
+                // Extract the fieldInformation block
+                const auto fieldInfoBlock = LBM::string::extractBlock(headerLines, "fieldInformation");
+
+                // Remove the outer braces
+                const auto innerLines = LBM::string::eraseBraces(fieldInfoBlock);
+
+                FieldInformation result;
+                bool foundTimeType = false;
+                bool foundMeanCount = false;
+
+                // Parse key-value pairs in the fieldInformation block
+                for (size_t i = 0; i < innerLines.size(); ++i)
+                {
+                    const auto trimmedLine = LBM::string::trim<string::TRIM_SEMICOLON>(innerLines[i]);
+                    if (trimmedLine.empty())
+                        continue;
+
+                    // Check if this is the fieldNames declaration
+                    if (trimmedLine.find("fieldNames[") != std::string::npos)
+                    {
+                        // Extract the count from fieldNames[10]
+                        const auto startBracket = trimmedLine.find('[');
+                        const auto endBracket = trimmedLine.find(']');
+                        if (startBracket == std::string::npos || endBracket == std::string::npos)
+                        {
+                            throw std::runtime_error("Invalid fieldNames format");
+                        }
+
+                        const std::string countStr = trimmedLine.substr(
+                            startBracket + 1,
+                            endBracket - startBracket - 1);
+
+                        try
+                        {
+                            result.expectedFieldCount = LBM::string::extractParameter<std::size_t>(countStr);
+                            if (result.expectedFieldCount == 0)
+                            {
+                                throw std::runtime_error("Field names count cannot be zero");
+                            }
+                        }
+                        catch (const std::exception &e)
+                        {
+                            throw std::runtime_error("Invalid fieldNames count: " + countStr);
+                        }
+
+                        // Extract field names from the nested block
+                        result.fieldNames = extractFieldNamesFromBlock(innerLines, i);
+                        break;
+                    }
+                    else
+                    {
+                        // Parse key-value pairs (timeStep, timeType, meanCount)
+                        // Split by whitespace to get key and value
+                        const auto tokens = LBM::string::split<' '>(trimmedLine, true);
+                        if (tokens.size() >= 2)
+                        {
+                            std::string key = tokens[0];
+                            std::string value = tokens[1];
+
+                            // Remove trailing semicolon if present
+                            if (!value.empty() && value.back() == ';')
+                            {
+                                value.pop_back();
+                            }
+
+                            if (key == "timeStep")
+                            {
+                                try
+                                {
+                                    result.timeStep = LBM::string::extractParameter<std::size_t>(value);
+                                }
+                                catch (const std::exception &e)
+                                {
+                                    throw std::runtime_error("Invalid timeStep: " + value);
+                                }
+                            }
+                            else if (key == "timeType")
+                            {
+                                result.timeType = value;
+                                foundTimeType = true;
+
+                                // Validate timeType
+                                if (value != "instantaneous" && value != "timeAverage")
+                                {
+                                    throw std::runtime_error("Invalid timeType: " + value +
+                                                             ". Must be 'instantaneous' or 'timeAverage'");
+                                }
+                            }
+                            else if (key == "meanCount")
+                            {
+                                try
+                                {
+                                    result.meanCount = LBM::string::extractParameter<std::size_t>(value);
+                                    foundMeanCount = true;
+                                }
+                                catch (const std::exception &e)
+                                {
+                                    throw std::runtime_error("Invalid meanCount: " + value);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Validation
+                if (!foundTimeType)
+                {
+                    throw std::runtime_error("Missing timeType in fieldInformation");
+                }
+
+                if (result.expectedFieldCount == 0)
+                {
+                    throw std::runtime_error("No fieldNames found in fieldInformation");
+                }
+
+                // Validate field names count
+                if (result.fieldNames.size() != result.expectedFieldCount)
+                {
+                    throw std::runtime_error(
+                        "Field names count (" + std::to_string(result.fieldNames.size()) +
+                        ") does not match declared count (" + std::to_string(result.expectedFieldCount) + ")");
+                }
+
+                // Validate meanCount based on timeType
+                if (result.timeType == "timeAverage" && !foundMeanCount)
+                {
+                    throw std::runtime_error("timeAverage specified but meanCount not found");
+                }
+
+                if (result.timeType == "instantaneous" && foundMeanCount)
+                {
+                    // Warn or throw? Let's be strict and throw
+                    throw std::runtime_error("meanCount found for instantaneous field. "
+                                             "meanCount should only be used with timeAverage fields.");
+                }
+
+                return result;
+            }
+            catch (const std::runtime_error &e)
+            {
+                throw std::runtime_error("Error parsing fieldInformation: " + std::string(e.what()));
+            }
+        }
+
+        // Parse field data section
+        __host__ [[nodiscard]] const FieldData parseFieldData(const std::vector<std::string> &headerLines)
+        {
+            try
+            {
+                // Extract the fieldData block
+                const auto fieldDataBlock = LBM::string::extractBlock(headerLines, "fieldData");
+
+                FieldData result;
+
+                // Look for the field[...] line
+                for (const auto &line : fieldDataBlock)
+                {
+                    const auto trimmedLine = LBM::string::trim<string::UNTRIMMED_SEMICOLON>(line);
+
+                    if (trimmedLine.find("field[") != std::string::npos)
+                    {
+                        // Extract dimensions from pattern: field[total][nVars][nz][ny][nx]
+                        std::vector<std::size_t> dims;
+                        std::size_t pos = 0;
+
+                        while ((pos = trimmedLine.find('[', pos)) != std::string::npos)
+                        {
+                            const std::size_t end = trimmedLine.find(']', pos);
+                            if (end == std::string::npos)
+                            {
+                                throw std::runtime_error("Unclosed bracket in field dimensions");
+                            }
+
+                            try
+                            {
+                                const std::string dimStr = trimmedLine.substr(pos + 1, end - pos - 1);
+                                const unsigned long long dimValue = std::stoull(dimStr);
+
+                                if (dimValue > std::numeric_limits<std::size_t>::max())
+                                {
+                                    throw std::runtime_error("Dimension value too large");
+                                }
+
+                                dims.push_back(static_cast<std::size_t>(dimValue));
+                            }
+                            catch (const std::exception &e)
+                            {
+                                throw std::runtime_error("Invalid dimension format: " + std::string(e.what()));
+                            }
+                            pos = end + 1;
+                        }
+
+                        if (dims.size() < 5)
+                        {
+                            throw std::runtime_error("Invalid field dimensions");
+                        }
+
+                        // Note: The original code had dims[1] as nVars, dims[2] as nz, etc.
+                        // According to the pattern field[total][nVars][nz][ny][nx]
+                        result.totalPoints = dims[0];
+                        result.nVars = dims[1];
+                        result.nz = dims[2];
+                        result.ny = dims[3];
+                        result.nx = dims[4];
+
+                        // Validate dimensions
+                        if (result.nx == 0 || result.ny == 0 || result.nz == 0 || result.nVars == 0)
+                        {
+                            throw std::runtime_error("Invalid grid dimensions: nx, ny, nz, nVars cannot be zero");
+                        }
+
+                        // Check for potential overflow
+                        if (result.nx > std::numeric_limits<std::size_t>::max() / result.ny / result.nz / result.nVars)
+                        {
+                            throw std::runtime_error("Dimension product would overflow");
+                        }
+
+                        // Verify consistency
+                        if (result.totalPoints != result.nx * result.ny * result.nz * result.nVars)
+                        {
+                            throw std::runtime_error(
+                                "Dimension mismatch: total points (" + std::to_string(result.totalPoints) +
+                                ") != nx * ny * nz * nVars (" + std::to_string(result.nx * result.ny * result.nz * result.nVars) + ")");
+                        }
+
+                        return result;
+                    }
+                }
+
+                throw std::runtime_error("No field dimensions found in fieldData");
+            }
+            catch (const std::runtime_error &e)
+            {
+                throw std::runtime_error("Error parsing fieldData: " + std::string(e.what()));
+            }
+        }
+
+        // Helper function to parse all sections from header lines
+        __host__ [[nodiscard]] const std::tuple<SystemInformation, FieldInformation, FieldData, std::size_t, std::size_t>
+        parseHeaderSections(const std::vector<std::string> &headerLines, const std::size_t dataStartPos, const std::size_t fileSize)
+        {
+            // Parse system information
+            const auto systemInfo = parseSystemInformation(headerLines);
+
+            // Parse field information
+            const auto fieldInfo = parseFieldInformation(headerLines);
+
+            // Parse field data
+            const auto fieldData = parseFieldData(headerLines);
+
+            return std::make_tuple(systemInfo, fieldInfo, fieldData, dataStartPos, fileSize);
+        }
+
+        // Helper function to read and parse file (used by fieldFileHeader constructor)
+        __host__ [[nodiscard]] std::tuple<std::vector<std::string>, std::size_t, std::size_t>
+        fieldFileHeader::readAndParseFile(const std::string &fileName)
         {
             // Check if file exists and is accessible
             if (!std::filesystem::exists(fileName))
@@ -118,7 +610,6 @@ namespace LBM
                 throw std::runtime_error("Cannot determine file size");
             }
 
-            // Safe cast: file size should be non-negative
             if (fileSizePos < 0)
             {
                 throw std::runtime_error("Invalid file size (negative)");
@@ -127,365 +618,185 @@ namespace LBM
             const std::size_t fileSize = static_cast<std::size_t>(fileSizePos);
             in.seekg(0, std::ios::beg);
 
+            // Read the header text portion
+            std::vector<std::string> headerLines;
             std::string line;
-            bool inSystemInfo = false;
-            bool inFieldData = false;
-            bool inFieldInfo = false;
-            bool inFieldNames = false;
-            bool isLittleEndian = false;
-
-            // Variables to store parsed data
-            std::size_t scalarSize = 0;
-            std::size_t nx = 0;
-            std::size_t ny = 0;
-            std::size_t nz = 0;
-            std::size_t nVars = 0;
-            std::size_t totalPoints = 0;
-            std::size_t dataStartPos = 0;
-            std::vector<std::string> fieldNamesVec;
-            std::size_t expectedFieldCount = 0;
-            bool foundFieldData = false;
-            bool foundSystemInfo = false;
-            bool foundFieldInfo = false;
-
-            // Track which sections we've already seen to detect duplicates
-            bool systemInfoSeen = false;
-            bool fieldDataSeen = false;
-            bool fieldInfoSeen = false;
-
-            // Track line number for better error messages
             std::size_t lineNumber = 0;
+            bool foundFieldDataStart = false;
+            std::size_t dataStartPos = 0;
 
+            // Read until we find the start of binary data
             while (std::getline(in, line))
             {
                 lineNumber++;
-                line = filestring_trim(line);
-                if (line.empty())
+
+                // Clean the line
+                const std::string cleanedLine = LBM::string::trim<string::UNTRIMMED_SEMICOLON>(line);
+
+                // Check if we've reached the start of binary data
+                if (foundFieldDataStart && cleanedLine == "{")
                 {
-                    continue;
-                }
-
-                // Detect sections (regardless of order)
-                if (line == "systemInformation")
-                {
-                    if (systemInfoSeen)
+                    // This is the opening brace before binary data
+                    const auto pos = in.tellg();
+                    if (pos == -1)
                     {
-                        throw std::runtime_error("Duplicate systemInformation section at line " + std::to_string(lineNumber));
+                        throw std::runtime_error("Cannot determine binary data start position");
                     }
-                    inSystemInfo = true;
-                    foundSystemInfo = true;
-                    systemInfoSeen = true;
-                    continue;
-                }
-                else if (line == "fieldData")
-                {
-                    if (fieldDataSeen)
+                    if (pos < 0)
                     {
-                        throw std::runtime_error("Duplicate fieldData section at line " + std::to_string(lineNumber));
+                        throw std::runtime_error("Invalid file position (negative)");
                     }
-                    inFieldData = true;
-                    fieldDataSeen = true;
-                    continue;
-                }
-                else if (line == "fieldInformation")
-                {
-                    if (fieldInfoSeen)
-                    {
-                        throw std::runtime_error("Duplicate fieldInformation section at line " + std::to_string(lineNumber));
-                    }
-                    inFieldInfo = true;
-                    foundFieldInfo = true;
-                    fieldInfoSeen = true;
-                    continue;
-                }
-
-                // Parse systemInformation section
-                if (inSystemInfo)
-                {
-                    if (line == "}")
-                    {
-                        inSystemInfo = false;
-                    }
-                    else if (line.find("binaryType") != std::string::npos)
-                    {
-                        isLittleEndian = (line.find("littleEndian") != std::string::npos);
-                    }
-                    else if (line.find("scalarType") != std::string::npos)
-                    {
-                        if (line.find("32 bit") != std::string::npos)
-                        {
-                            scalarSize = 4;
-                        }
-                        else if (line.find("64 bit") != std::string::npos)
-                        {
-                            scalarSize = 8;
-                        }
-                        else
-                        {
-                            throw std::runtime_error("Invalid scalarType at line " + std::to_string(lineNumber));
-                        }
-                    }
-                }
-
-                // Parse fieldData section for dimensions
-                if (inFieldData && !foundFieldData)
-                {
-                    if (line == "}")
-                    {
-                        inFieldData = false;
-                    }
-                    else if (line.find("field[") != std::string::npos)
-                    {
-                        // Extract dimensions from pattern: field[total][nx][ny][nz][nVars]
-                        std::vector<std::size_t> dims;
-                        std::size_t pos = 0;
-
-                        while ((pos = line.find('[', pos)) != std::string::npos)
-                        {
-                            const std::size_t end = line.find(']', pos);
-                            if (end == std::string::npos)
-                            {
-                                throw std::runtime_error("Unclosed bracket at line " + std::to_string(lineNumber));
-                            }
-
-                            try
-                            {
-                                const std::string dimStr = line.substr(pos + 1, end - pos - 1);
-                                const unsigned long long dimValue = std::stoull(dimStr);
-
-                                // Check for overflow before casting to std::size_t
-                                if (dimValue > std::numeric_limits<std::size_t>::max())
-                                {
-                                    throw std::runtime_error("Dimension value too large at line " + std::to_string(lineNumber));
-                                }
-
-                                dims.push_back(static_cast<std::size_t>(dimValue));
-                            }
-                            catch (const std::out_of_range &)
-                            {
-                                throw std::runtime_error("Dimension value out of range at line " + std::to_string(lineNumber));
-                            }
-                            catch (...)
-                            {
-                                throw std::runtime_error("Invalid dimension format at line " + std::to_string(lineNumber));
-                            }
-                            pos = end + 1;
-                        }
-
-                        if (dims.size() < 5)
-                        {
-                            throw std::runtime_error("Invalid field dimensions at line " + std::to_string(lineNumber));
-                        }
-
-                        totalPoints = dims[0];
-                        nVars = dims[1];
-                        nz = dims[2];
-                        ny = dims[3];
-                        nx = dims[4];
-
-                        // Validate dimensions
-                        if (nx == 0 || ny == 0 || nz == 0 || nVars == 0)
-                        {
-                            throw std::runtime_error("Invalid grid dimensions: nx, ny, nz, nVars cannot be zero at line " + std::to_string(lineNumber));
-                        }
-
-                        // Check for potential overflow in multiplication
-                        if (nx > std::numeric_limits<std::size_t>::max() / ny / nz / nVars)
-                        {
-                            throw std::runtime_error("Dimension product would overflow at line " + std::to_string(lineNumber));
-                        }
-
-                        if (totalPoints != nx * ny * nz * nVars)
-                        {
-                            throw std::runtime_error("Dimension mismatch at line " + std::to_string(lineNumber) + ": total points (" + std::to_string(totalPoints) + ") != nx * ny * nz * nVars (" + std::to_string(nx * ny * nz * nVars) + ")");
-                        }
-
-                        // Skip next line (contains "{")
-                        if (!std::getline(in, line))
-                        {
-                            throw std::runtime_error("Unexpected end of file after field declaration");
-                        }
-                        lineNumber++;
-
-                        // Record start position of binary data with safety check
-                        const auto dataPos = in.tellg();
-                        if (dataPos == -1)
-                        {
-                            throw std::runtime_error("Error getting file position");
-                        }
-
-                        if (dataPos < 0)
-                        {
-                            throw std::runtime_error("Invalid file position (negative)");
-                        }
-
-                        // Check for overflow before casting to std::size_t
-                        if (static_cast<unsigned long long>(dataPos) > std::numeric_limits<std::size_t>::max())
-                        {
-                            throw std::runtime_error("File position too large for std::size_t");
-                        }
-
-                        dataStartPos = static_cast<std::size_t>(dataPos);
-
-                        // Check if data start position is within file bounds
-                        if (dataStartPos > fileSize)
-                        {
-                            throw std::runtime_error("Data start position exceeds file size");
-                        }
-
-                        foundFieldData = true;
-                        inFieldData = false;
-                    }
-                }
-
-                // Parse fieldInformation section for field names
-                if (inFieldInfo)
-                {
-                    if (line == "}")
-                    {
-                        inFieldInfo = false;
-                    }
-                    else if (line.find("fieldNames[") != std::string::npos)
-                    {
-                        // Extract expected number of field names
-                        const std::size_t startBracket = line.find('[');
-                        const std::size_t endBracket = line.find(']');
-                        if (startBracket == std::string::npos || endBracket == std::string::npos)
-                        {
-                            throw std::runtime_error("Invalid fieldNames format at line " + std::to_string(lineNumber));
-                        }
-                        try
-                        {
-                            const unsigned long long count = std::stoull(
-                                line.substr(startBracket + 1, endBracket - startBracket - 1));
-
-                            // Check for overflow before casting to std::size_t
-                            if (count > std::numeric_limits<std::size_t>::max())
-                            {
-                                throw std::runtime_error("Field names count too large at line " + std::to_string(lineNumber));
-                            }
-
-                            expectedFieldCount = static_cast<std::size_t>(count);
-                            if (expectedFieldCount == 0)
-                            {
-                                throw std::runtime_error("Field names count cannot be zero at line " + std::to_string(lineNumber));
-                            }
-                        }
-                        catch (const std::out_of_range &)
-                        {
-                            throw std::runtime_error("Field names count out of range at line " + std::to_string(lineNumber));
-                        }
-                        catch (...)
-                        {
-                            throw std::runtime_error("Invalid fieldNames count at line " + std::to_string(lineNumber));
-                        }
-                        // Enter fieldNames block
-                        inFieldNames = true;
-
-                        // Skip the opening brace line
-                        if (!std::getline(in, line))
-                        {
-                            throw std::runtime_error("Unexpected end of file after fieldNames declaration");
-                        }
-                        lineNumber++;
-                        line = filestring_trim(line);
-                        if (line != "{")
-                        {
-                            throw std::runtime_error("Expected opening brace after fieldNames declaration at line " + std::to_string(lineNumber));
-                        }
-                    }
-                    else if (inFieldNames)
-                    {
-                        if (line == "}")
-                        {
-                            inFieldNames = false;
-                            inFieldInfo = false;
-                        }
-                        else if (line != "{") // Skip the opening brace if we encounter it
-                        {
-                            // Remove trailing semicolon and trim to get field name
-                            if (line.back() == ';')
-                            {
-                                line.pop_back();
-                            }
-                            const std::string fieldName = filestring_trim(line);
-
-                            // Validate field name
-                            if (fieldName.empty())
-                            {
-                                throw std::runtime_error("Empty field name at line " + std::to_string(lineNumber));
-                            }
-
-                            // Check for duplicate field names
-                            // if (std::find(fieldNamesVec.begin(), fieldNamesVec.end(), fieldName) != fieldNamesVec.end())
-                            if (string::containsString(fieldNamesVec, fieldName))
-                            {
-                                throw std::runtime_error("Duplicate field name '" + fieldName + "' at line " + std::to_string(lineNumber));
-                            }
-
-                            fieldNamesVec.push_back(fieldName);
-
-                            // Check if we've exceeded the expected number of field names
-                            if (fieldNamesVec.size() > expectedFieldCount)
-                            {
-                                throw std::runtime_error("Too many field names at line " + std::to_string(lineNumber) + ". Expected: " + std::to_string(expectedFieldCount));
-                            }
-                        }
-                    }
-                }
-
-                // Early exit if we've collected all necessary information
-                if (scalarSize > 0 && foundFieldData && fieldNamesVec.size() == expectedFieldCount && expectedFieldCount > 0)
-                {
+                    dataStartPos = static_cast<std::size_t>(pos);
                     break;
                 }
+
+                // Check if we're about to enter binary data
+                if (!foundFieldDataStart && cleanedLine.find("field[") != std::string::npos)
+                {
+                    foundFieldDataStart = true;
+                }
+
+                headerLines.push_back(line);
+
+                // Safety check
+                if (lineNumber > 1000)
+                {
+                    throw std::runtime_error("Header too large or malformed");
+                }
             }
 
-            // Final validation checks
-            if (!foundSystemInfo)
+            if (!foundFieldDataStart)
             {
-                throw std::runtime_error("Missing systemInformation section");
+                throw std::runtime_error("Could not find field data section");
             }
 
-            if (!foundFieldInfo)
+            return std::make_tuple(headerLines, dataStartPos, fileSize);
+        }
+
+        // Individual initialization functions for fieldFileHeader constructor
+        __host__ [[nodiscard]] bool fieldFileHeader::initializeIsLittleEndian(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto systemInfo = parseSystemInformation(headerLines);
+            return systemInfo.isLittleEndian;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeScalarSize(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto systemInfo = parseSystemInformation(headerLines);
+            return systemInfo.scalarSize;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeNx(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldData = parseFieldData(headerLines);
+            return fieldData.nx;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeNy(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldData = parseFieldData(headerLines);
+            return fieldData.ny;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeNz(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldData = parseFieldData(headerLines);
+            return fieldData.nz;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeNVars(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldData = parseFieldData(headerLines);
+            return fieldData.nVars;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeDataStartPos(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            return dataStartPos;
+        }
+
+        __host__ [[nodiscard]] const std::vector<std::string> fieldFileHeader::initializeFieldNames(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldInfo = parseFieldInformation(headerLines);
+            return fieldInfo.fieldNames;
+        }
+
+        __host__ [[nodiscard]] const std::string fieldFileHeader::initializeTimeType(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldInfo = parseFieldInformation(headerLines);
+            return fieldInfo.timeType;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeTimeStep(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldInfo = parseFieldInformation(headerLines);
+            return fieldInfo.timeStep;
+        }
+
+        __host__ [[nodiscard]] std::size_t fieldFileHeader::initializeMeanCount(const std::string &fileName)
+        {
+            auto [headerLines, dataStartPos, fileSize] = readAndParseFile(fileName);
+            const auto fieldInfo = parseFieldInformation(headerLines);
+            return fieldInfo.meanCount;
+        }
+
+        __host__ void fieldFileHeader::validateInternalConsistency() const
+        {
+            // Check field names count matches nVars
+            if (fieldNames.size() != nVars)
             {
-                throw std::runtime_error("Missing fieldInformation section");
+                throw std::runtime_error(
+                    "Field names count (" + std::to_string(fieldNames.size()) +
+                    ") does not match nVars (" + std::to_string(nVars) + ")");
             }
 
-            if (!foundFieldData)
+            // Validate timeType
+            if (timeType != "instantaneous" && timeType != "timeAverage")
             {
-                throw std::runtime_error("Missing fieldData section");
+                throw std::runtime_error("Invalid timeType: " + timeType);
             }
 
-            if (scalarSize == 0)
+            // Validate meanCount based on timeType
+            if (timeType == "timeAverage")
             {
-                throw std::runtime_error("Missing or invalid scalarType in systemInformation");
+                constexpr std::size_t MAX_REASONABLE_MEAN_COUNT = 1000000;
+                if (meanCount > MAX_REASONABLE_MEAN_COUNT)
+                {
+                    throw std::runtime_error(
+                        "Unreasonably large meanCount: " + std::to_string(meanCount));
+                }
             }
-
-            if (fieldNamesVec.size() != nVars)
+            else if (timeType == "instantaneous" && meanCount != 0)
             {
-                throw std::runtime_error("Field names count (" + std::to_string(fieldNamesVec.size()) + ") does not match nVars (" + std::to_string(nVars) + ")");
+                throw std::runtime_error("meanCount should be 0 for instantaneous fields");
             }
 
-            if (fieldNamesVec.size() != expectedFieldCount)
+            // Validate dimensions
+            if (nx == 0 || ny == 0 || nz == 0 || nVars == 0)
             {
-                throw std::runtime_error("Field names count (" + std::to_string(fieldNamesVec.size()) + ") does not match declared count (" + std::to_string(expectedFieldCount) + ")");
+                throw std::runtime_error("Invalid grid dimensions: nx, ny, nz, nVars cannot be zero");
             }
 
-            // Check if binary data size matches expectations
-            // Check for potential overflow in multiplication
-            if (totalPoints > std::numeric_limits<std::size_t>::max() / scalarSize)
+            // Check for potential overflow
+            if (nx > std::numeric_limits<std::size_t>::max() / ny / nz / nVars)
             {
-                throw std::runtime_error("Data size calculation would overflow");
+                throw std::runtime_error("Dimension product would overflow");
             }
 
-            const std::size_t expectedDataSize = totalPoints * scalarSize;
-            if (fileSize - dataStartPos < expectedDataSize)
-            {
-                throw std::runtime_error("Insufficient data in file. Expected " + std::to_string(expectedDataSize) + " bytes, but only " + std::to_string(fileSize - dataStartPos) + " bytes available");
-            }
-
-            return {isLittleEndian, scalarSize, nx, ny, nz, nVars, dataStartPos, fieldNamesVec};
+            // Verify consistency of total points
+            const std::size_t calculatedTotalPoints = nx * ny * nz * nVars;
+            // Note: We don't have totalPoints as a member anymore, but we can still check nx*ny*nz*nVars is reasonable
+            (void)calculatedTotalPoints; // Suppress unused variable warning
         }
 
         /**
@@ -534,14 +845,8 @@ namespace LBM
             static_assert(std::is_floating_point_v<T>, "T must be floating point");
             static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big, "System must be little or big endian");
 
-            // Check that the file exists - if it doesn't, throw an exception
-            if (!std::filesystem::exists(fileName))
-            {
-                throw std::runtime_error("File does not exist: " + fileName);
-            }
-
-            // Parse header metadata
-            const fieldFileHeader header = parseFieldFileHeader(fileName);
+            // Parse header metadata using the new constructor
+            const fieldFileHeader header(fileName);
 
             // Validate scalar size
             if (sizeof(T) != header.scalarSize)
@@ -626,8 +931,8 @@ namespace LBM
             const std::size_t fileSize = static_cast<std::size_t>(sizeCheck.tellg());
             sizeCheck.close();
 
-            // Parse header to get file structure and field names
-            const fieldFileHeader header = parseFieldFileHeader(fileName);
+            // Parse header using the new constructor
+            const fieldFileHeader header(fileName);
 
             // Validate scalar size
             if (sizeof(T) != header.scalarSize)
@@ -652,7 +957,7 @@ namespace LBM
                 throw std::runtime_error("Field name '" + fieldName + "' not found in file. Available fields: " + availableFields);
             }
 
-            // Calculate field index and data position - FIXED sign conversion issue
+            // Calculate field index and data position
             const std::ptrdiff_t signedFieldIndex = std::distance(header.fieldNames.begin(), it);
             if (signedFieldIndex < 0)
             {

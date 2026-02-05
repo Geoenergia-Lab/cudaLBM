@@ -243,6 +243,114 @@ namespace LBM
                     SPtrs.ptr<4>()[idx] = S_yz;
                     SPtrs.ptr<5>()[idx] = S_zz;
                 }
+
+                launchBounds __global__ void prime(
+                    const device::ptrCollection<6, scalar_t> SPtrs,
+                    const device::ptrCollection<6, scalar_t> SMeanPtrs,
+                    const device::ptrCollection<6, scalar_t> SPrimePtrs)
+                {
+                    const label_t idx = device::idx();
+
+                    // Calculate the prime quantity and write back to global
+                    const scalar_t Sxx = SPtrs.ptr<0>()[idx];
+                    const scalar_t Sxy = SPtrs.ptr<1>()[idx];
+                    const scalar_t Sxz = SPtrs.ptr<2>()[idx];
+                    const scalar_t Syy = SPtrs.ptr<3>()[idx];
+                    const scalar_t Syz = SPtrs.ptr<4>()[idx];
+                    const scalar_t Szz = SPtrs.ptr<5>()[idx];
+
+                    const scalar_t SxxMean = SMeanPtrs.ptr<0>()[idx];
+                    const scalar_t SxyMean = SMeanPtrs.ptr<1>()[idx];
+                    const scalar_t SxzMean = SMeanPtrs.ptr<2>()[idx];
+                    const scalar_t SyyMean = SMeanPtrs.ptr<3>()[idx];
+                    const scalar_t SyzMean = SMeanPtrs.ptr<4>()[idx];
+                    const scalar_t SzzMean = SMeanPtrs.ptr<5>()[idx];
+
+                    const scalar_t SxxPrime = Sxx - SxxMean;
+                    const scalar_t SxyPrime = Sxy - SxyMean;
+                    const scalar_t SxzPrime = Sxz - SxzMean;
+                    const scalar_t SyyPrime = Syy - SyyMean;
+                    const scalar_t SyzPrime = Syz - SyzMean;
+                    const scalar_t SzzPrime = Szz - SzzMean;
+
+                    // Write back to global memory
+                    SPrimePtrs.ptr<0>()[idx] = SxxPrime;
+                    SPrimePtrs.ptr<1>()[idx] = SxyPrime;
+                    SPrimePtrs.ptr<2>()[idx] = SxzPrime;
+                    SPrimePtrs.ptr<3>()[idx] = SyyPrime;
+                    SPrimePtrs.ptr<4>()[idx] = SyzPrime;
+                    SPrimePtrs.ptr<5>()[idx] = SzzPrime;
+                }
+
+                launchBounds __global__ void primeMean(
+                    const device::ptrCollection<10, scalar_t> devPtrs,
+                    const device::ptrCollection<6, scalar_t> SMeanPtrs,
+                    const device::ptrCollection<6, scalar_t> SPrimeMeanPtrs,
+                    const scalar_t invNewCount)
+                {
+                    // Calculate the index
+                    // MODIFY FOR MULTI GPU: idx must be multi GPU aware
+                    const label_t idx = device::idx();
+
+                    // Read from global memory
+                    const scalar_t u = devPtrs.ptr<1>()[idx];
+                    const scalar_t v = devPtrs.ptr<2>()[idx];
+                    const scalar_t w = devPtrs.ptr<3>()[idx];
+                    const scalar_t mxx = devPtrs.ptr<4>()[idx];
+                    const scalar_t mxy = devPtrs.ptr<5>()[idx];
+                    const scalar_t mxz = devPtrs.ptr<6>()[idx];
+                    const scalar_t myy = devPtrs.ptr<7>()[idx];
+                    const scalar_t myz = devPtrs.ptr<8>()[idx];
+                    const scalar_t mzz = devPtrs.ptr<9>()[idx];
+
+                    // Calculate the instantaneous
+                    const scalar_t Sxx = S<index::xx()>(u, u, mxx);
+                    const scalar_t Sxy = S<index::xy()>(u, v, mxy);
+                    const scalar_t Sxz = S<index::xz()>(u, w, mxz);
+                    const scalar_t Syy = S<index::yy()>(v, v, myy);
+                    const scalar_t Syz = S<index::yz()>(v, w, myz);
+                    const scalar_t Szz = S<index::zz()>(w, w, mzz);
+
+                    // Read the mean from global
+                    const scalar_t SxxMean = SMeanPtrs.ptr<0>()[idx];
+                    const scalar_t SxyMean = SMeanPtrs.ptr<1>()[idx];
+                    const scalar_t SxzMean = SMeanPtrs.ptr<2>()[idx];
+                    const scalar_t SyyMean = SMeanPtrs.ptr<3>()[idx];
+                    const scalar_t SyzMean = SMeanPtrs.ptr<4>()[idx];
+                    const scalar_t SzzMean = SMeanPtrs.ptr<5>()[idx];
+
+                    // Read the prime mean from global
+                    const scalar_t SxxPrimeMean = SPrimeMeanPtrs.ptr<0>()[idx];
+                    const scalar_t SxyPrimeMean = SPrimeMeanPtrs.ptr<1>()[idx];
+                    const scalar_t SxzPrimeMean = SPrimeMeanPtrs.ptr<2>()[idx];
+                    const scalar_t SyyPrimeMean = SPrimeMeanPtrs.ptr<3>()[idx];
+                    const scalar_t SyzPrimeMean = SPrimeMeanPtrs.ptr<4>()[idx];
+                    const scalar_t SzzPrimeMean = SPrimeMeanPtrs.ptr<5>()[idx];
+
+                    // Calculate the prime quantity
+                    const scalar_t SxxPrime = Sxx - SxxMean;
+                    const scalar_t SxyPrime = Sxy - SxyMean;
+                    const scalar_t SxzPrime = Sxz - SxzMean;
+                    const scalar_t SyyPrime = Syy - SyyMean;
+                    const scalar_t SyzPrime = Syz - SyzMean;
+                    const scalar_t SzzPrime = Szz - SzzMean;
+
+                    // Update the prime mean value and write back to global
+                    const scalar_t SxxPrimeMeanNew = timeAverage(SxxPrimeMean, SxxPrime, invNewCount);
+                    const scalar_t SxyPrimeMeanNew = timeAverage(SxyPrimeMean, SxyPrime, invNewCount);
+                    const scalar_t SxzPrimeMeanNew = timeAverage(SxzPrimeMean, SxzPrime, invNewCount);
+                    const scalar_t SyyPrimeMeanNew = timeAverage(SyyPrimeMean, SyyPrime, invNewCount);
+                    const scalar_t SyzPrimeMeanNew = timeAverage(SyzPrimeMean, SyzPrime, invNewCount);
+                    const scalar_t SzzPrimeMeanNew = timeAverage(SzzPrimeMean, SzzPrime, invNewCount);
+
+                    // Write back to global memory
+                    SPrimeMeanPtrs.ptr<0>()[idx] = SxxPrimeMeanNew;
+                    SPrimeMeanPtrs.ptr<1>()[idx] = SxyPrimeMeanNew;
+                    SPrimeMeanPtrs.ptr<2>()[idx] = SxzPrimeMeanNew;
+                    SPrimeMeanPtrs.ptr<3>()[idx] = SyyPrimeMeanNew;
+                    SPrimeMeanPtrs.ptr<4>()[idx] = SyzPrimeMeanNew;
+                    SPrimeMeanPtrs.ptr<5>()[idx] = SzzPrimeMeanNew;
+                }
             }
 
             /**
@@ -271,23 +379,38 @@ namespace LBM
                       streamsLBM_(streamsLBM),
                       calculate_(initialiserSwitch(fieldName_)),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
+                      calculatePrime_(initialiserSwitch(fieldNamePrime_)),
+                      calculatePrimeMean_(initialiserSwitch(fieldNamePrimeMean_)),
                       xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_)),
                       xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_)),
                       xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_)),
                       yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_)),
                       yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_)),
                       zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_)),
-                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_))
+                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[1], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[2], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[3], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[4], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[5], mesh, (calculateMean_ || calculatePrime_ || calculatePrimeMean_))),
+                      xxPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[0], mesh, calculatePrime_)),
+                      xyPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[1], mesh, calculatePrime_)),
+                      xzPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[2], mesh, calculatePrime_)),
+                      yyPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[3], mesh, calculatePrime_)),
+                      yzPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[4], mesh, calculatePrime_)),
+                      zzPrime_(objectAllocator<VelocitySet, time::instantaneous>(componentNamesPrime_[5], mesh, calculatePrime_)),
+                      xxPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[0], mesh, calculatePrimeMean_)),
+                      xyPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[1], mesh, calculatePrimeMean_)),
+                      xzPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[2], mesh, calculatePrimeMean_)),
+                      yyPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[3], mesh, calculatePrimeMean_)),
+                      yzPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[4], mesh, calculatePrimeMean_)),
+                      zzPrimeMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesPrimeMean_[5], mesh, calculatePrimeMean_))
                 {
                     // Set the cache config to prefer L1
                     checkCudaErrors(cudaFuncSetCacheConfig(kernel::instantaneous, cudaFuncCachePreferL1));
                     checkCudaErrors(cudaFuncSetCacheConfig(kernel::instantaneousAndMean, cudaFuncCachePreferL1));
                     checkCudaErrors(cudaFuncSetCacheConfig(kernel::mean, cudaFuncCachePreferL1));
+                    checkCudaErrors(cudaFuncSetCacheConfig(kernel::prime, cudaFuncCachePreferL1));
                 };
 
                 /**
@@ -311,6 +434,24 @@ namespace LBM
                 __host__ inline constexpr bool calculateMean() const noexcept
                 {
                     return calculateMean_;
+                }
+
+                /**
+                 * @brief Check if mean calculation is enabled
+                 * @return True if mean calculation is enabled
+                 **/
+                __host__ inline constexpr bool calculatePrime() const noexcept
+                {
+                    return calculatePrime_;
+                }
+
+                /**
+                 * @brief Check if mean calculation is enabled
+                 * @return True if mean calculation is enabled
+                 **/
+                __host__ inline constexpr bool calculatePrimeMean() const noexcept
+                {
+                    return calculatePrimeMean_;
                 }
 
                 /**
@@ -367,6 +508,41 @@ namespace LBM
                 }
 
                 /**
+                 * @brief Calculate both the instantaneous and time-averaged strain rate tensor components
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void calculatePrime([[maybe_unused]] const label_t timeStep) noexcept
+                {
+                    host::constexpr_for<0, N>(
+                        [&](const auto stream)
+                        {
+                            strainRate::kernel::prime<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                                {xx_.ptr(), xy_.ptr(), xz_.ptr(), yy_.ptr(), yz_.ptr(), zz_.ptr()},
+                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
+                                {xxPrime_.ptr(), xyPrime_.ptr(), xzPrime_.ptr(), yyPrime_.ptr(), yzPrime_.ptr(), zzPrime_.ptr()});
+                        });
+                }
+
+                /**
+                 * @brief Calculate both the instantaneous and time-averaged strain rate tensor components
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void calculatePrimeMean(const label_t timeStep) noexcept
+                {
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+
+                    host::constexpr_for<0, N>(
+                        [&](const auto stream)
+                        {
+                            strainRate::kernel::primeMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                                devPtrs_,
+                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
+                                {xxPrime_.ptr(), xyPrime_.ptr(), xzPrime_.ptr(), yyPrime_.ptr(), yzPrime_.ptr(), zzPrime_.ptr()},
+                                invNewCount);
+                        });
+                }
+
+                /**
                  * @brief Saves the instantaneous strain rate tensor components to file
                  * @param[in] timeStep Current simulation time step
                  **/
@@ -404,6 +580,48 @@ namespace LBM
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,
+                        hostWriteBuffer_.data(),
+                        timeStep);
+                }
+
+                /**
+                 * @brief Saves the mean strain rate tensor components to file
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void savePrime(const label_t timeStep) noexcept
+                {
+                    hostWriteBuffer_.copy_from_device(
+                        device::ptrCollection<6, scalar_t>(
+                            xxPrime_.ptr(), xyPrime_.ptr(),
+                            xzPrime_.ptr(), yyPrime_.ptr(),
+                            yzPrime_.ptr(), zzPrime_.ptr()),
+                        mesh_);
+
+                    fileIO::writeFile<time::instantaneous>(
+                        fieldNamePrime_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        mesh_,
+                        componentNamesPrime_,
+                        hostWriteBuffer_.data(),
+                        timeStep);
+                }
+
+                /**
+                 * @brief Saves the mean strain rate tensor components to file
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void savePrimeMean(const label_t timeStep) noexcept
+                {
+                    hostWriteBuffer_.copy_from_device(
+                        device::ptrCollection<6, scalar_t>(
+                            xxPrimeMean_.ptr(), xyPrimeMean_.ptr(),
+                            xzPrimeMean_.ptr(), yyPrimeMean_.ptr(),
+                            yzPrimeMean_.ptr(), zzPrimeMean_.ptr()),
+                        mesh_);
+
+                    fileIO::writeFile<time::timeAverage>(
+                        fieldNamePrimeMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        mesh_,
+                        componentNamesPrimeMean_,
                         hostWriteBuffer_.data(),
                         timeStep);
                 }
@@ -458,6 +676,16 @@ namespace LBM
                 const std::string fieldNameMean_ = fieldName_ + "Mean";
 
                 /**
+                 * @brief Field name for mean components
+                 **/
+                const std::string fieldNamePrime_ = fieldName_ + "Prime";
+
+                /**
+                 * @brief Field name for mean components
+                 **/
+                const std::string fieldNamePrimeMean_ = fieldName_ + "PrimeMean";
+
+                /**
                  * @brief Instantaneous component names
                  **/
                 const std::vector<std::string> componentNames_ = {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"};
@@ -466,6 +694,16 @@ namespace LBM
                  * @brief Mean component names
                  **/
                 const std::vector<std::string> componentNamesMean_ = string::catenate(componentNames_, "Mean");
+
+                /**
+                 * @brief Mean component names
+                 **/
+                const std::vector<std::string> componentNamesPrime_ = string::catenate(componentNames_, "Prime");
+
+                /**
+                 * @brief Mean component names
+                 **/
+                const std::vector<std::string> componentNamesPrimeMean_ = string::catenate(componentNames_, "PrimeMean");
 
                 /**
                  * @brief Reference to lattice mesh
@@ -493,6 +731,16 @@ namespace LBM
                 const bool calculateMean_;
 
                 /**
+                 * @brief Flag for prime calculation
+                 **/
+                const bool calculatePrime_;
+
+                /**
+                 * @brief Flag for prime calculation
+                 **/
+                const bool calculatePrimeMean_;
+
+                /**
                  * @brief Instantaneous strain rate tensor components
                  **/
                 device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xx_;
@@ -511,6 +759,26 @@ namespace LBM
                 device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yyMean_;
                 device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yzMean_;
                 device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> zzMean_;
+
+                /**
+                 * @brief Fluctuating strain rate tensor components
+                 **/
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xxPrime_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xyPrime_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xzPrime_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yyPrime_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yzPrime_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> zzPrime_;
+
+                /**
+                 * @brief Fluctuating strain rate tensor components
+                 **/
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xxPrimeMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xyPrimeMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xzPrimeMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yyPrimeMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yzPrimeMean_;
+                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> zzPrimeMean_;
             };
         }
     }

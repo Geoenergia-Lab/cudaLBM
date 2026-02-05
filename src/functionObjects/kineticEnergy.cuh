@@ -231,6 +231,42 @@ namespace LBM
                 }
 
                 /**
+                 * @brief Check if mean calculation is enabled
+                 * @return True if mean calculation is enabled
+                 **/
+                __host__ inline constexpr bool calculatePrime() const noexcept
+                {
+                    return false;
+                }
+
+                /**
+                 * @brief Check if mean calculation is enabled
+                 * @return True if mean calculation is enabled
+                 **/
+                __host__ inline constexpr bool calculatePrimeMean() const noexcept
+                {
+                    return false;
+                }
+
+                /**
+                 * @brief Check if mean calculation is enabled
+                 * @return True if mean calculation is enabled
+                 **/
+                __host__ void calculatePrime([[maybe_unused]] const label_t timeStep) const noexcept
+                {
+                    return;
+                }
+
+                /**
+                 * @brief Calculate both the instantaneous and time-averaged total kinetic energy
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void calculatePrimeMean([[maybe_unused]] const label_t timeStep) noexcept
+                {
+                    return;
+                }
+
+                /**
                  * @brief Calculate instantaneous total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
@@ -313,6 +349,24 @@ namespace LBM
                         componentNamesMean_,
                         hostWriteBuffer_.data(),
                         timeStep);
+                }
+
+                /**
+                 * @brief Saves the mean strain rate tensor components to file
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void savePrime([[maybe_unused]] const label_t timeStep) noexcept
+                {
+                    return;
+                }
+
+                /**
+                 * @brief Saves the mean strain rate tensor components to file
+                 * @param[in] timeStep Current simulation time step
+                 **/
+                __host__ void savePrimeMean([[maybe_unused]] const label_t timeStep) noexcept
+                {
+                    return;
                 }
 
                 /**
