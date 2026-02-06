@@ -306,16 +306,24 @@ namespace LBM
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, scalar_t> &gGhost) noexcept
             {
+
+#ifdef MULTI_GPU
+
                 constexpr const blockLabel_t blockOffset{0, 0, 0};
+                static_assert(MULTI_GPU_ASSERTION(), "halo::save function not implemented for multi GPU yet");
 
                 // This is correct. Just need to make blockOffset a per-GPU constant
                 const label_t x = threadIdx.x + (block::nx() * (blockIdx.x + blockOffset.nx));
                 const label_t y = threadIdx.y + (block::ny() * (blockIdx.y + blockOffset.ny));
                 const label_t z = threadIdx.z + (block::nz() * (blockIdx.z + blockOffset.nz));
 
-                // const label_t x = threadIdx.x + (blockDim.x * (blockIdx.x + blockOffset.nx));
-                // const label_t y = threadIdx.y + (blockDim.y * (blockIdx.y + blockOffset.ny));
-                // const label_t z = threadIdx.z + (blockDim.z * (blockIdx.z + blockOffset.nz));
+#else
+
+                const label_t x = threadIdx.x + (block::nx() * blockIdx.x);
+                const label_t y = threadIdx.y + (block::ny() * blockIdx.y);
+                const label_t z = threadIdx.z + (block::nz() * blockIdx.z);
+
+#endif
 
                 // MODIFY FOR MULTI GPU: idxPopX, Y and Z
                 /* write to global pop **/
