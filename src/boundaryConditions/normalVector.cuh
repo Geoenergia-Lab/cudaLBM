@@ -76,19 +76,11 @@ namespace LBM
         /**
          * @brief Constructs a normalVector from current thread indices
          * @return normalVector for the current thread's position
+         * @param[in] Tx Thread coordinates
+         * @param[in] Bx Block coordinates
          **/
-        __device__ [[nodiscard]] inline normalVector() noexcept
-            : bitmask_(computeBitmask()){};
-
-        /**
-         * @brief Constructs a normalVector from specific coordinates
-         * @param[in] x X-coordinate in the lattice
-         * @param[in] y Y-coordinate in the lattice
-         * @param[in] z Z-coordinate in the lattice
-         * @return normalVector for the specified position
-         **/
-        __device__ [[nodiscard]] inline normalVector(const label_t x, const label_t y, const label_t z) noexcept
-            : bitmask_(computeBitmask(x, y, z)){};
+        __device__ [[nodiscard]] inline constexpr normalVector(const device::pointCoordinate &point) noexcept
+            : bitmask_(computeBitmask(point)){};
 
         /**
          * @name Basic Boundary Flags
@@ -297,16 +289,9 @@ namespace LBM
          * @brief Compute bitmask from current thread indices
          * @return Bitmask representing boundary configuration
          **/
-        __device__ [[nodiscard]] inline static uint8_t computeBitmask() noexcept
+        __device__ [[nodiscard]] static inline constexpr uint8_t computeBitmask(const device::pointCoordinate &point) noexcept
         {
-            constexpr const blockLabel_t blockOffset{0, 0, 0};
-
-            // This is correct. Just need to make blockOffset a per-GPU constant
-            const label_t x = threadIdx.x + (block::nx() * (blockIdx.x + blockOffset.nx));
-            const label_t y = threadIdx.y + (block::ny() * (blockIdx.y + blockOffset.ny));
-            const label_t z = threadIdx.z + (block::nz() * (blockIdx.z + blockOffset.nz));
-
-            return computeBitmask(x, y, z);
+            return computeBitmask(point.value<axis::X>(), point.value<axis::Y>(), point.value<axis::Z>());
         }
 
         /**
@@ -325,19 +310,20 @@ namespace LBM
          * - Bit 5: Front boundary (z == device::nz - 1)
          * - Bit 6: Any boundary (logical OR of bits 0-5)
          **/
-        __device__ [[nodiscard]] inline static uint8_t computeBitmask(const label_t x, const label_t y, const label_t z) noexcept
+        __device__ [[nodiscard]] static inline constexpr uint8_t computeBitmask(const label_t x, const label_t y, const label_t z) noexcept
         {
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(normalVector::computeBitmask, "Believed correct"));
             return static_cast<uint8_t>(
-                (x == 0) << 0 |                      // West (bit0)
-                (x == device::nx - 1) << 1 |         // East (bit1)
-                (y == 0) << 2 |                      // South (bit2)
-                (y == device::ny - 1) << 3 |         // North (bit3)
-                (z == 0) << 4 |                      // Back (bit4)
-                (z == device::nz - 1) << 5 |         // Front (bit5)
-                (!!(x == 0 || x == device::nx - 1 || //
-                    y == 0 || y == device::ny - 1 || //
-                    z == 0 || z == device::nz - 1))  //
-                    << 6);                           // Any boundary (bit6)
+                (x == 0) << 0 |                                // West (bit0)
+                (x == device::n<axis::X>() - 1) << 1 |         // East (bit1)
+                (y == 0) << 2 |                                // South (bit2)
+                (y == device::n<axis::Y>() - 1) << 3 |         // North (bit3)
+                (z == 0) << 4 |                                // Back (bit4)
+                (z == device::n<axis::Z>() - 1) << 5 |         // Front (bit5)
+                (!!(x == 0 || x == device::n<axis::X>() - 1 || //
+                    y == 0 || y == device::n<axis::Y>() - 1 || //
+                    z == 0 || z == device::n<axis::Z>() - 1))  //
+                    << 6);                                     // Any boundary (bit6)
         }
     };
 }

@@ -292,7 +292,7 @@ namespace LBM
              * population components based on boundary position and direction.
              **/
             template <const axis::type alpha, const int side>
-            __host__ void static handleGhostCells(
+            __host__ static void handleGhostCells(
                 std::vector<scalar_t> &face,
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const label_t tx, const label_t ty, const label_t tz,
@@ -300,6 +300,8 @@ namespace LBM
                 const host::latticeMesh &mesh) noexcept
             {
                 constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, side>();
+
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(haloFace::handleGhostCells, "Potential issue with indexing: idxPop needs to be adapted to multi GPU."));
 
                 // MODIFY FOR MULTI GPU: idxPop must be multi GPU aware
                 host::constexpr_for<0, VelocitySet::QF()>(

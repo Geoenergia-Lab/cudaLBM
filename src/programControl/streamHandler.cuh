@@ -61,7 +61,6 @@ namespace LBM
      * multiple CUDA streams. It provides thread-safe access to streams and
      * ensures proper cleanup during destruction.
      */
-    template <const label_t N>
     class streamHandler
     {
     public:
@@ -72,10 +71,11 @@ namespace LBM
          * a static assertion to ensure N is positive at compile-time.
          * @pre N must be positive (enforced via static_assert)
          */
-        __host__ [[nodiscard]] streamHandler() noexcept
-            : streams_(createCudaStreams())
+        __host__ [[nodiscard]] streamHandler(const programControl &programCtrl) noexcept
+            : streams_(createCudaStreams(programCtrl)),
+              programCtrl_(programCtrl)
         {
-            static_assert(N > 0, "Number of CUDA streams must be positive!");
+            // static_assert(N > 0, "Number of CUDA streams must be positive!");
         }
 
         /**
@@ -86,18 +86,18 @@ namespace LBM
          */
         ~streamHandler() noexcept
         {
-            if constexpr (N == 1)
+            if (streams_.size() == 1)
             {
                 cudaStreamSynchronize(streams_[0]);
                 cudaStreamDestroy(streams_[0]);
             }
             else
             {
-                for (label_t stream = 0; stream < N; stream++)
+                for (label_t stream = 0; stream < streams_.size(); stream++)
                 {
                     cudaStreamSynchronize(streams_[stream]);
                 }
-                for (label_t stream = 0; stream < N; stream++)
+                for (label_t stream = 0; stream < streams_.size(); stream++)
                 {
                     cudaStreamDestroy(streams_[stream]);
                 }
@@ -112,11 +112,10 @@ namespace LBM
          */
         inline void synchronizeAll() const noexcept
         {
-            host::constexpr_for<0, N>(
-                [&](const auto stream)
-                {
-                    cudaStreamSynchronize(streams_[stream]);
-                });
+            for (label_t stream = 0; stream < streams_.size(); stream++)
+            {
+                cudaStreamSynchronize(streams_[stream]);
+            }
         }
 
         /**
@@ -130,7 +129,7 @@ namespace LBM
         template <const label_t stream_>
         inline void synchronize(const std::integral_constant<label_t, stream_> stream) const noexcept
         {
-            static_assert(stream_ < N, "Attempting to access an invalid stream: stream number must be < N");
+            // static_assert(stream_ < N, "Attempting to access an invalid stream: stream number must be < N");
             cudaStreamSynchronize(streams_[stream()]);
         }
 
@@ -152,7 +151,7 @@ namespace LBM
          * @brief Returns all managed CUDA streams
          * @return Const reference to std::array containing all CUDA streams
          */
-        __host__ [[nodiscard]] inline const std::array<cudaStream_t, N> &streams() const noexcept
+        __host__ [[nodiscard]] inline const std::vector<cudaStream_t> &streams() const noexcept
         {
             return streams_;
         }
@@ -165,24 +164,27 @@ namespace LBM
          * Private helper function that handles actual stream creation
          * with proper error checking and device synchronization.
          */
-        __host__ [[nodiscard]] static const std::array<cudaStream_t, N> createCudaStreams() noexcept
+        __host__ [[nodiscard]] static const std::vector<cudaStream_t> createCudaStreams(const programControl &programCtrl) noexcept
         {
-            std::array<cudaStream_t, N> streamsLBM;
+            std::vector<cudaStream_t> streams(programCtrl.deviceList().size());
 
-            for (label_t stream = 0; stream < N; stream++)
+            for (label_t stream = 0; stream < streams.size(); stream++)
             {
+                checkCudaErrors(cudaSetDevice(programCtrl.deviceList()[stream]));
                 checkCudaErrors(cudaDeviceSynchronize());
-                checkCudaErrors(cudaStreamCreate(&streamsLBM[stream]));
+                checkCudaErrors(cudaStreamCreate(&streams[stream]));
                 checkCudaErrors(cudaDeviceSynchronize());
             }
 
-            return streamsLBM;
+            return streams;
         }
 
         /**
          * @brief The underlying streams held in a std::array
          */
-        const std::array<cudaStream_t, N> streams_;
+        const std::vector<cudaStream_t> streams_;
+
+        const programControl &programCtrl_;
     };
 }
 

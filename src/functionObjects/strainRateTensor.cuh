@@ -96,7 +96,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -155,7 +155,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -216,7 +216,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -250,7 +250,7 @@ namespace LBM
              * @tparam VelocitySet The velocity set type used in LBM
              * @tparam N The number of streams (compile-time constant)
              **/
-            template <class VelocitySet, const label_t N>
+            template <class VelocitySet>
             class tensor
             {
             public:
@@ -264,25 +264,26 @@ namespace LBM
                     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
                     const device::ptrCollection<10, scalar_t> &devPtrs,
-                    const streamHandler<N> &streamsLBM) noexcept
+                    const streamHandler &streamsLBM,
+                    const programControl &programCtrl) noexcept
                     : hostWriteBuffer_(hostWriteBuffer),
                       mesh_(mesh),
                       devPtrs_(devPtrs),
                       streamsLBM_(streamsLBM),
                       calculate_(initialiserSwitch(fieldName_)),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
-                      xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_)),
-                      xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_)),
-                      xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_)),
-                      yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_)),
-                      yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_)),
-                      zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_)),
-                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_))
+                      xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_, programCtrl)),
+                      xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_, programCtrl)),
+                      xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_, programCtrl)),
+                      yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_, programCtrl)),
+                      yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_, programCtrl)),
+                      zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_, programCtrl)),
+                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_, programCtrl)),
+                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[1], mesh, calculateMean_, programCtrl)),
+                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[2], mesh, calculateMean_, programCtrl)),
+                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[3], mesh, calculateMean_, programCtrl)),
+                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[4], mesh, calculateMean_, programCtrl)),
+                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[5], mesh, calculateMean_, programCtrl))
                 {
                     // Set the cache config to prefer L1
                     checkCudaErrors(cudaFuncSetCacheConfig(kernel::instantaneous, cudaFuncCachePreferL1));
@@ -319,13 +320,16 @@ namespace LBM
                  **/
                 __host__ void calculateInstantaneous([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xx_.ptr(), xy_.ptr(), xz_.ptr(), yy_.ptr(), yz_.ptr(), zz_.ptr()});
-                        });
+                    // host::constexpr_for<0, N>(
+                    //[&](const auto stream)
+                    //{
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {xx_.ptr(0), xy_.ptr(0), xz_.ptr(0), yy_.ptr(0), yz_.ptr(0), zz_.ptr(0)});
+                    }
+                    // });
                 }
 
                 /**
@@ -337,14 +341,17 @@ namespace LBM
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
 
                     // Calculate the mean
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
-                                invNewCount);
-                        });
+                    //  host::constexpr_for<0, N>(
+                    //  [&](const auto stream)
+                    // {
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {xxMean_.ptr(0), xyMean_.ptr(0), xzMean_.ptr(0), yyMean_.ptr(0), yzMean_.ptr(0), zzMean_.ptr(0)},
+                            invNewCount);
+                    }
+                    //});
                 }
 
                 /**
@@ -355,15 +362,18 @@ namespace LBM
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
 
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xx_.ptr(), xy_.ptr(), xz_.ptr(), yy_.ptr(), yz_.ptr(), zz_.ptr()},
-                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
-                                invNewCount);
-                        });
+                    //  host::constexpr_for<0, N>(
+                    // [&](const auto stream)
+                    // {
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {xx_.ptr(0), xy_.ptr(0), xz_.ptr(0), yy_.ptr(0), yz_.ptr(0), zz_.ptr(0)},
+                            {xxMean_.ptr(0), xyMean_.ptr(0), xzMean_.ptr(0), yyMean_.ptr(0), yzMean_.ptr(0), zzMean_.ptr(0)},
+                            invNewCount);
+                    }
+                    // });
                 }
 
                 /**
@@ -374,9 +384,9 @@ namespace LBM
                 {
                     hostWriteBuffer_.copy_from_device(
                         device::ptrCollection<6, scalar_t>(
-                            xx_.ptr(), xy_.ptr(),
-                            xz_.ptr(), yy_.ptr(),
-                            yz_.ptr(), zz_.ptr()),
+                            xx_.ptr(0), xy_.ptr(0),
+                            xz_.ptr(0), yy_.ptr(0),
+                            yz_.ptr(0), zz_.ptr(0)),
                         mesh_);
 
                     fileIO::writeFile<time::instantaneous>(
@@ -395,9 +405,9 @@ namespace LBM
                 {
                     hostWriteBuffer_.copy_from_device(
                         device::ptrCollection<6, scalar_t>(
-                            xx_.ptr(), xy_.ptr(),
-                            xz_.ptr(), yy_.ptr(),
-                            yz_.ptr(), zz_.ptr()),
+                            xx_.ptr(0), xy_.ptr(0),
+                            xz_.ptr(0), yy_.ptr(0),
+                            yz_.ptr(0), zz_.ptr(0)),
                         mesh_);
 
                     fileIO::writeFile<time::timeAverage>(
@@ -480,7 +490,7 @@ namespace LBM
                 /**
                  * @brief Stream handler for CUDA operations
                  **/
-                const streamHandler<N> &streamsLBM_;
+                const streamHandler &streamsLBM_;
 
                 /**
                  * @brief Flag for instantaneous calculation

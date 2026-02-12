@@ -97,7 +97,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -130,7 +130,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -160,7 +160,7 @@ namespace LBM
                 {
                     // Calculate the index
                     // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idx = device::idx();
+                    const label_t idx = device::idx(device::threadCoordinate(), device::blockCoordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -178,7 +178,7 @@ namespace LBM
              * @tparam VelocitySet The velocity set type used in LBM
              * @tparam N The number of streams (compile-time constant)
              **/
-            template <class VelocitySet, const label_t N>
+            template <class VelocitySet>
             class scalar
             {
             public:
@@ -192,15 +192,16 @@ namespace LBM
                     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
                     const device::ptrCollection<10, scalar_t> &devPtrs,
-                    const streamHandler<N> &streamsLBM) noexcept
+                    const streamHandler &streamsLBM,
+                    const programControl &programCtrl) noexcept
                     : hostWriteBuffer_(hostWriteBuffer),
                       mesh_(mesh),
                       devPtrs_(devPtrs),
                       streamsLBM_(streamsLBM),
                       calculate_(initialiserSwitch(fieldName_)),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
-                      k_(objectAllocator<VelocitySet, time::instantaneous>(fieldName_, mesh)),
-                      kMean_(objectAllocator<VelocitySet, time::timeAverage>(fieldNameMean_, mesh))
+                      k_(objectAllocator<VelocitySet, time::instantaneous>(fieldName_, mesh, programCtrl)),
+                      kMean_(objectAllocator<VelocitySet, time::timeAverage>(fieldNameMean_, mesh, programCtrl))
                 {
                     // std::cout << fieldNameMean_ << std::endl;
                     // Set the cache config to prefer L1
@@ -236,13 +237,16 @@ namespace LBM
                  **/
                 __host__ void calculateInstantaneous([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            kineticEnergy::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {k_.ptr()});
-                        });
+                    // host::constexpr_for<0, N>(
+                    // [&](const auto stream)
+                    // {
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        kineticEnergy::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {k_.ptr(0)});
+                    }
+                    // });
                 }
 
                 /**
@@ -254,14 +258,17 @@ namespace LBM
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
 
                     // Calculate the mean
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            kineticEnergy::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {kMean_.ptr()},
-                                invNewCount);
-                        });
+                    // host::constexpr_for<0, N>(
+                    // [&](const auto stream)
+                    // {
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        kineticEnergy::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {kMean_.ptr(0)},
+                            invNewCount);
+                    }
+                    //});
                 }
 
                 /**
@@ -272,15 +279,18 @@ namespace LBM
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
 
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            kineticEnergy::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {k_.ptr()},
-                                {kMean_.ptr()},
-                                invNewCount);
-                        });
+                    //  host::constexpr_for<0, N>(
+                    //  [&](const auto stream)
+                    //  {
+                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        kineticEnergy::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            devPtrs_,
+                            {k_.ptr(0)},
+                            {kMean_.ptr(0)},
+                            invNewCount);
+                    }
+                    //  });
                 }
 
                 /**
@@ -289,7 +299,7 @@ namespace LBM
                  **/
                 __host__ void saveInstantaneous(const label_t timeStep) noexcept
                 {
-                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(k_.ptr()), mesh_);
+                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(k_.ptr(0)), mesh_);
 
                     fileIO::writeFile<time::instantaneous>(
                         fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
@@ -305,7 +315,7 @@ namespace LBM
                  **/
                 __host__ void saveMean(const label_t timeStep) noexcept
                 {
-                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(kMean_.ptr()), mesh_);
+                    hostWriteBuffer_.copy_from_device(device::ptrCollection<1, scalar_t>(kMean_.ptr(0)), mesh_);
 
                     fileIO::writeFile<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
@@ -387,7 +397,7 @@ namespace LBM
                 /**
                  * @brief Stream handler for CUDA operations
                  **/
-                const streamHandler<N> &streamsLBM_;
+                const streamHandler &streamsLBM_;
 
                 /**
                  * @brief Flag for instantaneous calculation

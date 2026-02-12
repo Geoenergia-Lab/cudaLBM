@@ -81,24 +81,24 @@ int main(const int argc, const char *const argv[])
     device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mzz("m_zz", mesh, programCtrl);
 
     const device::ptrCollection<10, scalar_t> devPtrs(
-        rho.ptr(),
-        u.ptr(),
-        v.ptr(),
-        w.ptr(),
-        mxx.ptr(),
-        mxy.ptr(),
-        mxz.ptr(),
-        myy.ptr(),
-        myz.ptr(),
-        mzz.ptr());
+        rho.ptr(0),
+        u.ptr(0),
+        v.ptr(0),
+        w.ptr(0),
+        mxx.ptr(0),
+        mxy.ptr(0),
+        mxz.ptr(0),
+        myy.ptr(0),
+        myz.ptr(0),
+        mzz.ptr(0));
 
     // Setup Streams
-    const streamHandler<NStreams()> streamsLBM;
+    const streamHandler streamsLBM(programCtrl);
 
     // Allocate a buffer of pinned memory on the host for writing
-    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.nPoints() * NUMBER_MOMENTS());
+    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.nPoints() * NUMBER_MOMENTS(), mesh);
 
-    objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM);
+    objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl);
 
     BlockHalo blockHalo(mesh, programCtrl);
 

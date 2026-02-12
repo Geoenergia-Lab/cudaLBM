@@ -82,18 +82,22 @@ namespace LBM
              * @brief Construct from a number of points and zero-initialise everything
              * @param nPoints The size of the memory in points to allocate
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints)
+            __host__ [[nodiscard]] array(const label_t nPoints, const host::latticeMesh &mesh)
                 : ptr_(host::allocate<T>(nPoints, 0)),
-                  nPoints_(nPoints){};
+                  nPoints_(nPoints),
+                  mesh_(mesh),
+                  name_(""){};
 
             /**
              * @brief Construct from a number of points and uniform-initialise everything
              * @param nPoints The size of the memory in points to allocate
              * @param val The value to assign to the array
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints, const T val)
+            __host__ [[nodiscard]] array(const label_t nPoints, const T val, const host::latticeMesh &mesh)
                 : ptr_(host::allocate<T>(nPoints, val)),
-                  nPoints_(nPoints){};
+                  nPoints_(nPoints),
+                  mesh_(mesh),
+                  name_(""){};
 
             /**
              * @brief Destructor - automatically releases device memory
@@ -198,6 +202,24 @@ namespace LBM
                 }
             }
 
+            /**
+             * @brief Get the mesh
+             * @return Const reference to mesh
+             **/
+            __host__ [[nodiscard]] inline constexpr const host::latticeMesh &mesh() const noexcept
+            {
+                return mesh_;
+            }
+
+            /**
+             * @brief Get field name identifier
+             * @return Const reference to name string
+             **/
+            __host__ [[nodiscard]] inline constexpr const std::string &name() const noexcept
+            {
+                return name_;
+            }
+
         private:
             /**
              * @brief Pointer to the data
@@ -208,6 +230,13 @@ namespace LBM
              * @brief Size of the data allocation
              **/
             const label_t nPoints_;
+
+            /**
+             * @brief Reference to the lattice mesh
+             **/
+            const host::latticeMesh &mesh_;
+
+            const std::string name_;
         };
 
         /**
@@ -278,6 +307,10 @@ namespace LBM
             __host__ [[nodiscard]] inline constexpr const std::vector<T> &arr() const noexcept
             {
                 return arr_;
+            }
+            __host__ [[nodiscard]] inline constexpr const T *data() const noexcept
+            {
+                return arr_.data();
             }
 
             /**
@@ -378,8 +411,6 @@ namespace LBM
 
                 std::vector<T> field(mesh.nPoints(), 0);
 
-#ifdef MULTI_GPU
-
                 const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>(); // > Set to device::NUM_BLOCK_X
                 const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>(); // > Set to device::NUM_BLOCK_Y
                 const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>(); // > Set to device::NUM_BLOCK_Z
@@ -391,8 +422,6 @@ namespace LBM
                     {
                         for (label_t GPU_x = 0; GPU_x < mesh.nDevices<axis::X>(); GPU_x++)
                         {
-                            // const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                            // const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
                             // Fill this GPU's contiguous segment
                             grid_for(
                                 nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
@@ -434,43 +463,6 @@ namespace LBM
                         }
                     }
                 }
-#else
-                grid_for(
-                    mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
-                    [&](const label_t bx, const label_t by, const label_t bz,
-                        const label_t tx, const label_t ty, const label_t tz)
-                    {
-                        const label_t x = (bx * block::nx()) + tx;
-                        const label_t y = (by * block::ny()) + ty;
-                        const label_t z = (bz * block::nz()) + tz;
-
-                        const label_t index = host::idx(tx, ty, tz, bx, by, bz, mesh);
-
-                        const bool is_west = mesh.West(x);
-                        const bool is_east = mesh.East(x);
-                        const bool is_south = mesh.South(y);
-                        const bool is_north = mesh.North(y);
-                        const bool is_back = mesh.Back(z);
-                        const bool is_front = mesh.Front(z);
-
-                        const label_t boundary_count =
-                            static_cast<label_t>(is_west) +
-                            static_cast<label_t>(is_east) +
-                            static_cast<label_t>(is_south) +
-                            static_cast<label_t>(is_north) +
-                            static_cast<label_t>(is_back) +
-                            static_cast<label_t>(is_front);
-                        const T value_sum =
-                            (is_west * bField.West()) +
-                            (is_east * bField.East()) +
-                            (is_south * bField.South()) +
-                            (is_north * bField.North()) +
-                            (is_back * bField.Back()) +
-                            (is_front * bField.Front());
-
-                        field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
-                    });
-#endif
                 return field;
             }
         };

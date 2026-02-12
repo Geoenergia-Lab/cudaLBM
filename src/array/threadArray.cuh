@@ -241,6 +241,19 @@ namespace LBM
             }
 
             /**
+             * @brief Returns a pointer to the first element of the array
+             * @return Pointer to data_[0]
+             **/
+            __device__ __host__ [[nodiscard]] inline constexpr const T *data() __restrict__ const noexcept
+            {
+                return &data_[0];
+            }
+            __device__ __host__ [[nodiscard]] inline constexpr T *data() __restrict__ noexcept
+            {
+                return &data_[0];
+            }
+
+            /**
              * @brief Returns the number of elements in the array
              * @return Compile-time constant number of elements (N)
              **/
@@ -275,7 +288,7 @@ namespace LBM
              * @brief Compile-time check that accesses are valid
              **/
             template <const label_t i>
-            __device__ __host__ constexpr static inline void assert_legal_access() noexcept
+            __device__ __host__ static inline consteval void assert_legal_access() noexcept
             {
                 static_assert(in_bounds<i, N>, "index is out of range: Must be < N.");
             }

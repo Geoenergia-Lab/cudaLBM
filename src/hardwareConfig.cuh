@@ -97,6 +97,25 @@ namespace LBM
 #endif
         }
 
+        template <axis::type alpha, typename T = label_t>
+        __device__ __host__ [[nodiscard]] inline consteval T n() noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                return nx<T>();
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return ny<T>();
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return nz<T>();
+            }
+        }
+
         /**
          * @brief Total threads per block (nx * ny * nz)
          **/

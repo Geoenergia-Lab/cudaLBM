@@ -180,6 +180,12 @@ namespace LBM
         __host__ [[nodiscard]] T *allocate(const std::size_t nPoints, const deviceIndex_t deviceID) noexcept
         {
             checkCudaErrors(cudaSetDevice(deviceID));
+
+            if constexpr (verbose())
+            {
+                std::cout << "Allocated " << nPoints << " to device " << deviceID << std::endl;
+            }
+
             return allocate<T>(nPoints);
         }
 

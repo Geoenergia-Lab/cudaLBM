@@ -11,7 +11,7 @@
 
 caseName        jetFlow;
 
-Re              1000;
+Re              5000;
 
 u_inf           0.016;
 
@@ -21,9 +21,9 @@ startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      20001;
+nTimeSteps      2000001;
 
-saveInterval    20000;
+saveInterval    200000;
 
 infoInterval    2000;
 

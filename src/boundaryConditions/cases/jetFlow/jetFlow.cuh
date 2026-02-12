@@ -102,7 +102,9 @@ namespace LBM
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS()> &moments,
             const normalVector &boundaryNormal,
-            const scalar_t *const ptrRestrict shared_buffer) noexcept
+            const scalar_t *const ptrRestrict shared_buffer,
+            const device::threadCoordinate &Tx,
+            const device::pointCoordinate &point) noexcept
         {
 #include "jetBoundaryCondition.cuh"
         }
@@ -112,20 +114,22 @@ namespace LBM
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS()> &moments,
             const normalVector &boundaryNormal,
-            const thread::array<scalar_t, N> &shared_buffer) noexcept
+            const thread::array<scalar_t, N> &shared_buffer,
+            const device::threadCoordinate &Tx,
+            const device::pointCoordinate &point) noexcept
         {
-#include "jetBoundaryCondition.cuh"
+            calculate_moments<VelocitySet>(pop, moments, boundaryNormal, shared_buffer.data(), Tx, point);
         }
 
     private:
         __device__ [[nodiscard]] static inline scalar_t center_x() noexcept
         {
-            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::nx - 1);
+            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::n<axis::X>() - 1);
         }
 
         __device__ [[nodiscard]] static inline scalar_t center_y() noexcept
         {
-            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::ny - 1);
+            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::n<axis::Y>() - 1);
         }
 
         __device__ [[nodiscard]] static inline scalar_t radius() noexcept

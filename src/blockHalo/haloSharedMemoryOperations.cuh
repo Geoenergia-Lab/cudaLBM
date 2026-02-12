@@ -51,6 +51,8 @@ SourceFiles
 #ifndef __MBLBM_HALOSHAREDMEMORYOPERATIONS_CUH
 #define __MBLBM_HALOSHAREDMEMORYOPERATIONS_CUH
 
+#ifdef MULTI_GPU_HALO_SHARED_MEMORY_OPERATIONS
+
 /**
  * @brief Transposes the block halo into the shared memory
  * @param[in] pop Array containing the populations for the particular thread
@@ -251,5 +253,7 @@ __device__ static inline void save_from_shared(
     }
     }
 }
+
+#endif
 
 #endif

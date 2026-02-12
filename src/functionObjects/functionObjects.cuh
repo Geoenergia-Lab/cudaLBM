@@ -116,12 +116,13 @@ namespace LBM
         template <class VelocitySet, const time::type TimeType>
         __host__ [[nodiscard]] device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType> objectAllocator(
             const std::string &name,
-            const host::latticeMesh &mesh)
+            const host::latticeMesh &mesh,
+            const programControl &programCtrl)
         {
             // If we wish to allocate the array, do so
             if (initialiserSwitch(name))
             {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0);
+                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0, programCtrl);
             }
             // Otherwise, just create the array without initializing it
             else
@@ -134,12 +135,13 @@ namespace LBM
         __host__ [[nodiscard]] device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType> objectAllocator(
             const std::string &name,
             const host::latticeMesh &mesh,
-            const bool allocate)
+            const bool allocate,
+            const programControl &programCtrl)
         {
             // If we wish to allocate the array, do so
             if (allocate)
             {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0);
+                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0, programCtrl);
             }
             // Otherwise, just create the array without initializing it
             else

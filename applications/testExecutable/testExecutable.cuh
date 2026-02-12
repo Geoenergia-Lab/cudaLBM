@@ -76,7 +76,7 @@ namespace LBM
     __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif
 
-    using VelocitySet = D3Q19;
+    using VelocitySet = D3Q27;
     using Collision = secondOrder;
     using BlockHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
 
@@ -107,25 +107,31 @@ namespace LBM
         const label_t GLOBAL_Z_BLOCK_OFFSET,
         const label_t correctDevice)
     {
+        const device::threadCoordinate Tx;
+
+        const device::blockCoordinate Bx;
+
+        const device::pointCoordinate point(Tx, Bx);
+
         // Always a multiple of 32, so no need to check this(I think)
         if constexpr (out_of_bounds_check())
         {
-            if (device::out_of_bounds())
+            if (device::out_of_bounds(point))
             {
                 return;
             }
         }
 
-        const label_t tx = threadIdx.x;
-        const label_t ty = threadIdx.y;
-        const label_t tz = threadIdx.z;
-        const label_t bx = blockIdx.x;
-        const label_t by = blockIdx.y;
-        const label_t bz = blockIdx.z;
+        const label_t idx = device::idx(Tx, Bx);
 
-        const label_t idx = (tx + block::nx<label_t>() * (ty + block::ny<label_t>() * (tz + block::nz<label_t>() * (bx + NUM_BLOCK_X * (by + NUM_BLOCK_Y * bz)))));
+        if ((threadIdx.x == 7) && (threadIdx.y == 7) && (threadIdx.z == 7))
+        {
+            printf("Accessing idx %lu\n", static_cast<uint64_t>(idx));
+        }
 
         const label_t deviceID = deviceIDPtr[idx];
+
+        // return;
 
         if (!(deviceID == correctDevice))
         {
@@ -134,7 +140,7 @@ namespace LBM
 
         if ((threadIdx.x == 0) && (threadIdx.y == 0) && (threadIdx.z == 0))
         {
-            print(deviceID, bx, GLOBAL_X_BLOCK_OFFSET, by, GLOBAL_Y_BLOCK_OFFSET, bz, GLOBAL_Z_BLOCK_OFFSET);
+            print(deviceID, Bx.value<axis::X>(), GLOBAL_X_BLOCK_OFFSET, Bx.value<axis::Y>(), GLOBAL_Y_BLOCK_OFFSET, Bx.value<axis::Z>(), GLOBAL_Z_BLOCK_OFFSET);
         }
 
         deviceIDPtr[idx] = deviceID + 100;

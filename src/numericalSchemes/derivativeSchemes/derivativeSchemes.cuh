@@ -67,11 +67,7 @@ namespace LBM
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
 
-#ifdef MULTI_GPU
-
-            static_assert(false, "derivative::dfdx not implemented for multi GPU yet");
-
-#else
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdx));
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -148,7 +144,7 @@ namespace LBM
             }
             return dfdx;
 
-#endif
+            // #endif
         }
 
         /**
@@ -164,11 +160,7 @@ namespace LBM
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
 
-#ifdef MULTI_GPU
-
-            static_assert(false, "derivative::dfdy not implemented for multi GPU yet");
-
-#else
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdy));
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -244,7 +236,7 @@ namespace LBM
             }
             return dfdy;
 
-#endif
+            // #endif
         }
 
         /**
@@ -260,11 +252,7 @@ namespace LBM
         {
             static_assert((order_ == 2) | (order_ == 4) | (order_ == 6) | (order_ == 8), "Invalid finite difference scheme order: valid orders are 2, 4, 6 and 8");
 
-#ifdef MULTI_GPU
-
-            static_assert(false, "derivative::dfdz not implemented for multi GPU yet");
-
-#else
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdz));
 
             const label_t nx = mesh.nx();
             const label_t ny = mesh.ny();
@@ -341,7 +329,7 @@ namespace LBM
 
             return dfdz;
 
-#endif
+            // #endif
         }
     }
 }

@@ -77,7 +77,7 @@ namespace LBM
              * - Calculation of LBM relaxation parameters
              * - Initialization of device constants for GPU execution
              **/
-            __host__ [[nodiscard]] latticeMesh(const programControl &programCtrl) noexcept
+            __host__ [[nodiscard]] latticeMesh([[maybe_unused]] const programControl &programCtrl) noexcept
                 : nx_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "nx")),
                   ny_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "ny")),
                   nz_(string::extractParameter<label_t>(string::readFile("latticeMesh"), "nz")),
@@ -146,64 +146,86 @@ namespace LBM
                                          std::to_string(typeLimit));
                     }
 
-#ifdef MULTI_GPU
+                    static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(host::latticeMesh));
 
-                    static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
-
-#else
                     // Check that the mesh dimensions are not too large for GPU memory
+                    for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < programCtrl.deviceList().size(); virtualDeviceIndex++)
                     {
-                        const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[0]);
+                        // Calculate the per-GPU allocation size
+                        const label_t nxPointsPerGPU = nx_ / nDevices_.nx;
+                        const label_t nyPointsPerGPU = ny_ / nDevices_.ny;
+                        const label_t nzPointsPerGPU = nz_ / nDevices_.nz;
+                        const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+
+                        const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[virtualDeviceIndex]);
                         const uintmax_t totalMemTemp = static_cast<uintmax_t>(props.totalGlobalMem);
-                        const uintmax_t allocationSize = nPointsTemp * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
+                        const uintmax_t allocationSize = nPointsPerGPU * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
 
                         if (allocationSize >= totalMemTemp)
                         {
                             const double gbAllocation = static_cast<double>(allocationSize / (1024 * 1024 * 1024));
                             const double gbAvailable = static_cast<double>(totalMemTemp / (1024 * 1024 * 1024));
 
-                            errorHandler(ERR_SIZE,
-                                         "\nInsufficient GPU memory:\n"
-                                         "Attempted to allocate: " +
-                                             std::to_string(allocationSize) +
-                                             " bytes (" + std::to_string(gbAllocation) + " GB)\n"
-                                                                                         "Available GPU memory: " +
-                                             std::to_string(totalMemTemp) +
-                                             " bytes (" + std::to_string(gbAvailable) + " GB)");
+                            errorHandler(
+                                ERR_SIZE,
+                                "\nInsufficient GPU memory:\nAttempted to allocate: " +
+                                    std::to_string(allocationSize) +
+                                    " bytes (" +
+                                    std::to_string(gbAllocation) +
+                                    " GB)\n"
+                                    "Available GPU memory: " +
+                                    std::to_string(totalMemTemp) +
+                                    " bytes (" +
+                                    std::to_string(gbAvailable) +
+                                    " GB)");
                         }
                     }
-#endif
                 }
 
-#ifdef MULTI_GPU
-
-                static_assert(false, "host::latticeMesh constructor not implemented for multi GPU yet");
-
-#else
-                // Allocate programControl symbols on the GPU (clean up later)
                 {
-                    const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
-                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
-                    const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
-                    const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
-                    const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
+                    const label_t nxGPUs = nDevices<axis::X>();
+                    const label_t nyGPUs = nDevices<axis::Y>();
+                    const label_t nzGPUs = nDevices<axis::Z>();
+                    gpu_for(
+                        nxGPUs, nyGPUs, nzGPUs,
+                        [&](const label_t dx, const label_t dy, const label_t dz)
+                        {
+                            const label_t virtualDeviceIndex = deviceIdx(dx, dy, dz, nxGPUs, nyGPUs);
 
-                    copyToSymbol(device::L_char, programCtrl.L_char());
-                    copyToSymbol(device::Re, programCtrl.Re());
-                    copyToSymbol(device::tau, tauTemp);
-                    copyToSymbol(device::omega, omegaTemp);
-                    copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
-                    copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+                            checkCudaErrors(cudaSetDevice(programCtrl.deviceList()[virtualDeviceIndex]));
+
+                            // Allocate programControl symbols on the GPU (clean up later)
+                            {
+                                const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
+                                const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
+                                const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
+                                const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
+                                const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
+
+                                copyToSymbol(device::L_char, programCtrl.L_char());
+                                copyToSymbol(device::Re, programCtrl.Re());
+                                copyToSymbol(device::tau, tauTemp);
+                                copyToSymbol(device::omega, omegaTemp);
+                                copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
+                                copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+                            }
+
+                            const label_t nxBlocksPerGPU = nxBlocks() / nDevices_.nx;
+                            const label_t nyBlocksPerGPU = nyBlocks() / nDevices_.ny;
+                            const label_t nzBlocksPerGPU = nzBlocks() / nDevices_.nz;
+
+                            // Allocate mesh symbols on the GPU
+                            copyToSymbol(device::nx, nx_);
+                            copyToSymbol(device::ny, ny_);
+                            copyToSymbol(device::nz, nz_);
+                            copyToSymbol(device::NUM_BLOCK_X, nxBlocksPerGPU);
+                            copyToSymbol(device::NUM_BLOCK_Y, nyBlocksPerGPU);
+                            copyToSymbol(device::NUM_BLOCK_Z, nzBlocksPerGPU);
+                            copyToSymbol(device::BLOCK_OFFSET_X, nxBlocksPerGPU * dx);
+                            copyToSymbol(device::BLOCK_OFFSET_Y, nyBlocksPerGPU * dy);
+                            copyToSymbol(device::BLOCK_OFFSET_Z, nzBlocksPerGPU * dz);
+                        });
                 }
-
-                // Allocate mesh symbols on the GPU
-                copyToSymbol(device::nx, nx_);
-                copyToSymbol(device::ny, ny_);
-                copyToSymbol(device::nz, nz_);
-                copyToSymbol(device::NUM_BLOCK_X, nxBlocks());
-                copyToSymbol(device::NUM_BLOCK_Y, nyBlocks());
-                copyToSymbol(device::NUM_BLOCK_Z, nzBlocks());
-#endif
             };
 
             // Constructor to initialise a cut plane

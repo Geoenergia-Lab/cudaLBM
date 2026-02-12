@@ -79,12 +79,13 @@ namespace LBM
             host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
             const host::latticeMesh &mesh,
             const device::ptrCollection<10, scalar_t> &devPtrs,
-            const streamHandler<N> &streamsLBM)
+            const streamHandler &streamsLBM,
+            const programControl &programCtrl)
             : hostWriteBuffer_(hostWriteBuffer),
               mesh_(mesh),
-              M_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
-              S_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
-              k_(hostWriteBuffer, mesh, devPtrs, streamsLBM),
+              M_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
+              S_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
+              k_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
               functionVector_(functionObjectCallInitialiser(M_, S_, k_)),
               saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {};
 
@@ -129,17 +130,17 @@ namespace LBM
         /**
          * @brief Moments function object
          **/
-        functionObjects::moments::collection<VelocitySet, N> M_;
+        functionObjects::moments::collection<VelocitySet> M_;
 
         /**
          * @brief Strain rate tensor function object
          **/
-        functionObjects::strainRate::tensor<VelocitySet, N> S_;
+        functionObjects::strainRate::tensor<VelocitySet> S_;
 
         /**
          * @brief Kinetic energy function object
          **/
-        functionObjects::kineticEnergy::scalar<VelocitySet, N> k_;
+        functionObjects::kineticEnergy::scalar<VelocitySet> k_;
 
         /**
          * @brief Registry of function objects to invoke
@@ -152,9 +153,9 @@ namespace LBM
          * @return Vector of function objects to be executed
          **/
         __host__ [[nodiscard]] const std::vector<std::function<void(const label_t)>> functionObjectCallInitialiser(
-            functionObjects::moments::collection<VelocitySet, N> &moments,
-            functionObjects::strainRate::tensor<VelocitySet, N> &S,
-            functionObjects::kineticEnergy::scalar<VelocitySet, N> &k) const noexcept
+            functionObjects::moments::collection<VelocitySet> &moments,
+            functionObjects::strainRate::tensor<VelocitySet> &S,
+            functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
             std::vector<std::function<void(const label_t)>> calls;
 
@@ -170,7 +171,7 @@ namespace LBM
         {
             // If both instantaneous and mean calculations are enabled, calculate both in one call
             // Only do this for variables other than the 10 moments
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet, N>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
                 if ((object.calculate()) && (object.calculateMean()))
                 {
@@ -181,7 +182,7 @@ namespace LBM
             }
 
             // Must be only saving instantaneous, so just calculate instantaneous without saving mean
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet, N>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
                 if (object.calculate() && !(object.calculateMean()))
                 {
@@ -212,9 +213,9 @@ namespace LBM
          * @return Vector of function objects to be executed
          **/
         __host__ [[nodiscard]] const std::vector<std::function<void(const label_t)>> functionObjectSaveInitialiser(
-            functionObjects::moments::collection<VelocitySet, N> &moments,
-            functionObjects::strainRate::tensor<VelocitySet, N> &S,
-            functionObjects::kineticEnergy::scalar<VelocitySet, N> &k) const noexcept
+            functionObjects::moments::collection<VelocitySet> &moments,
+            functionObjects::strainRate::tensor<VelocitySet> &S,
+            functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
             std::vector<std::function<void(const label_t)>> calls;
 
@@ -228,7 +229,7 @@ namespace LBM
         template <class C>
         __host__ void addSaveCall(std::vector<std::function<void(const label_t)>> &calls, C &object) const noexcept
         {
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet, N>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
                 if (object.calculate())
                 {

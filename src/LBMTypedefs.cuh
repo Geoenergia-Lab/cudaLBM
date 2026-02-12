@@ -153,41 +153,19 @@ namespace LBM
      **/
     struct pointLabel_t
     {
-        const label_t x; // < Lattice point in x-direction
-        const label_t y; // < Lattice point in y-direction
-        const label_t z; // < Lattice point in z-direction
-    };
+        __device__ [[nodiscard]] inline pointLabel_t(const dim3 &label) noexcept
+            : x(static_cast<label_t>(label.x)),
+              y(static_cast<label_t>(label.y)),
+              z(static_cast<label_t>(label.z)){};
 
-    /**
-     * @brief 1D range descriptor [begin, end)
-     **/
-    struct blockPartitionRange_t
-    {
-        const label_t begin; // < Inclusive start index
-        const label_t end;   // < Exclusive end index
-    };
+        __device__ [[nodiscard]] inline pointLabel_t(const label_t X, const label_t Y, const label_t Z) noexcept
+            : x(X),
+              y(Y),
+              z(Z){};
 
-    /**
-     * @brief 3D block range descriptor
-     * @details Defines a rectangular region in lattice space
-     **/
-    struct blockRange_t
-    {
-        const blockPartitionRange_t xRange; // < X-dimension range
-        const blockPartitionRange_t yRange; // < Y-dimension range
-        const blockPartitionRange_t zRange; // < Z-dimension range
-    };
-
-    /**
-     * @brief Type used to contain a variable or variables over a block of shared memory
-     * @param T The type of variable
-     * @param N The number of variables
-     * @param blockSize The number of lattice points in the shared memory block
-     **/
-    template <typename T, const label_t N, const label_t blockSize>
-    struct sharedArray
-    {
-        T arr[N][blockSize];
+        const label_t x;
+        const label_t y;
+        const label_t z;
     };
 
     /**
@@ -250,7 +228,7 @@ namespace LBM
     {
         /**
          * @brief Cardinal axis directions: X, Y, Z or NO_DIRECTION
-         */
+         **/
         typedef enum Enum : label_t
         {
             X = 0,
@@ -258,6 +236,54 @@ namespace LBM
             Z = 2,
             NO_DIRECTION = static_cast<label_t>(-1)
         } type;
+
+        /**
+         * @brief Returns axis directions orthogonal to alpha
+         * @tparam alpha The axis direction
+         * @tparam i The index of the orthogonal axis (must be 0 or 1)
+         * @returns One of two axis directions orthogonal to alpha
+         **/
+        template <const axis::type alpha, const label_t i>
+        __device__ __host__ [[nodiscard]] inline consteval axis::type orthogonal() noexcept
+        {
+            static_assert(i < 2);
+
+            if constexpr (alpha == axis::X)
+            {
+                if constexpr (i == 0)
+                {
+                    return axis::Y;
+                }
+                if constexpr (i == 1)
+                {
+                    return axis::Z;
+                }
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                if constexpr (i == 0)
+                {
+                    return axis::X;
+                }
+                if constexpr (i == 1)
+                {
+                    return axis::Z;
+                }
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                if constexpr (i == 0)
+                {
+                    return axis::X;
+                }
+                if constexpr (i == 1)
+                {
+                    return axis::Y;
+                }
+            }
+        }
 
         /**
          * @brief Enumerated type for axes: The axis either can or cannot be null
@@ -352,6 +378,48 @@ namespace LBM
         __device__ __constant__ label_t NUM_BLOCK_X;
         __device__ __constant__ label_t NUM_BLOCK_Y;
         __device__ __constant__ label_t NUM_BLOCK_Z;
+
+        template <axis::type alpha>
+        __device__ [[nodiscard]] inline constexpr label_t n() noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                return nx;
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return ny;
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return nz;
+            }
+        }
+
+        template <axis::type alpha>
+        __device__ [[nodiscard]] inline constexpr label_t NUM_BLOCK() noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                return NUM_BLOCK_X;
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return NUM_BLOCK_Y;
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return NUM_BLOCK_Z;
+            }
+        }
+
+        __device__ __constant__ label_t BLOCK_OFFSET_X;
+        __device__ __constant__ label_t BLOCK_OFFSET_Y;
+        __device__ __constant__ label_t BLOCK_OFFSET_Z;
 
         /**
          * @brief Class holding N device pointers of type T
