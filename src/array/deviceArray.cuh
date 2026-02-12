@@ -116,7 +116,6 @@ namespace LBM
         class array<field::FULL_FIELD, T, VelocitySet, TimeType>
         {
         public:
-#ifdef MULTI_GPU
             /**
              * @brief Constructs a device array from host data
              * @tparam VelocitySet Template parameter for velocity set configuration
@@ -150,7 +149,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const T value,
                 const programControl &programCtrl)
-                : ptr_(allocate_on_devices(mesh, mesh.nPoints(), value)),
+                : ptr_(allocate_on_devices(mesh, value)),
                   name_(name),
                   mesh_(mesh)
             {
@@ -228,53 +227,6 @@ namespace LBM
             {
                 return ptr_[idx];
             }
-#else
-
-            /**
-             * @brief Allocates no memory on the device
-             **/
-            __host__ [[nodiscard]] array(const std::string &name, const host::latticeMesh &mesh)
-                : ptr_(nullptr),
-                  name_(name),
-                  mesh_(mesh){};
-
-            /**
-             * @brief Destructor - automatically releases device memory
-             * @note Noexcept guarantee: failsafe if cudaFree fails
-             **/
-            ~array() noexcept
-            {
-                checkCudaErrors(cudaFree(ptr_));
-            }
-
-            /**
-             * @brief Element access operator
-             * @param[in] i Index of element to access
-             * @return Value at index @p i
-             * @warning No bounds checking performed
-             **/
-            __device__ __host__ [[nodiscard]] inline T operator[](const label_t i) const noexcept
-            {
-                return ptr_[i];
-            }
-
-            /**
-             * @brief Get read-only access to underlying data
-             * @return Const pointer to device memory
-             **/
-            __device__ __host__ [[nodiscard]] inline const T *ptr() const noexcept
-            {
-                return ptr_;
-            }
-
-            /**
-             * @brief Get mutable access to underlying data
-             * @return Pointer to device memory
-             **/
-            __device__ __host__ [[nodiscard]] inline T *ptr() noexcept
-            {
-                return ptr_;
-            }
 
             /**
              * @brief Get array identifier name
@@ -299,10 +251,10 @@ namespace LBM
              * @return Number of elements in array
              * @note Returns mesh point count - assumes 1:1 element-to-point mapping
              **/
-            template <typename T = label_t>
-            __host__ [[nodiscard]] inline constexpr T size() const noexcept
+            template <typename SizeType = label_t>
+            __host__ [[nodiscard]] inline constexpr SizeType size() const noexcept
             {
-                return mesh_.nPoints<T>();
+                return mesh_.nPoints<SizeType>();
             }
 
             __host__ [[nodiscard]] inline consteval time::type timeType() const noexcept
@@ -310,11 +262,17 @@ namespace LBM
                 return TimeType;
             }
 
-#endif
-
         private:
+            /**
+             * @brief The underlying pointers to device memory
+             **/
             T **const ptrRestrict ptr_;
 
+            /**
+             * @brief Allocates all partitions of the array to the devices
+             * @param[in] mesh The mesh
+             * @param[in] hostArrayGlobal Pointer to the array allocated on the host
+             **/
             __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const T *hostArrayGlobal)
             {
                 const label_t nxGPUs = mesh.nDevices<axis::X>();
@@ -337,26 +295,42 @@ namespace LBM
                 return hostPtrsToDevice;
             }
 
-            // This is the problematic function
+            /**
+             * @brief Partitions and allocates an existing std::vector on the devices
+             * @param[in] hostArrayGlobal Pointer to the array allocated on the host
+             **/
             __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const std::vector<T> &hostArrayGlobal)
             {
                 return allocate_on_devices(mesh, hostArrayGlobal.data());
             }
 
+            /**
+             * @brief Partitions and allocates an existing host::array on the devices
+             * @param[in] hostArrayGlobal Pointer to the array allocated on the host
+             **/
             template <const host::mallocType MallocType>
             __host__ [[nodiscard]] T **allocate_on_devices(const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal)
             {
                 return allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data());
             }
 
-            // template <const host::mallocType MallocType>
-            __host__ [[nodiscard]] T **allocate_on_devices(const host::latticeMesh &mesh, const label_t N, const T val)
+            /**
+             * @brief Allocates a uniform value distributed amongst the devices
+             * @param[in] mesh The mesh
+             * @param[in] hostArrayGlobal Pointer to the array allocated on the host
+             **/
+            __host__ [[nodiscard]] T **allocate_on_devices(const host::latticeMesh &mesh, const T val)
             {
-                const std::vector<T> toAllocate(N, val);
+                const std::vector<T> toAllocate(mesh.nPoints<std::size_t>(), val);
                 return allocate_on_devices(mesh, toAllocate);
             }
 
-            // Creates a partition of the mesh and allocates it to a particular GPU
+            /**
+             * @brief Creates a partition of the mesh and allocates it to a pointer
+             * @param[in] mesh The mesh
+             * @param[in] hostArrayGlobal Pointer to the array allocated on the host
+             * @param[in] GPU_x, GPU_y, GPUz Indices of the device to allocate on
+             **/
             __host__ [[nodiscard]] static T *allocate_device_segment(
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
@@ -379,16 +353,6 @@ namespace LBM
                 device::copy(devPtr, &(hostArrayGlobal[startIndex]), nPointsPerGPU);
 
                 return devPtr;
-            }
-
-            // Creates a partition of the mesh and allocates it to a particular GPU
-            __host__ [[nodiscard]] static T *allocate_device_segment(
-                const std::vector<T> &hostArrayGlobal,
-                const label_t GPU_x,
-                const label_t GPU_y,
-                const label_t GPU_z)
-            {
-                return allocate_device_segment(hostArrayGlobal.mesh(), hostArrayGlobal.data(), GPU_x, GPU_y, GPU_z);
             }
 
             /**
@@ -441,9 +405,8 @@ namespace LBM
              **/
             __host__ static void initialise_boundary_condition(const std::string &name, const std::vector<deviceIndex_t> &deviceList) noexcept
             {
-#ifdef MULTI_GPU
 
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(device::array::initialise_boundary_condition));
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::initialise_boundary_condition, "Believed to be correct"));
 
                 if ((name == "u") || (name == "v") || (name == "w"))
                 {
@@ -467,27 +430,6 @@ namespace LBM
                         copyToSymbol(device::U_Front, Front(), i);
                     }
                 }
-
-#else
-                if ((name == "u") || (name == "v") || (name == "w"))
-                {
-                    const label_t i = name_to_index(name);
-
-                    const boundaryValue<VelocitySet, false> North(name, "North");
-                    const boundaryValue<VelocitySet, false> South(name, "South");
-                    const boundaryValue<VelocitySet, false> East(name, "East");
-                    const boundaryValue<VelocitySet, false> West(name, "West");
-                    const boundaryValue<VelocitySet, false> Back(name, "Back");
-                    const boundaryValue<VelocitySet, false> Front(name, "Front");
-
-                    copyToSymbol(device::U_North, North(), i);
-                    copyToSymbol(device::U_South, South(), i);
-                    copyToSymbol(device::U_East, East(), i);
-                    copyToSymbol(device::U_West, West(), i);
-                    copyToSymbol(device::U_Back, Back(), i);
-                    copyToSymbol(device::U_Front, Front(), i);
-                }
-#endif
             }
         };
     }

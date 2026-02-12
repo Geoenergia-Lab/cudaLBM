@@ -93,7 +93,9 @@ SourceFiles
 
 #define MULTI_GPU
 
-#define MULTI_GPU_MSG(func, ...) #func " function not implemented for multi GPU yet" __VA_OPT__(": ") __VA_ARGS__
+#define MULTI_GPU_MSG_NOTE(func, note) #func " function not implemented for multi GPU yet: " note
+
+#define MULTI_GPU_MSG(func) #func " function not implemented for multi GPU yet"
 
 __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return true; }
 

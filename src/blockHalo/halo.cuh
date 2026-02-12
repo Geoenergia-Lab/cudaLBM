@@ -73,9 +73,7 @@ namespace LBM
              * @param[in] mesh Lattice mesh defining simulation domain
              * @param[in] programCtrl Program control parameters
              **/
-            __host__ [[nodiscard]] halo(
-                const host::latticeMesh &mesh,
-                const programControl &programCtrl) noexcept
+            __host__ [[nodiscard]] halo(const host::latticeMesh &mesh, const programControl &programCtrl) noexcept
                 : fGhost_(haloFace<VelocitySet>(
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("u", mesh, programCtrl),
@@ -146,14 +144,10 @@ namespace LBM
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            __device__ static inline void load(
-                thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, const scalar_t> &fGhost,
-                const device::threadCoordinate &Tx,
-                const device::blockCoordinate &Bx) noexcept
+            __device__ static inline constexpr void load(thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, const scalar_t> &fGhost, const device::threadCoordinate &Tx, const device::blockCoordinate &Bx) noexcept
             {
 
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(device::halo::load));
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::load, "Potential issue with condition checking (e.g. West, East, etc)."));
 
                 if (Tx.value<axis::X>() == 0)
                 {
@@ -197,15 +191,10 @@ namespace LBM
              * This device function saves population values to halo regions for
              * neighboring blocks to read.
              **/
-            __device__ static inline void save(
-                const thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, scalar_t> &gGhost,
-                const device::threadCoordinate &Tx,
-                const device::blockCoordinate &Bx,
-                const device::pointCoordinate &point) noexcept
+            __device__ static inline constexpr void save(const thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, scalar_t> &gGhost, const device::threadCoordinate &Tx, const device::blockCoordinate &Bx, const device::pointCoordinate &point) noexcept
             {
 
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(device::halo::save));
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::save, "Potential issue with condition checking (e.g. West, East, etc)."));
 
                 if (West(point.value<axis::X>(), Tx))
                 {
@@ -268,7 +257,7 @@ namespace LBM
              * @param[in] x Global x-coordinate
              * @return True if at western boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool West(const label_t x, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool West(const label_t x, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (x_periodic)
                 {
@@ -285,7 +274,7 @@ namespace LBM
              * @param[in] x Global x-coordinate
              * @return True if at eastern boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool East(const label_t x, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool East(const label_t x, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (x_periodic)
                 {
@@ -302,7 +291,7 @@ namespace LBM
              * @param[in] y Global y-coordinate
              * @return True if at southern boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool South(const label_t y, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool South(const label_t y, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (y_periodic)
                 {
@@ -319,7 +308,7 @@ namespace LBM
              * @param[in] y Global y-coordinate
              * @return True if at northern boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool North(const label_t y, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool North(const label_t y, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (y_periodic)
                 {
@@ -336,7 +325,7 @@ namespace LBM
              * @param[in] z Global z-coordinate
              * @return True if at back boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool Back(const label_t z, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool Back(const label_t z, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (z_periodic)
                 {
@@ -353,7 +342,7 @@ namespace LBM
              * @param[in] z Global z-coordinate
              * @return True if at front boundary but not domain edge
              **/
-            __device__ [[nodiscard]] static inline bool Front(const label_t z, const device::threadCoordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool Front(const label_t z, const device::threadCoordinate &Tx) noexcept
             {
                 if constexpr (z_periodic)
                 {
@@ -374,7 +363,7 @@ namespace LBM
              *
              * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
              **/
-            __device__ __host__ [[nodiscard]] static inline label_t idx_block(const label_t tx, const label_t ty, const label_t tz) noexcept
+            __device__ __host__ [[nodiscard]] static inline constexpr label_t idx_block(const label_t tx, const label_t ty, const label_t tz) noexcept
             {
                 return tx + block::nx() * (ty + block::ny() * tz);
             }
@@ -388,7 +377,7 @@ namespace LBM
              *
              * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
              **/
-            __device__ __host__ [[nodiscard]] static inline label_t warpID(const label_t tx, const label_t ty, const label_t tz) noexcept
+            __device__ __host__ [[nodiscard]] static inline constexpr label_t warpID(const label_t tx, const label_t ty, const label_t tz) noexcept
             {
                 return idx_block(tx, ty, tz) / block::warp_size();
             }
@@ -402,7 +391,7 @@ namespace LBM
              *
              * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
              **/
-            __device__ __host__ [[nodiscard]] static inline label_t idxWarp(const label_t tx, const label_t ty, const label_t tz) noexcept
+            __device__ __host__ [[nodiscard]] static inline constexpr label_t idxWarp(const label_t tx, const label_t ty, const label_t tz) noexcept
             {
                 return idx_block(tx, ty, tz) % block::warp_size();
             }
@@ -429,9 +418,7 @@ namespace LBM
              * @param[in] t The thread coordinate
              **/
             template <const int coeff>
-            __device__ [[nodiscard]] static inline constexpr label_t thread_stencil(
-                const thread::array<label_t, 2> &dt,
-                const label_t t) noexcept
+            __device__ [[nodiscard]] static inline constexpr label_t thread_stencil(const thread::array<label_t, 2> &dt, const label_t t) noexcept
             {
                 if constexpr (coeff == -1)
                 {
@@ -487,11 +474,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              **/
             template <const axis::type alpha, const int coeff, const label_t PtrIndex>
-            __device__ static inline void load_face(
-                thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, const scalar_t> &fGhost,
-                const device::threadCoordinate &Tx,
-                const device::blockCoordinate &Bx) noexcept
+            __device__ static inline constexpr void load_face(thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, const scalar_t> &fGhost, const device::threadCoordinate &Tx, const device::blockCoordinate &Bx) noexcept
             {
                 const thread::array<label_t, 2> dBx{Bx.shifted_block<axis::X, -1>(), Bx.shifted_block<axis::X, +1>()};
                 const thread::array<label_t, 2> dBy{Bx.shifted_block<axis::Y, -1>(), Bx.shifted_block<axis::Y, +1>()};
@@ -540,11 +523,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              **/
             template <const axis::type alpha, const label_t PtrIndex, const int coeff>
-            __device__ inline static void save_face(
-                const thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, scalar_t> &gGhost,
-                const device::threadCoordinate &Tx,
-                const device::blockCoordinate &Bx) noexcept
+            __device__ static inline constexpr void save_face(const thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, scalar_t> &gGhost, const device::threadCoordinate &Tx, const device::blockCoordinate &Bx) noexcept
             {
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)

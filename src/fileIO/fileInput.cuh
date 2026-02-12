@@ -788,9 +788,7 @@ namespace LBM
 
             std::vector<std::vector<T>> soa(nFields, std::vector<scalar_t>(nNodes, 0));
 
-#ifdef MULTI_GPU
-
-            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(fileIO::deinterleaveAoS));
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(fileIO::deinterleaveAoS, "Believed to be correct but should verify"));
 
             const label_t nxGPUs = mesh.template nDevices<axis::X>();
             const label_t nyGPUs = mesh.template nDevices<axis::Y>();
@@ -834,27 +832,6 @@ namespace LBM
                             }
                         });
                 });
-
-#else
-            grid_for(
-                mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
-                [&](const label_t bx, const label_t by, const label_t bz,
-                    const label_t tx, const label_t ty, const label_t tz)
-                {
-                    const label_t x = (bx * block::nx()) + tx;
-                    const label_t y = (by * block::ny()) + ty;
-                    const label_t z = (bz * block::nz()) + tz;
-
-                    // MODIFY FOR MULTI GPU: idx must be multi GPU aware
-                    const label_t idxGlobal = host::idxScalarGlobal(x, y, z, mesh.nx(), mesh.ny());
-                    const label_t idx = host::idx(tx, ty, tz, bx, by, bz, mesh);
-
-                    for (label_t field = 0; field < nFields; field++)
-                    {
-                        soa[field][idxGlobal] = fMom[idx + (field * mesh.nPoints())];
-                    }
-                });
-#endif
 
             return soa;
         }

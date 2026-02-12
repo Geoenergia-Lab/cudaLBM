@@ -50,11 +50,7 @@ Notes
 
 assertions::velocitySet::validate<VelocitySet>();
 
-#ifdef MULTI_GPU
-
-static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(jetBoundaryCondition::calculate_moments));
-
-#endif
+static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(jetBoundaryCondition::calculate_moments, "Need to verify calculation of jet centreline"));
 
 const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
 const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;

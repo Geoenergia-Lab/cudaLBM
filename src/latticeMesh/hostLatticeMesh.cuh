@@ -146,8 +146,6 @@ namespace LBM
                                          std::to_string(typeLimit));
                     }
 
-#ifdef MULTI_GPU
-
                     static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(host::latticeMesh));
 
                     // Check that the mesh dimensions are not too large for GPU memory
@@ -182,39 +180,7 @@ namespace LBM
                                     " GB)");
                         }
                     }
-
-#else
-                    // Check that the mesh dimensions are not too large for GPU memory
-                    {
-                        const cudaDeviceProp props = getDeviceProperties(programCtrl.deviceList()[0]);
-                        const uintmax_t totalMemTemp = static_cast<uintmax_t>(props.totalGlobalMem);
-                        const uintmax_t allocationSize = nPointsTemp * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
-
-                        if (allocationSize >= totalMemTemp)
-                        {
-                            const double gbAllocation = static_cast<double>(allocationSize / (1024 * 1024 * 1024));
-                            const double gbAvailable = static_cast<double>(totalMemTemp / (1024 * 1024 * 1024));
-
-                            errorHandler(
-                                ERR_SIZE,
-                                "\nInsufficient GPU memory:\nAttempted to allocate: " +
-                                    std::to_string(allocationSize) +
-                                    " bytes (" +
-                                    std::to_string(gbAllocation) +
-                                    " GB)\n"
-                                    "Available GPU memory: " +
-                                    std::to_string(totalMemTemp) +
-                                    " bytes (" +
-                                    std::to_string(gbAvailable) +
-                                    " GB)");
-                        }
-                    }
-#endif
                 }
-
-#ifdef MULTI_GPU
-
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(host::latticeMesh));
 
                 {
                     const label_t nxGPUs = nDevices<axis::X>();
@@ -260,32 +226,6 @@ namespace LBM
                             copyToSymbol(device::BLOCK_OFFSET_Z, nzBlocksPerGPU * dz);
                         });
                 }
-
-#else
-                // Allocate programControl symbols on the GPU (clean up later)
-                {
-                    const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
-                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
-                    const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
-                    const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
-                    const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
-
-                    copyToSymbol(device::L_char, programCtrl.L_char());
-                    copyToSymbol(device::Re, programCtrl.Re());
-                    copyToSymbol(device::tau, tauTemp);
-                    copyToSymbol(device::omega, omegaTemp);
-                    copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
-                    copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
-                }
-
-                // Allocate mesh symbols on the GPU
-                copyToSymbol(device::nx, nx_);
-                copyToSymbol(device::ny, ny_);
-                copyToSymbol(device::nz, nz_);
-                copyToSymbol(device::NUM_BLOCK_X, nxBlocks());
-                copyToSymbol(device::NUM_BLOCK_Y, nyBlocks());
-                copyToSymbol(device::NUM_BLOCK_Z, nzBlocks());
-#endif
             };
 
             // Constructor to initialise a cut plane

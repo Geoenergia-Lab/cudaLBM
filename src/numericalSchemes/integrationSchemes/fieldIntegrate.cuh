@@ -68,11 +68,7 @@ namespace LBM
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
 
-        // #ifdef MULTI_GPU
-
-        //         static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-        // #else
+        static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_x));
 
         const std::size_t nx = mesh.template nx<std::size_t>();
         const std::size_t ny = mesh.template ny<std::size_t>();
@@ -113,11 +109,7 @@ namespace LBM
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
 
-        // #ifdef MULTI_GPU
-
-        // static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-        // #else
+        static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_y));
 
         const std::size_t nx = mesh.template nx<std::size_t>();
         const std::size_t ny = mesh.template ny<std::size_t>();
@@ -158,11 +150,7 @@ namespace LBM
     {
         static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
 
-        // #ifdef MULTI_GPU
-
-        //    static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-        // #else
+        static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_z));
 
         const std::size_t nx = mesh.template nx<std::size_t>();
         const std::size_t ny = mesh.template ny<std::size_t>();

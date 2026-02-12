@@ -288,7 +288,7 @@ namespace LBM
              * @brief Compile-time check that accesses are valid
              **/
             template <const label_t i>
-            __device__ __host__ constexpr static inline void assert_legal_access() noexcept
+            __device__ __host__ static inline consteval void assert_legal_access() noexcept
             {
                 static_assert(in_bounds<i, N>, "index is out of range: Must be < N.");
             }

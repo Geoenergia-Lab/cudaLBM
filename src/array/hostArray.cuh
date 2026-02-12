@@ -411,8 +411,6 @@ namespace LBM
 
                 std::vector<T> field(mesh.nPoints(), 0);
 
-#ifdef MULTI_GPU
-
                 const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>(); // > Set to device::NUM_BLOCK_X
                 const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>(); // > Set to device::NUM_BLOCK_Y
                 const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>(); // > Set to device::NUM_BLOCK_Z
@@ -465,43 +463,6 @@ namespace LBM
                         }
                     }
                 }
-#else
-                grid_for(
-                    mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
-                    [&](const label_t bx, const label_t by, const label_t bz,
-                        const label_t tx, const label_t ty, const label_t tz)
-                    {
-                        const label_t x = (bx * block::nx()) + tx;
-                        const label_t y = (by * block::ny()) + ty;
-                        const label_t z = (bz * block::nz()) + tz;
-
-                        const label_t index = host::idx(tx, ty, tz, bx, by, bz, mesh);
-
-                        const bool is_west = mesh.West(x);
-                        const bool is_east = mesh.East(x);
-                        const bool is_south = mesh.South(y);
-                        const bool is_north = mesh.North(y);
-                        const bool is_back = mesh.Back(z);
-                        const bool is_front = mesh.Front(z);
-
-                        const label_t boundary_count =
-                            static_cast<label_t>(is_west) +
-                            static_cast<label_t>(is_east) +
-                            static_cast<label_t>(is_south) +
-                            static_cast<label_t>(is_north) +
-                            static_cast<label_t>(is_back) +
-                            static_cast<label_t>(is_front);
-                        const T value_sum =
-                            (is_west * bField.West()) +
-                            (is_east * bField.East()) +
-                            (is_south * bField.South()) +
-                            (is_north * bField.North()) +
-                            (is_back * bField.Back()) +
-                            (is_front * bField.Front());
-
-                        field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
-                    });
-#endif
                 return field;
             }
         };

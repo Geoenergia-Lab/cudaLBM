@@ -80,7 +80,6 @@ int main(const int argc, const char *const argv[])
     device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> myz("m_yz", mesh, programCtrl);
     device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mzz("m_zz", mesh, programCtrl);
 
-#ifdef MULTI_GPU
     const device::ptrCollection<10, scalar_t> devPtrs(
         rho.ptr(0),
         u.ptr(0),
@@ -92,19 +91,6 @@ int main(const int argc, const char *const argv[])
         myy.ptr(0),
         myz.ptr(0),
         mzz.ptr(0));
-#else
-    const device::ptrCollection<10, scalar_t> devPtrs(
-        rho.ptr(),
-        u.ptr(),
-        v.ptr(),
-        w.ptr(),
-        mxx.ptr(),
-        mxy.ptr(),
-        mxz.ptr(),
-        myy.ptr(),
-        myz.ptr(),
-        mzz.ptr());
-#endif
 
     // Setup Streams
     const streamHandler streamsLBM(programCtrl);
