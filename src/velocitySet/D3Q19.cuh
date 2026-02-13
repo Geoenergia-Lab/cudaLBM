@@ -62,7 +62,8 @@ namespace LBM
              * @brief Get number of discrete velocity directions
              * @return 19 (number of directions in D3Q19 lattice)
              **/
-            __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
             {
                 return 19;
             }
@@ -71,7 +72,8 @@ namespace LBM
              * @brief Get number of velocity components on a lattice face
              * @return 5 (number of directions crossing each face in D3Q19)
              **/
-            __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
+            template <typename T = label_t>
+            __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
             {
                 return 5;
             }
@@ -104,18 +106,20 @@ namespace LBM
          * @brief Get number of discrete velocity directions
          * @return 19 (number of directions in D3Q19 lattice)
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
         {
-            return vs::Q();
+            return vs::Q<T>();
         }
 
         /**
          * @brief Get number of velocity components on a lattice face
          * @return 5 (number of directions crossing each face in D3Q19)
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
+        template <typename T = label_t>
+        __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
         {
-            return vs::QF();
+            return vs::QF<T>();
         }
 
         /**

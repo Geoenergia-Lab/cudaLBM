@@ -68,7 +68,10 @@ namespace LBM
         {
         public:
             __host__ [[nodiscard]] array(const std::vector<T> &hostArray)
-                : ptr_(device::allocateArray<T>(hostArray)){};
+                : ptr_(device::allocateArray<T>(hostArray))
+            {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::<field::SKELETON>, "Need to decompose skeleton amongst devices"));
+            };
 
             /**
              * @brief Destructor - automatically releases device memory
@@ -76,6 +79,7 @@ namespace LBM
              **/
             ~array() noexcept
             {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::<field::SKELETON>, "Need to free all pointers"));
                 checkCudaErrors(cudaFree(ptr_));
             }
 
@@ -85,6 +89,7 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline const T *constPtr() const noexcept
             {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::<field::SKELETON>, "Need to add indexing into pointers for multi GPU"));
                 return ptr_;
             }
 
@@ -94,6 +99,7 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline T *ptr() noexcept
             {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::<field::SKELETON>, "Need to add indexing into pointers for multi GPU"));
                 return ptr_;
             }
 
@@ -102,6 +108,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr T * ptrRestrict & ptrRef() noexcept
             {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::<field::SKELETON>, "Need to add indexing into pointers for multi GPU"));
                 return ptr_;
             }
 

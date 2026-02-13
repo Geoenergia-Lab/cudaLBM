@@ -97,9 +97,14 @@ namespace LBM
 #endif
         }
 
+        /**
+         * @brief Threads per block in an arbitrary dimension (compile-time constant)
+         **/
         template <axis::type alpha, typename T = label_t>
         __device__ __host__ [[nodiscard]] inline consteval T n() noexcept
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             if constexpr (alpha == axis::X)
             {
                 return nx<T>();
@@ -146,12 +151,12 @@ namespace LBM
         /**
          * @brief Total size of the shared memory
          **/
-        template <class VelocitySet, const label_t nVars>
-        __device__ __host__ [[nodiscard]] inline consteval label_t sharedMemoryBufferSize(const label_t size = 1) noexcept
+        template <class VelocitySet, const std::size_t nVars>
+        __device__ __host__ [[nodiscard]] inline consteval std::size_t sharedMemoryBufferSize(const std::size_t variableSize = 1) noexcept
         {
-            constexpr const label_t A = (VelocitySet::Q() - 1) * block::stride();
-            constexpr const label_t B = block::size() * (nVars + 1);
-            return (A > B ? A : B) * size;
+            constexpr const std::size_t A = (VelocitySet::template Q<std::size_t>() - 1) * block::stride<std::size_t>();
+            constexpr const std::size_t B = block::size<std::size_t>() * (nVars + 1);
+            return (A > B ? A : B) * variableSize;
         }
 
         /**

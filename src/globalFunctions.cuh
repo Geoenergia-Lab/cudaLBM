@@ -137,6 +137,13 @@ namespace LBM
         }
     }
 
+    /**
+     * @brief Loop over all GPUs
+     * @tparam F Callable type
+     * @tparam T Index type
+     * @param[in] nxGPUs, nyGPUs, nzGPUs Number of GPUs in the X, Y and Z directions
+     * @param[in] f Function object to execute per iteration
+     **/
     template <typename F, typename T>
     __host__ void gpu_for(
         const T nxGPUs,
@@ -236,6 +243,12 @@ namespace LBM
         }
     }
 
+    /**
+     * @brief Device index (universal version)
+     * @tparam T Label type
+     * @param[in] dx, dy, dz Device indices in the X, Y and Z directions
+     * @param[in] ndx, ndy Number of devices in the X and Y directions
+     **/
     template <typename T = label_t>
     __device__ __host__ [[nodiscard]] inline constexpr T deviceIdx(const T dx, const T dy, const T dz, const T ndx, const T ndy) noexcept
     {
@@ -246,7 +259,7 @@ namespace LBM
      * @brief Number of hydrodynamic moments
      **/
     template <typename T = label_t>
-    __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() { return 10; }
+    __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() noexcept { return 10; }
 
     /**
      * @brief Host-side indexing operations
@@ -263,31 +276,9 @@ namespace LBM
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
         template <typename T = label_t>
-        __host__ [[nodiscard]] inline constexpr T idx(
-            const T tx, const T ty, const T tz,
-            const T bx, const T by, const T bz,
-            const T nxBlocks, const T nyBlocks) noexcept
+        __host__ [[nodiscard]] inline constexpr T idx(const T tx, const T ty, const T tz, const T bx, const T by, const T bz, const T nxBlocks, const T nyBlocks) noexcept
         {
             return (tx + block::nx<T>() * (ty + block::ny<T>() * (tz + block::nz<T>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
-        }
-
-        /**
-         * @brief Memory index (host version)
-         * @param tx,ty,tz Thread-local coordinates
-         * @param bx,by,bz Block indices
-         * @param gpuX,gpuY,gpuZ GPU indices
-         * @param nxBlocks,nyBlocks Number of blocks in the x and y directions
-         * @param[in] XBLOCKS_PER_GPU,YBLOCKS_PER_GPU,ZBLOCKS_PER_GPU Number of blocks per GPU in x, y and z directions
-         * @return Linearized index using mesh constants
-         **/
-        __host__ [[nodiscard]] inline constexpr label_t idx(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t gpuX, const label_t gpuY, const label_t gpuZ,
-            const label_t nxBlocks, const label_t nyBlocks,
-            const label_t XBLOCKS_PER_GPU, const label_t YBLOCKS_PER_GPU, const label_t ZBLOCKS_PER_GPU) noexcept
-        {
-            return (tx + block::nx() * (ty + block::ny() * (tz + block::nz() * ((gpuX * XBLOCKS_PER_GPU + bx) + nxBlocks * ((gpuY * YBLOCKS_PER_GPU + by) + nyBlocks * (gpuZ * ZBLOCKS_PER_GPU + bz))))));
         }
 
         /**
@@ -389,6 +380,8 @@ namespace LBM
             const label_t bx, const label_t by, const label_t bz,
             const label_t nxBlocks, const label_t nyBlocks)
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             if constexpr (alpha == axis::X)
             {
                 return idxPopX<pop, QF>(ty, tz, bx, by, bz, nxBlocks, nyBlocks);
@@ -429,14 +422,18 @@ namespace LBM
             template <axis::type alpha>
             __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
             {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
                 if constexpr (alpha == axis::X)
                 {
                     return x;
                 }
+
                 if constexpr (alpha == axis::Y)
                 {
                     return y;
                 }
+
                 if constexpr (alpha == axis::Z)
                 {
                     return z;
@@ -451,14 +448,20 @@ namespace LBM
             template <axis::type alpha, const int coeff>
             __device__ [[nodiscard]] inline constexpr label_t shifted_coordinate() const noexcept
             {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
+                assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
+
                 if constexpr (coeff == -1)
                 {
                     return (value<alpha>() - 1 + block::n<alpha>()) % block::n<alpha>();
                 }
+
                 if constexpr (coeff == 0)
                 {
                     return value<alpha>();
                 }
+
                 if constexpr (coeff == 1)
                 {
                     return (value<alpha>() + 1 + block::n<alpha>()) % block::n<alpha>();
@@ -492,14 +495,18 @@ namespace LBM
             template <axis::type alpha>
             __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
             {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
                 if constexpr (alpha == axis::X)
                 {
                     return x;
                 }
+
                 if constexpr (alpha == axis::Y)
                 {
                     return y;
                 }
+
                 if constexpr (alpha == axis::Z)
                 {
                     return z;
@@ -514,14 +521,20 @@ namespace LBM
             template <const axis::type alpha, const int coeff>
             __device__ [[nodiscard]] inline constexpr label_t shifted_block() const noexcept
             {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
+                assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
+
                 if constexpr (coeff == -1)
                 {
                     return (value<alpha>() - 1 + device::NUM_BLOCK<alpha>()) % device::NUM_BLOCK<alpha>();
                 }
+
                 if constexpr (coeff == 0)
                 {
                     return value<alpha>();
                 }
+
                 if constexpr (coeff == 1)
                 {
                     return (value<alpha>() + 1 + device::NUM_BLOCK<alpha>()) % device::NUM_BLOCK<alpha>();
@@ -559,14 +572,18 @@ namespace LBM
             template <axis::type alpha>
             __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
             {
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
                 if constexpr (alpha == axis::X)
                 {
                     return x;
                 }
+
                 if constexpr (alpha == axis::Y)
                 {
                     return y;
                 }
+
                 if constexpr (alpha == axis::Z)
                 {
                     return z;
@@ -589,7 +606,6 @@ namespace LBM
          **/
         __device__ [[nodiscard]] inline bool out_of_bounds(const device::pointCoordinate &point) noexcept
         {
-            // MODIFY THIS FOR MULTI GPU
             return ((point.value<axis::X>() >= device::n<axis::X>()) || (point.value<axis::Y>() >= device::n<axis::Y>()) || (point.value<axis::Z>() >= device::n<axis::Z>()));
         }
 
@@ -694,6 +710,8 @@ namespace LBM
             const label_t ta, const label_t tb,
             const label_t bx, const label_t by, const label_t bz)
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             if constexpr (alpha == axis::X)
             {
                 return idxPopX<pop, QF>(ta, tb, bx, by, bz);
@@ -719,6 +737,8 @@ namespace LBM
             const label_t talpha, const label_t tbeta,
             const blockCoordinate &Bx)
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             return idxPop<alpha, pop, QF>(talpha, tbeta, Bx.value<axis::X>(), Bx.value<axis::Y>(), Bx.value<axis::Z>());
         }
     }

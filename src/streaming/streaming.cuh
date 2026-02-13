@@ -155,23 +155,25 @@ namespace LBM
          * This function uses bitwise AND optimization when Dim is power-of-two
          * for improved performance, falling back to modulo arithmetic otherwise.
          **/
-        template <const int Shift, const int Dim>
+        template <const int coeff, const label_t Dim>
         __device__ [[nodiscard]] static inline label_t periodic_index(const label_t idx) noexcept
         {
-            static_assert((Shift == -1) || (Shift == 1) || (Shift == 0), "Shift must be -1, 0, or 1");
+            assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::CAN_BE_NULL>();
 
             if constexpr (Dim > 0 && (Dim & (Dim - 1)) == 0)
             {
                 // Power-of-two: use bitwise AND
-                if constexpr (Shift == -1)
+                if constexpr (coeff == -1)
                 {
                     return (idx - 1) & (Dim - 1);
                 }
-                else if constexpr (Shift == 1)
+
+                if constexpr (coeff == 1)
                 {
                     return (idx + 1) & (Dim - 1);
                 }
-                else
+
+                if constexpr (coeff == 0)
                 {
                     return idx & (Dim - 1);
                 }
@@ -179,15 +181,17 @@ namespace LBM
             else
             {
                 // General case: adjust by adding Dim to ensure nonnegative modulo
-                if constexpr (Shift == -1)
+                if constexpr (coeff == -1)
                 {
                     return (idx - 1 + Dim) % Dim;
                 }
-                else if constexpr (Shift == 1)
+
+                if constexpr (coeff == 1)
                 {
                     return (idx + 1) % Dim;
                 }
-                else
+
+                if constexpr (coeff == 0)
                 {
                     return idx % Dim;
                 }

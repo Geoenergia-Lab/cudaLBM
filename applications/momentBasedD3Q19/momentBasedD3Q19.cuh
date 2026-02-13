@@ -63,26 +63,15 @@ SourceFiles
 
 namespace LBM
 {
-
-#ifdef JETFLOW
-    using BoundaryConditions = jetFlow;
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return true; }
-#endif
-
-#ifdef LIDDRIVENCAVITY
-    using BoundaryConditions = lidDrivenCavity;
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
-#endif
-
+    using BoundaryConditions = typename boundaryConditions::traits<boundaryConditions::caseName()>::type;
     using VelocitySet = D3Q19;
     using Collision = secondOrder;
-    using BlockHalo = device::halo<VelocitySet, periodicX(), periodicY()>;
+    using BlockHalo = device::halo<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>;
 
     __device__ __host__ [[nodiscard]] inline consteval label_t smem_alloc_size() noexcept { return 0; }
 
     __host__ [[nodiscard]] inline consteval label_t MIN_BLOCKS_PER_MP() noexcept { return 2; }
+
 #define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
     /**
@@ -124,7 +113,7 @@ namespace LBM
             });
 
         // Declare shared memory (flattened)
-        __shared__ thread::array<scalar_t, block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS()>()> shared_buffer;
+        __shared__ thread::array<scalar_t, block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<std::size_t>()>()> shared_buffer;
 
         // Coalesced read from global memory
         thread::array<scalar_t, NUMBER_MOMENTS()> moments;

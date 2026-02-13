@@ -650,7 +650,7 @@ namespace LBM
                     }
                 }
             }
-            // Is it supposed a floating ponit value?
+            // Is it supposed a floating point value?
             else if constexpr (std::is_floating_point_v<T>)
             {
                 return static_cast<T>(std::stold(toReturn));

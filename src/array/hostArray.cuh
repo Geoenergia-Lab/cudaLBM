@@ -411,9 +411,9 @@ namespace LBM
 
                 std::vector<T> field(mesh.nPoints(), 0);
 
-                const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>(); // > Set to device::NUM_BLOCK_X
-                const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>(); // > Set to device::NUM_BLOCK_Y
-                const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>(); // > Set to device::NUM_BLOCK_Z
+                const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>();
+                const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>();
+                const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>();
 
                 // This is the loop we should be using for multi GPU, I think
                 for (label_t GPU_z = 0; GPU_z < mesh.nDevices<axis::Z>(); GPU_z++)
@@ -433,7 +433,6 @@ namespace LBM
                                     const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
                                     const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
 
-                                    // MODIFY FOR MULTI GPU
                                     const label_t index = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
 
                                     const bool is_west = mesh.West(x);

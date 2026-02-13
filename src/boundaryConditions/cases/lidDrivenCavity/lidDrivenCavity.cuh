@@ -72,6 +72,13 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline consteval lidDrivenCavity(){};
 
         /**
+         * @brief Periodic boundary definitions
+         **/
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicX() noexcept { return false; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicY() noexcept { return false; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicZ() noexcept { return false; }
+
+        /**
          * @brief Calculate moment variables at boundary nodes
          * @tparam VelocitySet Velocity set configuration defining lattice structure
          * @param[in] pop Population density array at current lattice node

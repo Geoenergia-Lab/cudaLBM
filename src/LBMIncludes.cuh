@@ -88,14 +88,11 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
-#define JETFLOW
-// #define LIDDRIVENCAVITY
-
 #define MULTI_GPU
 
-#define MULTI_GPU_MSG_NOTE(func, note) #func " function not implemented for multi GPU yet: " note
+#define MULTI_GPU_MSG_NOTE(func, note) #func " not implemented for multi GPU yet: " note
 
-#define MULTI_GPU_MSG(func) #func " function not implemented for multi GPU yet"
+#define MULTI_GPU_MSG(func) #func " not implemented for multi GPU yet"
 
 __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return true; }
 

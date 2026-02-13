@@ -209,31 +209,22 @@ namespace LBM
             template <const axis::type alpha>
             __host__ [[nodiscard]] static inline constexpr label_t nFaces(const host::latticeMesh &mesh) noexcept
             {
-                if constexpr (alpha == axis::X)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nx()) * VelocitySet::QF();
-                }
-                if constexpr (alpha == axis::Y)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::ny()) * VelocitySet::QF();
-                }
-                if constexpr (alpha == axis::Z)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nz()) * VelocitySet::QF();
-                }
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::haloFace::nFaces, "Need to fix the calculation of the number of faces per GPU: it is no longer global"));
 
-                return 0;
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
+                return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::n<alpha>()) * VelocitySet::QF();
             }
 
             /**
              * @brief Initialize population data for a specific halo face
              * @tparam alpha Direction index (x, y, or z)
-             * @tparam side Face side (0 for min, 1 for max)
+             * @tparam coeff Face coeff (-1 for min, 1 for max)
              * @param[in] fMom Moment representation of distribution functions
              * @param[in] mesh Lattice mesh for dimensioning
              * @return Initialized population data for the specified halo face
              **/
-            template <const axis::type alpha, const int side>
+            template <const axis::type alpha, const int coeff>
             __host__ [[nodiscard]] const std::vector<scalar_t> initialise_pop(
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &rho,
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &u,
@@ -247,6 +238,12 @@ namespace LBM
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh) const noexcept
             {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::haloFace::initialise_pop, "Need to sort out indexing and decomposition between devices"));
+
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
+
+                assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
+
                 std::vector<scalar_t> face(nFaces<alpha>(mesh), 0);
 
                 grid_for(
@@ -254,7 +251,6 @@ namespace LBM
                     [&](const label_t bx, const label_t by, const label_t bz,
                         const label_t tx, const label_t ty, const label_t tz)
                     {
-                        // MODIFY FOR MULTI GPU: idx must be GPU-aware
                         const label_t base = host::idx(tx, ty, tz, bx, by, bz, mesh);
 
                         // Contiguous moment access
@@ -272,7 +268,7 @@ namespace LBM
                                 m_zz[base]});
 
                         // Handle ghost cells (equivalent to threadIdx.x/y/z checks)
-                        handleGhostCells<alpha, side>(face, pop, tx, ty, tz, bx, by, bz, mesh);
+                        handleGhostCells<alpha, coeff>(face, pop, tx, ty, tz, bx, by, bz, mesh);
                     });
 
                 return face;
@@ -281,7 +277,7 @@ namespace LBM
             /**
              * @brief Populate halo face with population data from boundary cells
              * @tparam alpha Direction index (x, y, or z)
-             * @tparam side Face side (0 for min, 1 for max)
+             * @tparam coeff Face coeff (-1 for min, 1 for max)
              * @param[out] face Halo face data to populate
              * @param[in] pop Population density values for current cell
              * @param[in] tx, ty, tz Thread indices within block
@@ -291,7 +287,7 @@ namespace LBM
              * This method handles the D3Q19 lattice model, storing appropriate
              * population components based on boundary position and direction.
              **/
-            template <const axis::type alpha, const int side>
+            template <const axis::type alpha, const int coeff>
             __host__ static void handleGhostCells(
                 std::vector<scalar_t> &face,
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
@@ -299,11 +295,14 @@ namespace LBM
                 const label_t bx, const label_t by, const label_t bz,
                 const host::latticeMesh &mesh) noexcept
             {
-                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, side>();
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::haloFace::handleGhostCells, "Potential issue with indexing: idxPop needs to be adapted to multi GPU."));
 
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(haloFace::handleGhostCells, "Potential issue with indexing: idxPop needs to be adapted to multi GPU."));
+                assertions::axis::validate<alpha, axis::NOT_NULL>();
 
-                // MODIFY FOR MULTI GPU: idxPop must be multi GPU aware
+                assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
+
+                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, coeff>();
+
                 host::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto q)
                     {

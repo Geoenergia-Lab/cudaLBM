@@ -266,16 +266,16 @@ namespace LBM
          * @brief Returns the indices of the distribution functions on a specific face
          * @tparam VelocitySet The velocity set being used
          * @tparam alpha The axis direction (X, Y, or Z)
-         * @tparam v The value of the coordinate along the axis (-1 or 1)
+         * @tparam coeff The value of the coordinate along the axis (-1 or 1)
          * @return Indices of the distribution on a specific face
          **/
-        template <class VelocitySet, const axis::type alpha, const int v>
+        template <class VelocitySet, const axis::type alpha, const int coeff>
         __device__ __host__ [[nodiscard]] static inline consteval thread::array<label_t, VelocitySet::QF()> indices_on_face() noexcept
         {
             assertions::velocitySet::validate<VelocitySet>();
             assertions::axis::validate<alpha, axis::NOT_NULL>();
 
-            static_assert((v == -1 || v == 1));
+            assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
 
             constexpr const thread::array<int, VelocitySet::Q()> vals = VelocitySet::template c<int, alpha>();
 
@@ -285,7 +285,7 @@ namespace LBM
 
             for (label_t i = 0; i < VelocitySet::Q(); i++)
             {
-                if (vals[i] == v)
+                if (vals[i] == coeff)
                 {
                     indices[j] = i;
                     j++;
@@ -355,13 +355,14 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
             const scalar_t pop_value) noexcept
         {
-            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
+            assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
 
             if constexpr (coeff == 1)
             {
                 return pop_value;
             }
-            else if constexpr (coeff == -1)
+
+            if constexpr (coeff == -1)
             {
                 return -pop_value;
             }
@@ -384,13 +385,14 @@ namespace LBM
             const scalar_t pop_value,
             const BoundaryNormal &boundaryNormal) noexcept
         {
-            static_assert(((coeff == -1) || (coeff == 1)), "Invalid coefficient");
+            assertions::velocitySet::validate_coefficient<coeff, assertions::velocitySet::NOT_NULL>();
 
             if constexpr (coeff == 1)
             {
                 return is_incoming<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
             }
-            else if constexpr (coeff == -1)
+
+            if constexpr (coeff == -1)
             {
                 return -is_incoming<scalar_t, VelocitySet>(q_i<I>(), boundaryNormal) * pop_value;
             }

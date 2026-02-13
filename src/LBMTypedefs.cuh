@@ -344,6 +344,35 @@ namespace LBM
                 }
             }
         }
+
+        namespace velocitySet
+        {
+            /**
+             * @brief Enumerated type for velocity coefficients: The coefficient either can or cannot be null
+             */
+            typedef enum nullEnum : bool
+            {
+                NOT_NULL = false,
+                CAN_BE_NULL = true
+            } null;
+
+            /**
+             * @brief Asserts that coeff is a valid velocity set coefficient
+             * @tparam coeff The velocity set coefficient
+             **/
+            template <const int coeff, const null Null>
+            __device__ __host__ inline consteval void validate_coefficient() noexcept
+            {
+                if constexpr (Null == CAN_BE_NULL)
+                {
+                    static_assert(((coeff == 0) || (coeff == -1) || (coeff == 1)), "Coeff must be -1, 0 or +1.");
+                }
+                else
+                {
+                    static_assert(((coeff == -1) || (coeff == 1)), "Coeff must be -1, 0 or +1.");
+                }
+            }
+        }
     }
 
     struct dim2
@@ -379,9 +408,19 @@ namespace LBM
         __device__ __constant__ label_t NUM_BLOCK_Y;
         __device__ __constant__ label_t NUM_BLOCK_Z;
 
+        __device__ __constant__ label_t BLOCK_OFFSET_X;
+        __device__ __constant__ label_t BLOCK_OFFSET_Y;
+        __device__ __constant__ label_t BLOCK_OFFSET_Z;
+
+        /**
+         * @brief Returns the global mesh size in a particular axis direction
+         * @tparam alpha The axis
+         **/
         template <axis::type alpha>
         __device__ [[nodiscard]] inline constexpr label_t n() noexcept
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             if constexpr (alpha == axis::X)
             {
                 return nx;
@@ -398,9 +437,15 @@ namespace LBM
             }
         }
 
+        /**
+         * @brief Returns the number of mesh blocks per GPU in a particular axis direction
+         * @tparam alpha The axis
+         **/
         template <axis::type alpha>
         __device__ [[nodiscard]] inline constexpr label_t NUM_BLOCK() noexcept
         {
+            assertions::axis::validate<alpha, axis::NOT_NULL>();
+
             if constexpr (alpha == axis::X)
             {
                 return NUM_BLOCK_X;
@@ -416,10 +461,6 @@ namespace LBM
                 return NUM_BLOCK_Z;
             }
         }
-
-        __device__ __constant__ label_t BLOCK_OFFSET_X;
-        __device__ __constant__ label_t BLOCK_OFFSET_Y;
-        __device__ __constant__ label_t BLOCK_OFFSET_Z;
 
         /**
          * @brief Class holding N device pointers of type T
