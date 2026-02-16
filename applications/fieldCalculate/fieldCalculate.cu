@@ -63,7 +63,7 @@ int main(const int argc, const char *const argv[])
     const bool calculationType = programCtrl.input().isArgPresent("-calculationType");
 
     // Parse the argument if present, otherwise set to empty string
-    const std::string calculationTypeString = calculationType ? programCtrl.getArgument("-calculationType") : "";
+    const name_t calculationTypeString = calculationType ? programCtrl.getArgument("-calculationType") : "";
 
     if (calculationTypeString == "containsNaN")
     {
@@ -108,10 +108,10 @@ int main(const int argc, const char *const argv[])
     if (calculationTypeString == "vorticity")
     {
         // Get the conversion type
-        const std::string conversion = programCtrl.getArgument("-fileType");
+        const name_t conversion = programCtrl.getArgument("-fileType");
 
         // Get the writer function
-        const std::unordered_map<std::string, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
+        const std::unordered_map<name_t, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
 
         // Get the time indices
         const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
@@ -121,7 +121,7 @@ int main(const int argc, const char *const argv[])
             for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
             {
                 // Get the file name at the present time step
-                const std::string fileName = "vorticity_" + std::to_string(fileNameIndices[timeStep]);
+                const name_t fileName = "vorticity_" + std::to_string(fileNameIndices[timeStep]);
 
                 const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments(
                     programCtrl,
@@ -146,10 +146,10 @@ int main(const int argc, const char *const argv[])
     if (calculationTypeString == "div[U]")
     {
         // Get the conversion type
-        const std::string conversion = programCtrl.getArgument("-fileType");
+        const name_t conversion = programCtrl.getArgument("-fileType");
 
         // Get the writer function
-        const std::unordered_map<std::string, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
+        const std::unordered_map<name_t, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
 
         // Get the time indices
         const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
@@ -159,7 +159,7 @@ int main(const int argc, const char *const argv[])
             for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
             {
                 // Get the file name at the present time step
-                const std::string fileName = "div[U]_" + std::to_string(fileNameIndices[timeStep]);
+                const name_t fileName = "div[U]_" + std::to_string(fileNameIndices[timeStep]);
 
                 const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments(
                     programCtrl,

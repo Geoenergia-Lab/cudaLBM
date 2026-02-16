@@ -132,43 +132,42 @@ namespace LBM
             template <const host::mallocType MallocType>
             __host__ [[nodiscard]] array(
                 const host::array<MallocType, T, VelocitySet, TimeType> &hostArray,
-                const programControl &programCtrl)
-                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data())),
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data(), allocate)),
                   name_(hostArray.name()),
-                  mesh_(hostArray.mesh())
+                  mesh_(hostArray.mesh()),
+                  programCtrl_(programCtrl)
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             };
 
             __host__ [[nodiscard]] array(
-                const std::string &name,
-                const host::latticeMesh &mesh,
-                const programControl &programCtrl)
-                : ptr_(allocate_on_devices(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl))),
-                  name_(name),
-                  mesh_(mesh)
-            {
-                initialise_boundary_condition(name_, programCtrl.deviceList());
-            };
-
-            __host__ [[nodiscard]] array(
-                const std::string &name,
+                const name_t &name,
                 const host::latticeMesh &mesh,
                 const T value,
-                const programControl &programCtrl)
-                : ptr_(allocate_on_devices(mesh, value)),
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : ptr_(allocate_on_devices(mesh, value, allocate)),
                   name_(name),
-                  mesh_(mesh)
+                  mesh_(mesh),
+                  programCtrl_(programCtrl)
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             };
 
             __host__ [[nodiscard]] array(
-                const std::string &name,
-                const host::latticeMesh &mesh)
-                : ptr_(nullptr),
+                const name_t &name,
+                const host::latticeMesh &mesh,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : ptr_(allocate_on_devices(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl), allocate)),
                   name_(name),
-                  mesh_(mesh){};
+                  mesh_(mesh),
+                  programCtrl_(programCtrl)
+            {
+                initialise_boundary_condition(name_, programCtrl.deviceList());
+            };
 
             /**
              * @brief Destructor - automatically releases device memory
@@ -180,29 +179,40 @@ namespace LBM
                 const label_t nyGPUs = mesh_.nDevices<axis::Y>();
                 const label_t nzGPUs = mesh_.nDevices<axis::Z>();
 
-                gpu_for(
-                    nxGPUs, nyGPUs, nzGPUs,
-                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
-                    {
-                        const label_t virtualDeviceIndex = deviceIdx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+                if constexpr (verbose())
+                {
+                    std::cout << "Entering device::array destructor for field " << name_ << std::endl;
+                }
 
-                        if (!(ptr_[virtualDeviceIndex] == nullptr))
-                        {
-                            if constexpr (verbose())
-                            {
-                                std::cout << "Freeing ptr[" << virtualDeviceIndex << "];" << std::endl;
-                            }
-                            checkCudaErrors(cudaFree(ptr_[virtualDeviceIndex]));
-                            if constexpr (verbose())
-                            {
-                                std::cout << "Freed ptr[" << virtualDeviceIndex << "];" << std::endl;
-                            }
-                        }
-                    });
-
-                // Now free the host memory allocated to store the pointers
                 if (!(ptr_ == nullptr))
                 {
+                    gpu_for(
+                        nxGPUs, nyGPUs, nzGPUs,
+                        [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                        {
+                            const label_t virtualDeviceIndex = deviceIdx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+
+                            if (!(ptr_[virtualDeviceIndex] == nullptr))
+                            {
+                                if constexpr (verbose())
+                                {
+                                    std::cout << "Freeing ptr[" << virtualDeviceIndex << "];" << std::endl;
+                                }
+
+                                cudaDeviceSynchronize();
+                                cudaSetDevice(programCtrl_.deviceList()[virtualDeviceIndex]);
+                                checkCudaErrors(cudaFree(ptr_[virtualDeviceIndex]));
+                                cudaDeviceSynchronize();
+
+                                if constexpr (verbose())
+                                {
+                                    std::cout << "Freed ptr[" << virtualDeviceIndex << "];" << std::endl;
+                                }
+                            }
+                        });
+
+                    cudaSetDevice(programCtrl_.deviceList()[0]);
+
                     if constexpr (verbose())
                     {
                         std::cout << "Freeing host pointer collection" << std::endl;
@@ -211,6 +221,13 @@ namespace LBM
                     if constexpr (verbose())
                     {
                         std::cout << "Freed host pointer collection" << std::endl;
+                    }
+                }
+                else
+                {
+                    if constexpr (verbose())
+                    {
+                        std::cout << "Nothing to free" << std::endl;
                     }
                 }
             }
@@ -239,7 +256,7 @@ namespace LBM
              * @brief Get array identifier name
              * @return Const reference to name string
              **/
-            __host__ [[nodiscard]] inline const std::string &name() const noexcept
+            __host__ [[nodiscard]] inline const name_t &name() const noexcept
             {
                 return name_;
             }
@@ -298,47 +315,56 @@ namespace LBM
             /**
              * @brief Names of the solution variables
              **/
-            const std::string &name_;
+            const name_t name_;
 
             /**
              * @brief Reference to the mesh
              **/
             const host::latticeMesh &mesh_;
 
+            const programControl &programCtrl_;
+
             /**
              * @brief Allocates all partitions of the array to the devices
              * @param[in] mesh The mesh
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const T *hostArrayGlobal)
+            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const T *hostArrayGlobal, const bool allocate)
             {
-                const label_t nxGPUs = mesh.nDevices<axis::X>();
-                const label_t nyGPUs = mesh.nDevices<axis::Y>();
-                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+                if (allocate)
+                {
+                    const label_t nxGPUs = mesh.nDevices<axis::X>();
+                    const label_t nyGPUs = mesh.nDevices<axis::Y>();
+                    const label_t nzGPUs = mesh.nDevices<axis::Z>();
 
-                const std::size_t nDevices = mesh.nDevices<axis::X, std::size_t>() * mesh.nDevices<axis::Y, std::size_t>() * mesh.nDevices<axis::Z, std::size_t>();
+                    const std::size_t nDevices = mesh.nDevices<axis::X, std::size_t>() * mesh.nDevices<axis::Y, std::size_t>() * mesh.nDevices<axis::Z, std::size_t>();
 
-                T **hostPtrsToDevice = host::allocate<T *>(nDevices, nullptr);
+                    T **hostPtrsToDevice = host::allocate<T *>(nDevices, nullptr);
 
-                gpu_for(
-                    nxGPUs, nyGPUs, nzGPUs,
-                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
-                    {
-                        const label_t virtualDeviceIndex = deviceIdx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+                    gpu_for(
+                        nxGPUs, nyGPUs, nzGPUs,
+                        [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                        {
+                            const label_t virtualDeviceIndex = deviceIdx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
-                        hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z);
-                    });
+                            hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z);
+                        });
 
-                return hostPtrsToDevice;
+                    return hostPtrsToDevice;
+                }
+                else
+                {
+                    return nullptr;
+                }
             }
 
             /**
              * @brief Partitions and allocates an existing std::vector on the devices
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const std::vector<T> &hostArrayGlobal)
+            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const std::vector<T> &hostArrayGlobal, const bool allocate)
             {
-                return allocate_on_devices(mesh, hostArrayGlobal.data());
+                return allocate_on_devices(mesh, hostArrayGlobal.data(), allocate);
             }
 
             /**
@@ -346,9 +372,9 @@ namespace LBM
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
             template <const host::mallocType MallocType>
-            __host__ [[nodiscard]] T **allocate_on_devices(const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal)
+            __host__ [[nodiscard]] T **allocate_on_devices(const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal, const bool allocate)
             {
-                return allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data());
+                return allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate);
             }
 
             /**
@@ -356,10 +382,10 @@ namespace LBM
              * @param[in] mesh The mesh
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] T **allocate_on_devices(const host::latticeMesh &mesh, const T val)
+            __host__ [[nodiscard]] T **allocate_on_devices(const host::latticeMesh &mesh, const T val, const bool allocate)
             {
-                const std::vector<T> toAllocate(mesh.nPoints<std::size_t>(), val);
-                return allocate_on_devices(mesh, toAllocate);
+                const std::vector<T> toAllocate(static_cast<std::size_t>(allocate) * mesh.nPoints<std::size_t>(), val);
+                return allocate_on_devices(mesh, toAllocate, allocate);
             }
 
             /**
@@ -408,7 +434,7 @@ namespace LBM
              * @param[in] name The name of the variable
              * @return The index of the variable, or -1 if not found
              **/
-            __host__ [[nodiscard]] static inline label_t name_to_index(const std::string &name) noexcept
+            __host__ [[nodiscard]] static inline label_t name_to_index(const name_t &name) noexcept
             {
                 if (name == "u")
                 {
@@ -430,7 +456,7 @@ namespace LBM
              * @param[in] name The name of the variable to initialise boundary conditions for
              * @param[in] devicelist List of devices to allocate the constants over
              **/
-            __host__ static void initialise_boundary_condition(const std::string &name, const std::vector<deviceIndex_t> &deviceList) noexcept
+            __host__ static void initialise_boundary_condition(const name_t &name, const std::vector<deviceIndex_t> &deviceList) noexcept
             {
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::array::initialise_boundary_condition, "Believed to be correct"));

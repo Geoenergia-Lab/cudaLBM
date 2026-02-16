@@ -419,7 +419,7 @@ namespace LBM
                  * @brief Get the field name for instantaneous components
                  * @return Field name string
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::string &fieldName() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldName() const noexcept
                 {
                     return fieldName_;
                 }
@@ -428,7 +428,7 @@ namespace LBM
                  * @brief Get the field name for mean components
                  * @return Field name string
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::string &fieldNameMean() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldNameMean() const noexcept
                 {
                     return fieldNameMean_;
                 }
@@ -437,7 +437,7 @@ namespace LBM
                  * @brief Get the component names for instantaneous tensor
                  * @return Vector of component names
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &componentNames() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNames() const noexcept
                 {
                     return componentNames_;
                 }
@@ -446,7 +446,7 @@ namespace LBM
                  * @brief Get the component names for mean tensor
                  * @return Vector of component names
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &componentNamesMean() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNamesMean() const noexcept
                 {
                     return componentNamesMean_;
                 }
@@ -457,22 +457,22 @@ namespace LBM
                 /**
                  * @brief Field name for instantaneous components
                  **/
-                const std::string fieldName_ = "S";
+                const name_t fieldName_ = "S";
 
                 /**
                  * @brief Field name for mean components
                  **/
-                const std::string fieldNameMean_ = fieldName_ + "Mean";
+                const name_t fieldNameMean_ = fieldName_ + "Mean";
 
                 /**
                  * @brief Instantaneous component names
                  **/
-                const std::vector<std::string> componentNames_ = {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"};
+                const words_t componentNames_ = {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"};
 
                 /**
                  * @brief Mean component names
                  **/
-                const std::vector<std::string> componentNamesMean_ = string::catenate(componentNames_, "Mean");
+                const words_t componentNamesMean_ = string::catenate(componentNames_, "Mean");
 
                 /**
                  * @brief Reference to lattice mesh

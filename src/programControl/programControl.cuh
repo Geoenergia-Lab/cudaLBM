@@ -68,7 +68,7 @@ namespace LBM
          **/
         __host__ [[nodiscard]] programControl(const int argc, const char *const argv[]) noexcept
             : input_(inputControl(argc, argv)),
-              caseName_(string::extractParameter<std::string>(string::readFile("programControl"), "caseName")),
+              caseName_(string::extractParameter<name_t>(string::readFile("programControl"), "caseName")),
               Re_(initialiseConst<scalar_t>("Re")),
               u_inf_(initialiseConst<scalar_t>("u_inf")),
               L_char_(initialiseConst<scalar_t>("L_char")),
@@ -131,9 +131,9 @@ namespace LBM
 
         /**
          * @brief Returns the name of the case
-         * @return A const std::string
+         * @return A const name_t
          **/
-        __host__ [[nodiscard]] inline constexpr const std::string &caseName() const noexcept
+        __host__ [[nodiscard]] inline constexpr const name_t &caseName() const noexcept
         {
             return caseName_;
         }
@@ -224,7 +224,7 @@ namespace LBM
          * @return A string representing the convertion type passed at the command line
          * @param[in] programCtrl Program control parameters
          **/
-        __host__ [[nodiscard]] const std::string getArgument(const std::string &argument) const
+        __host__ [[nodiscard]] const name_t getArgument(const name_t &argument) const
         {
             if (input_.isArgPresent(argument))
             {
@@ -251,7 +251,7 @@ namespace LBM
          * @brief Provides read-only access to the arguments supplied at the command line
          * @return The command line input as a vector of strings
          **/
-        __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &commandLine() const noexcept
+        __host__ [[nodiscard]] inline constexpr const words_t &commandLine() const noexcept
         {
             return input_.commandLine();
         }
@@ -265,7 +265,7 @@ namespace LBM
         /**
          * @brief The name of the simulation case
          **/
-        const std::string caseName_;
+        const name_t caseName_;
 
         /**
          * @brief The Reynolds number
@@ -296,7 +296,7 @@ namespace LBM
          * @param varName The name of the variable to read
          **/
         template <typename T>
-        __host__ [[nodiscard]] T initialiseConst(const std::string varName) const noexcept
+        __host__ [[nodiscard]] T initialiseConst(const name_t varName) const noexcept
         {
             return string::extractParameter<T>(string::readFile("programControl"), varName);
         }

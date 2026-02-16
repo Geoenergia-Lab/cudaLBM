@@ -64,7 +64,7 @@ namespace LBM
          * @param[in] numStr String to check
          * @return True if string contains only digits, false otherwise
          **/
-        __host__ [[nodiscard]] inline bool isAllDigits(const std::string &numStr) noexcept
+        __host__ [[nodiscard]] inline bool isAllDigits(const name_t &numStr) noexcept
         {
             for (char c : numStr)
             {
@@ -82,7 +82,7 @@ namespace LBM
          * @param[in] intStr String to validate
          * @return True if string is non-empty and contains only digits
          **/
-        __host__ [[nodiscard]] inline bool isValidInteger(const std::string &intStr) noexcept
+        __host__ [[nodiscard]] inline bool isValidInteger(const name_t &intStr) noexcept
         {
             return (!intStr.empty() || isAllDigits(intStr));
         }
@@ -95,10 +95,10 @@ namespace LBM
          * Searches current directory for files with pattern: {fileName}_{number}.LBMBin
          * where {number} consists of only digits.
          **/
-        __host__ [[nodiscard]] bool hasIndexedFiles(const std::string &fileName)
+        __host__ [[nodiscard]] bool hasIndexedFiles(const name_t &fileName)
         {
             const std::filesystem::path currentDir = std::filesystem::current_path();
-            const std::string prefix = fileName + "_";
+            const name_t prefix = fileName + "_";
 
             for (const auto &entry : std::filesystem::directory_iterator(currentDir))
             {
@@ -113,13 +113,13 @@ namespace LBM
                     continue;
                 }
 
-                const std::string stem = filePath.stem().string();
+                const name_t stem = filePath.stem().string();
                 if (stem.size() <= prefix.size() || stem.substr(0, prefix.size()) != prefix)
                 {
                     continue;
                 }
 
-                const std::string num_str = stem.substr(prefix.size());
+                const name_t num_str = stem.substr(prefix.size());
                 if (num_str.empty())
                 {
                     continue;
@@ -142,7 +142,7 @@ namespace LBM
          * @note Uses std::from_chars for efficient conversion
          **/
         template <typename T>
-        __host__ [[nodiscard]] T stringToIntegral(const std::string &num_str) noexcept
+        __host__ [[nodiscard]] T stringToIntegral(const name_t &num_str) noexcept
         {
             T value = 0;
 
@@ -162,11 +162,11 @@ namespace LBM
          * Parses files with pattern: {fileName}_{number}.LBMBin and extracts
          * the numeric portion as time indices.
          **/
-        __host__ [[nodiscard]] const std::vector<label_t> timeIndices(const std::string &fileName)
+        __host__ [[nodiscard]] const std::vector<label_t> timeIndices(const name_t &fileName)
         {
             std::vector<label_t> indices;
             const std::filesystem::path currentDir = std::filesystem::current_path();
-            const std::string prefix = fileName + "_";
+            const name_t prefix = fileName + "_";
 
             for (const auto &entry : std::filesystem::directory_iterator(currentDir))
             {
@@ -181,13 +181,13 @@ namespace LBM
                     continue;
                 }
 
-                const std::string stem = filePath.stem().string();
+                const name_t stem = filePath.stem().string();
                 if (stem.size() <= prefix.size() || stem.substr(0, prefix.size()) != prefix)
                 {
                     continue;
                 }
 
-                const std::string num_str = stem.substr(prefix.size());
+                const name_t num_str = stem.substr(prefix.size());
                 if (!isValidInteger(num_str))
                 {
                     continue;
@@ -219,7 +219,7 @@ namespace LBM
          * @param[in] fileName Case name prefix to search for
          * @return Highest time index found, or 0 if no files found
          **/
-        __host__ [[nodiscard]] label_t latestTime(const std::string &fileName)
+        __host__ [[nodiscard]] label_t latestTime(const name_t &fileName)
         {
             if (hasIndexedFiles(fileName))
             {
@@ -247,7 +247,7 @@ namespace LBM
             return isLatestTime ? static_cast<label_t>(fileNameIndices.size() - 1) : 0;
         }
 
-        __host__ [[nodiscard]] label_t getStartIndex(const std::string fileNamePrefix, const bool isLatestTime)
+        __host__ [[nodiscard]] label_t getStartIndex(const name_t fileNamePrefix, const bool isLatestTime)
         {
             const std::vector<label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
@@ -267,7 +267,7 @@ namespace LBM
         }
 
         template <class ProgramControl>
-        __host__ [[nodiscard]] label_t getStartIndex(const std::string fileNamePrefix, const ProgramControl &programCtrl)
+        __host__ [[nodiscard]] label_t getStartIndex(const name_t fileNamePrefix, const ProgramControl &programCtrl)
         {
             return getStartIndex(fileNamePrefix, programCtrl.input().isArgPresent("-latestTime"));
         }

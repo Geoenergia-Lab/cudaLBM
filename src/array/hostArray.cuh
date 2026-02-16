@@ -187,9 +187,24 @@ namespace LBM
              * @param mesh The lattice mesh
              **/
             template <const label_t N>
-            __host__ void copy_from_device(const device::ptrCollection<N, T> &devPtrs, const host::latticeMesh &mesh)
+            __host__ void copy_from_device(
+                const device::ptrCollection<N, T> &devPtrs,
+                const host::latticeMesh &mesh,
+                const label_t GPU_x = 0,
+                const label_t GPU_y = 0,
+                const label_t GPU_z = 0)
             {
                 // Should check that mesh.nPoints() * N is less than or equal to nPoints_
+
+                const label_t nxGPUs = mesh.nDevices<axis::X>();
+                const label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+                const label_t virtualDeviceIndex = deviceIdx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+
+                const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
+                const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
+                const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
+                const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
                 if (mesh.nPoints() * N > nPoints_)
                 {
@@ -198,7 +213,18 @@ namespace LBM
 
                 for (label_t field = 0; field < N; field++)
                 {
-                    host::to_host(devPtrs[field], ptr_, field, mesh.nPoints());
+                    checkCudaErrors(
+                        cudaMemcpy(
+                            &(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]),
+                            devPtrs[field],
+                            nPointsPerGPU * sizeof(T),
+                            cudaMemcpyDeviceToHost));
+
+                    // host::to_host(
+                    //     devPtrs[field],
+                    //     &(ptr_[startIndex]),
+                    //     field,
+                    //     mesh.nPoints());
                 }
             }
 
@@ -215,7 +241,7 @@ namespace LBM
              * @brief Get field name identifier
              * @return Const reference to name string
              **/
-            __host__ [[nodiscard]] inline constexpr const std::string &name() const noexcept
+            __host__ [[nodiscard]] inline constexpr const name_t &name() const noexcept
             {
                 return name_;
             }
@@ -236,7 +262,7 @@ namespace LBM
              **/
             const host::latticeMesh &mesh_;
 
-            const std::string name_;
+            const name_t name_;
         };
 
         /**
@@ -259,7 +285,7 @@ namespace LBM
              * @post Array is initialized from latest time step or initial conditions
              **/
             __host__ [[nodiscard]] array(
-                const std::string &name,
+                const name_t &name,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
                 : arr_(initialise_array(mesh, name, programCtrl)),
@@ -317,7 +343,7 @@ namespace LBM
              * @brief Get field name identifier
              * @return Const reference to name string
              **/
-            __host__ [[nodiscard]] inline constexpr const std::string &name() const noexcept
+            __host__ [[nodiscard]] inline constexpr const name_t &name() const noexcept
             {
                 return name_;
             }
@@ -345,7 +371,7 @@ namespace LBM
             /**
              * @brief Names of the solution variable
              **/
-            const std::string name_;
+            const name_t name_;
 
             /**
              * @brief Reference to the lattice mesh
@@ -360,11 +386,11 @@ namespace LBM
              * @return Initialized data vector
              * @throws std::runtime_error if file operations fail
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialise_array(const host::latticeMesh &mesh, const std::string &fieldName, const programControl &programCtrl)
+            __host__ [[nodiscard]] const std::vector<T> initialise_array(const host::latticeMesh &mesh, const name_t &fieldName, const programControl &programCtrl)
             {
                 if (fileIO::hasIndexedFiles(programCtrl.caseName()))
                 {
-                    const std::string fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
+                    const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
 
                     return fileIO::readFieldByName<T>(fileName, fieldName);
                 }
@@ -381,14 +407,14 @@ namespace LBM
              * @param time The time step to initialise from
              **/
             __host__ [[nodiscard]] const std::vector<T> initialise_array(
-                const std::string &caseName,
+                const name_t &caseName,
                 const host::latticeMesh &mesh,
                 const label_t time)
             {
                 if (fileIO::hasIndexedFiles(caseName))
                 {
                     // Should take the field name rather than the case name
-                    const std::string fileName = caseName + "_" + std::to_string(time) + ".LBMBin";
+                    const name_t fileName = caseName + "_" + std::to_string(time) + ".LBMBin";
 
                     return fileIO::readFieldByName<T>(fileName, caseName);
                 }
@@ -405,7 +431,7 @@ namespace LBM
              * @param[in] fieldName Name of field for boundary condition lookup
              * @return Initialized data vector with boundary conditions applied
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialConditions(const host::latticeMesh &mesh, const std::string &fieldName)
+            __host__ [[nodiscard]] const std::vector<T> initialConditions(const host::latticeMesh &mesh, const name_t &fieldName)
             {
                 const boundaryFields<VelocitySet, true> bField(fieldName);
 

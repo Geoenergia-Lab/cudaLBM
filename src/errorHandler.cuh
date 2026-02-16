@@ -141,7 +141,7 @@ namespace LBM
      **/
     void errorHandler(
         const int err,
-        const std::string &errorString,
+        const name_t &errorString,
         const std::source_location &loc = std::source_location::current()) noexcept
     {
         std::cerr << "runTimeError:" << std::endl;

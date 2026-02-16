@@ -69,7 +69,7 @@ namespace LBM
          * @brief Constructs boundary field values for all regions
          * @param[in] fieldName Name of the field to initialize across all regions
          **/
-        __host__ [[nodiscard]] boundaryFields(const std::string &fieldName)
+        __host__ [[nodiscard]] boundaryFields(const name_t &fieldName)
             : values_{
                   boundaryValue<VelocitySet, Scaled>(fieldName, "North"),
                   boundaryValue<VelocitySet, Scaled>(fieldName, "South"),
@@ -121,7 +121,7 @@ namespace LBM
         {
             std::cout << fieldName_ << " boundary values:" << std::endl;
 
-            const std::vector<std::string> fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
+            const words_t fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
             for (std::size_t var = 0; var < fieldNames.size(); var++)
             {
                 std::cout << fieldNames[var] << ": " << values_[var]() << std::endl;
@@ -137,7 +137,7 @@ namespace LBM
         /**
          * @brief Name of the field
          **/
-        const std::string &fieldName_;
+        const name_t &fieldName_;
     };
 
 }

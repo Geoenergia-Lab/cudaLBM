@@ -423,7 +423,7 @@ namespace LBM
              **/
             const blockLabel_t nDevices_;
 
-            __host__ [[nodiscard]] static blockLabel_t initialise_device_list(const std::string &fileName) noexcept
+            __host__ [[nodiscard]] static blockLabel_t initialise_device_list(const name_t &fileName) noexcept
             {
                 return {string::extractParameter<label_t>(string::readFile(fileName), "nx"),
                         string::extractParameter<label_t>(string::readFile(fileName), "ny"),

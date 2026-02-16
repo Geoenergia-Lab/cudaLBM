@@ -75,7 +75,7 @@ namespace LBM
          * @param[in] dir The directory to query
          * @return The name of the disk, e.g. "/mnt/c"
          **/
-        __host__ [[nodiscard]] const std::string diskName(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] const name_t diskName(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             std::filesystem::path current = std::filesystem::absolute(dir);
 
@@ -270,7 +270,7 @@ namespace LBM
          * @throws std::runtime_error if insufficient disk space is available
          */
         template <const fileFormat_t fileFormat, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
-        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const std::string &fileName)
+        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const name_t &fileName)
         {
             const uintmax_t requiredDiskSpace = expectedDiskUsage<fileFormat, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), static_cast<uintmax_t>(nVars));
 

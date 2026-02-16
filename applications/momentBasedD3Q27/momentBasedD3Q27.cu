@@ -115,7 +115,24 @@ int main(const int argc, const char *const argv[])
         // Checkpoint
         if (programCtrl.save(timeStep))
         {
-            hostWriteBuffer.copy_from_device(devPtrs, mesh);
+            // Do this in a loop
+            {
+                constexpr const label_t virtualDeviceIndex = 0;
+                hostWriteBuffer.copy_from_device(
+                    device::ptrCollection<10, scalar_t>{
+                        rho.ptr(virtualDeviceIndex),
+                        u.ptr(virtualDeviceIndex),
+                        v.ptr(virtualDeviceIndex),
+                        w.ptr(virtualDeviceIndex),
+                        mxx.ptr(virtualDeviceIndex),
+                        mxy.ptr(virtualDeviceIndex),
+                        mxz.ptr(virtualDeviceIndex),
+                        myy.ptr(virtualDeviceIndex),
+                        myz.ptr(virtualDeviceIndex),
+                        mzz.ptr(virtualDeviceIndex)},
+                    mesh,
+                    0, 0, 0);
+            }
 
             fileIO::writeFile<time::instantaneous>(
                 programCtrl.caseName() + "_" + std::to_string(timeStep) + ".LBMBin",

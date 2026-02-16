@@ -106,7 +106,7 @@ namespace LBM
          * @param[in] totalSeconds Total number of seconds to format
          * @return String formatted as HH:MM:SS (supports negative durations)
          **/
-        __host__ [[nodiscard]] static const std::string duration(const long long totalSeconds) noexcept
+        __host__ [[nodiscard]] static const name_t duration(const long long totalSeconds) noexcept
         {
             // Handle sign and absolute value conversion
             const bool isNegative = (totalSeconds < 0);

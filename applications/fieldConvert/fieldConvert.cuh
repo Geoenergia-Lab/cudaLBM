@@ -70,9 +70,9 @@ namespace LBM
      * @param[in] conversion The invalid conversion type provided by the user
      * @return A formatted error message listing the supported formats
      **/
-    __host__ [[nodiscard]] const std::string invalidWriter(const std::unordered_map<std::string, postProcess::writerFunction> &writerNames, const std::string &conversion) noexcept
+    __host__ [[nodiscard]] const name_t invalidWriter(const std::unordered_map<name_t, postProcess::writerFunction> &writerNames, const name_t &conversion) noexcept
     {
-        std::vector<std::string> supportedFormats;
+        words_t supportedFormats;
         for (const auto &pair : writerNames)
         {
             supportedFormats.push_back(pair.first);
@@ -82,7 +82,7 @@ namespace LBM
         std::sort(supportedFormats.begin(), supportedFormats.end());
 
         // Create the error message with supported formats
-        std::string errorMsg = "Unsupported conversion format: " + conversion + "\nSupported formats are: ";
+        name_t errorMsg = "Unsupported conversion format: " + conversion + "\nSupported formats are: ";
         for (std::size_t i = 0; i < supportedFormats.size(); ++i)
         {
             if (i != 0)
@@ -103,9 +103,9 @@ namespace LBM
      * @throws std::runtime_error if an invalid field name is provided
      **/
     __host__ [[nodiscard]] host::arrayCollection<scalar_t, ctorType::MUST_READ> initialiseArrays(
-        const std::string &fileNamePrefix,
+        const name_t &fileNamePrefix,
         const programControl &programCtrl,
-        const std::vector<std::string> &fieldNames,
+        const words_t &fieldNames,
         const label_t timeStep)
     {
         // Construct from a custom field name
@@ -127,8 +127,8 @@ namespace LBM
      * @return A reference to a vector of field names
      * @throws std::runtime_error if an invalid field name is provided
      **/
-    __host__ [[nodiscard]] const std::vector<std::string> &getFieldNames(
-        const std::string &fileNamePrefix,
+    __host__ [[nodiscard]] const words_t &getFieldNames(
+        const name_t &fileNamePrefix,
         const bool doCustomField)
     {
         if (!doCustomField)
@@ -137,7 +137,7 @@ namespace LBM
         }
         else
         {
-            const std::unordered_map<std::string, std::vector<std::string>>::const_iterator namesIterator = functionObjects::fieldComponentsMap.find(fileNamePrefix);
+            const std::unordered_map<name_t, words_t>::const_iterator namesIterator = functionObjects::fieldComponentsMap.find(fileNamePrefix);
             const bool foundField = namesIterator != functionObjects::fieldComponentsMap.end();
             if (!foundField)
             {
@@ -153,7 +153,7 @@ namespace LBM
 
     __host__ [[nodiscard]] axis::type cutPlaneDirection(const programControl &programCtrl) noexcept
     {
-        const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+        const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
         // Need to check that j = 1 because the first character before the = symbol should be x, y or z and nothing else
         if (!(string::findCharPosition(cutPlanePrefix, "=") == 1))
@@ -349,7 +349,7 @@ namespace LBM
     {
         if (doCutPlane)
         {
-            const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+            const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             // Check that size() - 1 isn't = 2
             const scalar_t planeCoordinate = static_cast<scalar_t>(std::stold(cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1)));
@@ -385,12 +385,12 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const std::string processName(const programControl programCtrl, const std::string &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
+    __host__ [[nodiscard]] const name_t processName(const programControl programCtrl, const name_t &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
     {
         // Get the file name at the present time step
         if (cutPlane)
         {
-            const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+            const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             return fileNamePrefix + "CutPlane_" + cutPlanePrefix + "_" + std::to_string(nameIndex);
         }

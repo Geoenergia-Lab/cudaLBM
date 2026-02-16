@@ -66,7 +66,7 @@ namespace LBM
     {
     public:
         // Need to check that the length of fieldNames is 10
-        __host__ [[nodiscard]] boundaryRegion(const std::string &regionName)
+        __host__ [[nodiscard]] boundaryRegion(const name_t &regionName)
             : values_{
                   boundaryValue<VelocitySet, Scaled>("rho", regionName),
                   boundaryValue<VelocitySet, Scaled>("u", regionName),
@@ -137,7 +137,7 @@ namespace LBM
          **/
         void print() const noexcept
         {
-            const std::vector<std::string> regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
+            const words_t regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
             for (std::size_t field = 0; field < regionNames.size(); field++)
             {
                 std::cout << regionNames[field] << ": " << values_[field]() << std::endl;

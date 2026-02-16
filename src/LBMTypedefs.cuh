@@ -51,7 +51,6 @@ SourceFiles
 #define __MBLBM_TYPEDEFS_CUH
 
 #include "LBMIncludes.cuh"
-#include "errorHandler.cuh"
 
 namespace LBM
 {
@@ -59,6 +58,12 @@ namespace LBM
      * @brief Shorthand for __restrict__
      **/
 #define ptrRestrict __restrict__
+
+    /**
+     * @brief Shorthand for std::string and std::vector<std::string>
+     **/
+    typedef std::string name_t;
+    typedef std::vector<name_t> words_t;
 
     /**
      * @brief Verbose logging
@@ -157,7 +162,7 @@ namespace LBM
         const label_t ny; // < Lattice points in y-direction
         const label_t nz; // < Lattice points in z-direction
 
-        void print(const std::string &name) const noexcept
+        void print(const name_t &name) const noexcept
         {
             std::cout << "    " << name << " = [" << nx << ", " << ny << ", " << nz << "];" << std::endl;
         }
@@ -534,5 +539,6 @@ namespace LBM
 }
 
 #include "hardwareConfig.cuh"
+#include "errorHandler.cuh"
 
 #endif

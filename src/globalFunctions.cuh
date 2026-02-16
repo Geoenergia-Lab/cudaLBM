@@ -827,7 +827,7 @@ namespace LBM
      * @param[in] functionName The name of the function
      **/
     template <const label_t smem_alloc_size, class T>
-    __host__ void kernelSetup(T *func, const std::string &functionName) noexcept
+    __host__ void kernelSetup(T *func, const name_t &functionName) noexcept
     {
         checkCudaErrors(cudaFuncSetCacheConfig(func, cudaFuncCachePreferShared));
         checkCudaErrors(cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_alloc_size));

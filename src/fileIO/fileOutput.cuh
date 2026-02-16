@@ -56,7 +56,7 @@ namespace LBM
     {
         // Get the time type string
         template <const time::type TimeType>
-        __host__ [[nodiscard]] const std::string timeTypeString() noexcept
+        __host__ [[nodiscard]] const name_t timeTypeString() noexcept
         {
             static_assert((TimeType == time::instantaneous || (TimeType == time::timeAverage)), "Time type must be either instantaneous or timeAverage");
 
@@ -81,9 +81,9 @@ namespace LBM
          **/
         template <const time::type TimeType, class LatticeMesh, typename T>
         __host__ void writeFile(
-            const std::string &fileName,
+            const name_t &fileName,
             const LatticeMesh &mesh,
-            const std::vector<std::string> &varNames,
+            const words_t &varNames,
             const T *const ptrRestrict fields,
             const label_t timeStep)
         {

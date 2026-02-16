@@ -64,14 +64,14 @@ namespace LBM
          **/
         struct fieldFileHeader
         {
-            const bool isLittleEndian;                 //!< Endianness of the binary data
-            const std::size_t scalarSize;              //!< Size of scalar values (4 or 8 bytes)
-            const std::size_t nx;                      //!< Grid dimension in x-direction
-            const std::size_t ny;                      //!< Grid dimension in y-direction
-            const std::size_t nz;                      //!< Grid dimension in z-direction
-            const std::size_t nVars;                   //!< Number of variables per grid point
-            const std::size_t dataStartPos;            //!< File position where binary data begins
-            const std::vector<std::string> fieldNames; //!< Names of all field variables
+            const bool isLittleEndian;      //!< Endianness of the binary data
+            const std::size_t scalarSize;   //!< Size of scalar values (4 or 8 bytes)
+            const std::size_t nx;           //!< Grid dimension in x-direction
+            const std::size_t ny;           //!< Grid dimension in y-direction
+            const std::size_t nz;           //!< Grid dimension in z-direction
+            const std::size_t nVars;        //!< Number of variables per grid point
+            const std::size_t dataStartPos; //!< File position where binary data begins
+            const words_t fieldNames;       //!< Names of all field variables
         };
 
         /**
@@ -79,11 +79,11 @@ namespace LBM
          * @param[in] str The input string to trim
          * @return The trimmed string
          **/
-        __host__ [[nodiscard]] const std::string filestring_trim(const std::string &str)
+        __host__ [[nodiscard]] const name_t filestring_trim(const name_t &str)
         {
             const std::size_t start = str.find_first_not_of(" \t\r\n");
             const std::size_t end = str.find_last_not_of(" \t\r\n;");
-            return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
+            return (start == name_t::npos) ? "" : str.substr(start, end - start + 1);
         }
 
         /**
@@ -96,7 +96,7 @@ namespace LBM
          * extracting metadata about grid dimensions, data format, and field names.
          * It performs comprehensive error checking for file integrity and format compliance.
          **/
-        __host__ [[nodiscard]] const fieldFileHeader parseFieldFileHeader(const std::string &fileName)
+        __host__ [[nodiscard]] const fieldFileHeader parseFieldFileHeader(const name_t &fileName)
         {
             // Check if file exists and is accessible
             if (!std::filesystem::exists(fileName))
@@ -127,7 +127,7 @@ namespace LBM
             const std::size_t fileSize = static_cast<std::size_t>(fileSizePos);
             in.seekg(0, std::ios::beg);
 
-            std::string line;
+            name_t line;
             bool inSystemInfo = false;
             bool inFieldData = false;
             bool inFieldInfo = false;
@@ -142,7 +142,7 @@ namespace LBM
             std::size_t nVars = 0;
             std::size_t totalPoints = 0;
             std::size_t dataStartPos = 0;
-            std::vector<std::string> fieldNamesVec;
+            words_t fieldNamesVec;
             std::size_t expectedFieldCount = 0;
             bool foundFieldData = false;
             bool foundSystemInfo = false;
@@ -206,17 +206,17 @@ namespace LBM
                     {
                         inSystemInfo = false;
                     }
-                    else if (line.find("binaryType") != std::string::npos)
+                    else if (line.find("binaryType") != name_t::npos)
                     {
-                        isLittleEndian = (line.find("littleEndian") != std::string::npos);
+                        isLittleEndian = (line.find("littleEndian") != name_t::npos);
                     }
-                    else if (line.find("scalarType") != std::string::npos)
+                    else if (line.find("scalarType") != name_t::npos)
                     {
-                        if (line.find("32 bit") != std::string::npos)
+                        if (line.find("32 bit") != name_t::npos)
                         {
                             scalarSize = 4;
                         }
-                        else if (line.find("64 bit") != std::string::npos)
+                        else if (line.find("64 bit") != name_t::npos)
                         {
                             scalarSize = 8;
                         }
@@ -234,23 +234,23 @@ namespace LBM
                     {
                         inFieldData = false;
                     }
-                    else if (line.find("field[") != std::string::npos)
+                    else if (line.find("field[") != name_t::npos)
                     {
                         // Extract dimensions from pattern: field[total][nx][ny][nz][nVars]
                         std::vector<std::size_t> dims;
                         std::size_t pos = 0;
 
-                        while ((pos = line.find('[', pos)) != std::string::npos)
+                        while ((pos = line.find('[', pos)) != name_t::npos)
                         {
                             const std::size_t end = line.find(']', pos);
-                            if (end == std::string::npos)
+                            if (end == name_t::npos)
                             {
                                 throw std::runtime_error("Unclosed bracket at line " + std::to_string(lineNumber));
                             }
 
                             try
                             {
-                                const std::string dimStr = line.substr(pos + 1, end - pos - 1);
+                                const name_t dimStr = line.substr(pos + 1, end - pos - 1);
                                 const unsigned long long dimValue = std::stoull(dimStr);
 
                                 // Check for overflow before casting to std::size_t
@@ -345,12 +345,12 @@ namespace LBM
                     {
                         inFieldInfo = false;
                     }
-                    else if (line.find("fieldNames[") != std::string::npos)
+                    else if (line.find("fieldNames[") != name_t::npos)
                     {
                         // Extract expected number of field names
                         const std::size_t startBracket = line.find('[');
                         const std::size_t endBracket = line.find(']');
-                        if (startBracket == std::string::npos || endBracket == std::string::npos)
+                        if (startBracket == name_t::npos || endBracket == name_t::npos)
                         {
                             throw std::runtime_error("Invalid fieldNames format at line " + std::to_string(lineNumber));
                         }
@@ -408,7 +408,7 @@ namespace LBM
                             {
                                 line.pop_back();
                             }
-                            const std::string fieldName = filestring_trim(line);
+                            const name_t fieldName = filestring_trim(line);
 
                             // Validate field name
                             if (fieldName.empty())
@@ -529,7 +529,7 @@ namespace LBM
          * all variables for each point are stored contiguously.
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> readFieldFile(const std::string &fileName)
+        __host__ [[nodiscard]] const std::vector<T> readFieldFile(const name_t &fileName)
         {
             static_assert(std::is_floating_point_v<T>, "T must be floating point");
             static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big, "System must be little or big endian");
@@ -606,7 +606,7 @@ namespace LBM
          * reading the entire file when only specific fields are needed.
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> readFieldByName(const std::string &fileName, const std::string &fieldName)
+        __host__ [[nodiscard]] const std::vector<T> readFieldByName(const name_t &fileName, const name_t &fieldName)
         {
             static_assert(std::is_floating_point_v<T>, "T must be floating point");
             static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big, "System must be little or big endian");
@@ -640,7 +640,7 @@ namespace LBM
             if (it == header.fieldNames.end())
             {
                 // Create a list of available field names for better error message
-                std::string availableFields;
+                name_t availableFields;
                 for (const auto &name : header.fieldNames)
                 {
                     if (!availableFields.empty())

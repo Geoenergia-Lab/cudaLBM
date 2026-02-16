@@ -114,10 +114,10 @@ namespace LBM
      * @return Numerical index of the month (0 for January, 11 for December).
      * @throws std::runtime_error If the input string does not match any month abbreviation.
      **/
-    __host__ [[nodiscard]] std::size_t monthIndex(const std::string &monthStr)
+    __host__ [[nodiscard]] std::size_t monthIndex(const name_t &monthStr)
     {
         // Map month abbreviations to numbers
-        const std::vector<std::string> months{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        const words_t months{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
         for (std::size_t i = 0; i < 12; i++)
         {
@@ -135,14 +135,14 @@ namespace LBM
      * @details Uses the predefined __DATE__ and __TIME__ macros to determine compilation time.
      * @return Formatted timestamp string (YYYY-MM-DD HH:MM:SS).
      **/
-    __host__ [[nodiscard]] const std::string compileTimestamp()
+    __host__ [[nodiscard]] const name_t compileTimestamp()
     {
-        const std::string date = __DATE__;
-        const std::string time = __TIME__;
+        const name_t date = __DATE__;
+        const name_t time = __TIME__;
 
-        const std::string monthStr = date.substr(0, 3);
-        const std::string dayStr = date.substr(4, 2);
-        const std::string yearStr = date.substr(7, 4);
+        const name_t monthStr = date.substr(0, 3);
+        const name_t dayStr = date.substr(4, 2);
+        const name_t yearStr = date.substr(7, 4);
 
         // Find month number
         const std::size_t month = monthIndex(monthStr);
@@ -162,7 +162,7 @@ namespace LBM
      * @return The value of the environment variable, or the default value if it is not set.
      **/
     template <const bool verboseOutput = false>
-    __host__ [[nodiscard]] const std::string getEnvironmentVariable(const std::string &envVariable, const std::string &defaultName)
+    __host__ [[nodiscard]] const name_t getEnvironmentVariable(const name_t &envVariable, const name_t &defaultName)
     {
         const char *const env_ptr = std::getenv(envVariable.c_str());
 
@@ -192,13 +192,13 @@ namespace LBM
      * @throws std::runtime_error If the environment variable is not set.
      **/
     template <const bool verboseOutput = false>
-    __host__ [[nodiscard]] const std::string getEnvironmentVariable(const std::string &envVariable)
+    __host__ [[nodiscard]] const name_t getEnvironmentVariable(const name_t &envVariable)
     {
         const char *const env_ptr = std::getenv(envVariable.c_str());
 
         if (env_ptr == nullptr)
         {
-            const std::string errorString = "Error: " + envVariable + " environment variable is not set." + "Please run:" + "  source ~/.bashrc" + "or add it to your environment.";
+            const name_t errorString = "Error: " + envVariable + " environment variable is not set." + "Please run:" + "  source ~/.bashrc" + "or add it to your environment.";
             throw std::runtime_error(errorString);
         }
 

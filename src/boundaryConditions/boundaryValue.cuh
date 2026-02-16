@@ -72,7 +72,7 @@ namespace LBM
          * @param[in] regionName Name of the boundary region (e.g., "North", "West")
          * @throws std::runtime_error if field name is invalid or configuration is malformed
          **/
-        __host__ [[nodiscard]] boundaryValue(const std::string &fieldName, const std::string &regionName)
+        __host__ [[nodiscard]] boundaryValue(const name_t &fieldName, const name_t &regionName)
             : value(initialiseValue(fieldName, regionName)){};
 
         /**
@@ -101,17 +101,17 @@ namespace LBM
          * @note This function is used to extract values that MUST be numeric
          */
         template <const bool safety_check>
-        __host__ [[nodiscard]] static scalar_t extractParameter(const std::string &fieldName, const std::string &regionName, const std::string &initialConditionsName)
+        __host__ [[nodiscard]] static scalar_t extractParameter(const name_t &fieldName, const name_t &regionName, const name_t &initialConditionsName)
         {
-            const std::vector<std::string> boundaryLines = string::readFile(initialConditionsName);
+            const words_t boundaryLines = string::readFile(initialConditionsName);
 
             // Extracts the entire block of text corresponding to currentField
-            const std::vector<std::string> fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
+            const words_t fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
 
             // Extracts the block of text corresponding to internalField within the current field block
-            const std::vector<std::string> regionFieldBlock = string::extractBlock(fieldBlock, regionName);
+            const words_t regionFieldBlock = string::extractBlock(fieldBlock, regionName);
 
-            const std::string valueString = string::extractParameterLine(regionFieldBlock, "value");
+            const name_t valueString = string::extractParameterLine(regionFieldBlock, "value");
 
             if constexpr (safety_check)
             {
@@ -144,23 +144,23 @@ namespace LBM
          * - Equilibrium-based calculations for moment fields
          * - Validation of field names and region names
          **/
-        __host__ [[nodiscard]] static scalar_t initialiseValue(const std::string &fieldName, const std::string &regionName, const std::string &initialConditionsName = "initialConditions")
+        __host__ [[nodiscard]] static scalar_t initialiseValue(const name_t &fieldName, const name_t &regionName, const name_t &initialConditionsName = "initialConditions")
         {
-            const std::vector<std::string> boundaryLines = string::readFile(initialConditionsName);
+            const words_t boundaryLines = string::readFile(initialConditionsName);
 
             // Extracts the entire block of text corresponding to currentField
-            const std::vector<std::string> fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
+            const words_t fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
 
             // Extracts the block of text corresponding to internalField within the current field block
-            const std::vector<std::string> regionFieldBlock = string::extractBlock(fieldBlock, regionName);
+            const words_t regionFieldBlock = string::extractBlock(fieldBlock, regionName);
 
             // Now read the value line
-            const std::string value_ = string::extractParameterLine(regionFieldBlock, "value");
+            const name_t value_ = string::extractParameterLine(regionFieldBlock, "value");
 
             // Try fixing its value
             if (string::isNumber(value_))
             {
-                const std::unordered_set<std::string> allowed = {"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
+                const std::unordered_set<name_t> allowed = {"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
 
                 const bool isMember = allowed.find(fieldName) != allowed.end();
 
@@ -211,7 +211,7 @@ namespace LBM
             else if (value_ == "equilibrium")
             {
                 // Check to see if the variable is one of the moments
-                const std::unordered_set<std::string> allowed = {"m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
+                const std::unordered_set<name_t> allowed = {"m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
                 const bool isMember = allowed.find(fieldName) != allowed.end();
 
                 // It is an equilibrium moment

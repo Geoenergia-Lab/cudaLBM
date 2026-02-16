@@ -97,7 +97,7 @@ namespace LBM
          * @param[in] name The argument to search for
          * @return bool True if the argument is present, false otherwise
          **/
-        __host__ [[nodiscard]] bool isArgPresent(const std::string &name) const noexcept
+        __host__ [[nodiscard]] bool isArgPresent(const name_t &name) const noexcept
         {
             for (label_t i = 0; i < commandLine_.size(); i++)
             {
@@ -112,18 +112,18 @@ namespace LBM
 
         /**
          * @brief Returns the command line input as a vector of strings
-         * @return const std::vector<std::string>& The parsed command line arguments
+         * @return const words_t& The parsed command line arguments
          **/
-        __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &commandLine() const noexcept
+        __host__ [[nodiscard]] inline constexpr const words_t &commandLine() const noexcept
         {
             return commandLine_;
         }
 
         /**
          * @brief Returns the name of the currently running executable
-         * @return const std::string& The executable name
+         * @return const name_t& The executable name
          **/
-        __host__ [[nodiscard]] inline constexpr const std::string &executableName() const noexcept
+        __host__ [[nodiscard]] inline constexpr const name_t &executableName() const noexcept
         {
             return commandLine_[0];
         }
@@ -157,19 +157,19 @@ namespace LBM
         /**
          * @brief The parsed command line
          **/
-        const std::vector<std::string> commandLine_;
+        const words_t commandLine_;
 
         /**
          * @brief Parses command line arguments into a vector of strings
          * @param[in] argc First argument passed to main (argument count)
          * @param[in] argv Second argument passed to main (argument vector)
-         * @return std::vector<std::string> Parsed command line arguments
+         * @return words_t Parsed command line arguments
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> parseCommandLine(const int argc, const char *const argv[]) const noexcept
+        __host__ [[nodiscard]] const words_t parseCommandLine(const int argc, const char *const argv[]) const noexcept
         {
             if (argc > 0)
             {
-                std::vector<std::string> arr;
+                words_t arr;
                 label_t arrLength = 0;
 
                 for (label_t i = 0; i < static_cast<label_t>(argc); i++)
@@ -183,7 +183,7 @@ namespace LBM
             }
             else
             {
-                return std::vector<std::string>{""};
+                return words_t{""};
             }
         }
 

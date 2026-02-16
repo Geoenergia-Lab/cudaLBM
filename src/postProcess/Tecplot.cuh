@@ -90,7 +90,7 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames) noexcept
+                const words_t &solutionVarNames) noexcept
             {
                 // Check input sizes
                 const label_t numNodes = mesh.nx() * mesh.ny() * mesh.nz();
@@ -155,9 +155,9 @@ namespace LBM
 
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
-                const std::string &fileName,
+                const name_t &fileName,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames)
+                const words_t &solutionVarNames)
             {
                 const uint64_t numNodes = static_cast<uint64_t>(mesh.nx()) * static_cast<uint64_t>(mesh.ny()) * static_cast<uint64_t>(mesh.nz());
                 const std::size_t numVars = solutionVars.size();
@@ -186,7 +186,7 @@ namespace LBM
                         std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
                         std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
                         std::cout << "};" << std::endl;
-                        errorHandler(-1, "Error: unable to create directory" + std::string(directoryPrefix()));
+                        errorHandler(-1, "Error: unable to create directory" + name_t(directoryPrefix()));
                     }
                 }
                 else
@@ -212,7 +212,7 @@ namespace LBM
                 // Check if there is enough disk space to store the file
                 fileSystem::diskSpaceAssertion<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
 
-                const std::string trueFileName(std::string(directoryPrefix()) + "/" + fileName + fileExtension());
+                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 
                 std::ofstream outFile(trueFileName);
                 if (outFile)

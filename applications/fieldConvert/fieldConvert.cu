@@ -60,7 +60,7 @@ int main(const int argc, const char *const argv[])
 
     // If we have supplied a -fieldName argument, replace programCtrl.caseName() with the fieldName
     const bool doCustomField = programCtrl.input().isArgPresent("-fieldName");
-    const std::string fileNamePrefix = doCustomField ? programCtrl.getArgument("-fieldName") : programCtrl.caseName();
+    const name_t fileNamePrefix = doCustomField ? programCtrl.getArgument("-fieldName") : programCtrl.caseName();
 
     // If we have supplied the -cutPlane argument, set the flag to true
     const bool doCutPlane = programCtrl.input().isArgPresent("-cutPlane");
@@ -69,16 +69,16 @@ int main(const int argc, const char *const argv[])
     const host::latticeMesh newMesh = processMesh(mesh, programCtrl, doCutPlane);
 
     // Now get the std::vector of std::strings corresponding to the prefix
-    const std::vector<std::string> &fieldNames = getFieldNames(fileNamePrefix, doCustomField);
+    const words_t &fieldNames = getFieldNames(fileNamePrefix, doCustomField);
 
     // Get the time indices
     const std::vector<label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
     // Get the conversion type
-    const std::string conversion = programCtrl.getArgument("-fileType");
+    const name_t conversion = programCtrl.getArgument("-fileType");
 
     // Get the writer function
-    const std::unordered_map<std::string, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
+    const std::unordered_map<name_t, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
 
     // Check if the writer is valid
     if (it != postProcess::writers.end())
@@ -95,7 +95,7 @@ int main(const int argc, const char *const argv[])
 
             const std::vector<std::vector<scalar_t>> fields = processFields(hostMoments, mesh, programCtrl, doCutPlane);
 
-            const std::string fileName = processName(programCtrl, fileNamePrefix, fileNameIndices[timeStep], doCutPlane);
+            const name_t fileName = processName(programCtrl, fileNamePrefix, fileNameIndices[timeStep], doCutPlane);
 
             writer(
                 fields,

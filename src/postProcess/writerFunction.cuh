@@ -60,14 +60,14 @@ namespace LBM
     {
         using writerFunction = void (*)(
             const std::vector<std::vector<scalar_t>> &,
-            const std::string &,
+            const name_t &,
             const host::latticeMesh &,
-            const std::vector<std::string> &);
+            const words_t &);
 
         /**
          * @brief Unordered map of the writer types to the appropriate functions
          **/
-        const std::unordered_map<std::string, writerFunction> writers = {
+        const std::unordered_map<name_t, writerFunction> writers = {
             {"vtu", VTU::write},
             {"vts", VTS::write},
             {"tecplot", Tecplot::write}};

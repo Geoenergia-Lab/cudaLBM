@@ -114,6 +114,17 @@ namespace LBM
             }
         }
 
+        // template <typename T>
+        // __host__ void to_host(const T *const ptrRestrict devPtr, T *const ptrRestrict hostPtr, const label_t fieldIndex, const std::size_t nPointsGlobal, const std::size_t nPointsSegment) noexcept
+        // {
+        //     checkCudaErrors(cudaMemcpy(hostPtr + (fieldIndex * nPointsGlobal), devPtr, nPointsSegment * sizeof(T), cudaMemcpyDeviceToHost));
+
+        //     if constexpr (verbose())
+        //     {
+        //         std::cout << "Copied " << sizeof(T) * nPointsSegment << " bytes of memory from device address " << devPtr << " to host address " << hostPtr << std::endl;
+        //     }
+        // }
+
         /**
          * @brief Copies data from device memory to host memory
          * @tparam T Data type of the elements
