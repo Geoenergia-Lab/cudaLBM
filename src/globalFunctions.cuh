@@ -293,9 +293,7 @@ namespace LBM
          * @return Linearized index: x + nx*(y + ny*z)
          **/
         template <typename T = label_t>
-        __host__ [[nodiscard]] inline T idx(
-            const T x, const T y, const T z,
-            const T nx, const T ny) noexcept
+        __device__ __host__ [[nodiscard]] inline T idx(const T x, const T y, const T z, const T nx, const T ny) noexcept
         {
             return x + (nx * (y + (ny * z)));
         }
@@ -383,7 +381,7 @@ namespace LBM
         template <typename T = label_t>
         __device__ __host__ [[nodiscard]] inline constexpr T idx(const T dx, const T dy, const T dz, const T ndx, const T ndy) noexcept
         {
-            return dx + (dy * ndx) + (dz * ndx * ndy);
+            return global::idx<T>(dx, dy, dz, ndx, ndy);
         }
 
         /**

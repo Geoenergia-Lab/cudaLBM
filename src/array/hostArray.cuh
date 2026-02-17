@@ -190,14 +190,11 @@ namespace LBM
             __host__ void copy_from_device(
                 const device::ptrCollection<N, T> &devPtrs,
                 const host::latticeMesh &mesh,
-                const label_t GPU_x = 0,
-                const label_t GPU_y = 0,
-                const label_t GPU_z = 0)
+                const label_t virtualDeviceIndex = 0)
             {
                 const label_t nxGPUs = mesh.nDevices<axis::X>();
                 const label_t nyGPUs = mesh.nDevices<axis::Y>();
                 const label_t nzGPUs = mesh.nDevices<axis::Z>();
-                const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
                 const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
                 const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
@@ -211,7 +208,12 @@ namespace LBM
 
                 for (label_t field = 0; field < N; field++)
                 {
-                    errorHandler::check(cudaMemcpy(&(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]), devPtrs[field], nPointsPerGPU * sizeof(T), cudaMemcpyDeviceToHost));
+                    errorHandler::check(
+                        cudaMemcpy(
+                            &(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]),
+                            devPtrs[field],
+                            nPointsPerGPU * sizeof(T),
+                            cudaMemcpyDeviceToHost));
                 }
             }
 
@@ -425,59 +427,71 @@ namespace LBM
             {
                 const boundaryFields<VelocitySet, true> bField(fieldName);
 
+                const label_t nxGPUs = mesh.nDevices<axis::X>();
+                const label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+                const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
+                const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
+                const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
+                const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+
                 std::vector<T> field(mesh.nPoints(), 0);
 
-                const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / mesh.nDevices<axis::X>();
-                const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / mesh.nDevices<axis::Y>();
-                const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / mesh.nDevices<axis::Z>();
+                const label_t nxBlocksPerGPU = mesh.nxBlocks() / nxGPUs;
+                const label_t nyBlocksPerGPU = mesh.nyBlocks() / nyGPUs;
+                const label_t nzBlocksPerGPU = mesh.nzBlocks() / nzGPUs;
 
-                // This is the loop we should be using for multi GPU, I think
-                for (label_t GPU_z = 0; GPU_z < mesh.nDevices<axis::Z>(); GPU_z++)
-                {
-                    for (label_t GPU_y = 0; GPU_y < mesh.nDevices<axis::Y>(); GPU_y++)
+                gpu_for(
+                    nxGPUs, nyGPUs, nzGPUs,
+                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
                     {
-                        for (label_t GPU_x = 0; GPU_x < mesh.nDevices<axis::X>(); GPU_x++)
-                        {
-                            // Fill this GPU's contiguous segment
-                            grid_for(
-                                nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
-                                [&](const label_t bx, const label_t by, const label_t bz,
-                                    const label_t tx, const label_t ty, const label_t tz)
-                                {
-                                    // Calculate global coordinates
-                                    const label_t x = tx + block::nx() * (bx + (GPU_x * nxBlocksPerGPU));
-                                    const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
-                                    const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
+                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
-                                    const label_t index = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
+                        grid_for(
+                            nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
+                            [&](const label_t bx, const label_t by, const label_t bz,
+                                const label_t tx, const label_t ty, const label_t tz)
+                            {
+                                // Global coordinates (for boundary detection)
+                                const label_t x = tx + block::nx() * (bx + (GPU_x * nxBlocksPerGPU));
+                                const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
+                                const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
 
-                                    const bool is_west = mesh.West(x);
-                                    const bool is_east = mesh.East(x);
-                                    const bool is_south = mesh.South(y);
-                                    const bool is_north = mesh.North(y);
-                                    const bool is_back = mesh.Back(z);
-                                    const bool is_front = mesh.Front(z);
+                                // Local index within this GPU's segment
+                                const label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
 
-                                    const label_t boundary_count =
-                                        static_cast<label_t>(is_west) +
-                                        static_cast<label_t>(is_east) +
-                                        static_cast<label_t>(is_south) +
-                                        static_cast<label_t>(is_north) +
-                                        static_cast<label_t>(is_back) +
-                                        static_cast<label_t>(is_front);
-                                    const T value_sum =
-                                        (is_west * bField.West()) +
-                                        (is_east * bField.East()) +
-                                        (is_south * bField.South()) +
-                                        (is_north * bField.North()) +
-                                        (is_back * bField.Back()) +
-                                        (is_front * bField.Front());
+                                // Boundary detection and value computation (unchanged)
+                                const bool is_west = mesh.West(x);
+                                const bool is_east = mesh.East(x);
+                                const bool is_south = mesh.South(y);
+                                const bool is_north = mesh.North(y);
+                                const bool is_back = mesh.Back(z);
+                                const bool is_front = mesh.Front(z);
 
-                                    field[index] = boundary_count > 0 ? value_sum / static_cast<T>(boundary_count) : bField.internalField();
-                                });
-                        }
-                    }
-                }
+                                const label_t boundary_count =
+                                    static_cast<label_t>(is_west) +
+                                    static_cast<label_t>(is_east) +
+                                    static_cast<label_t>(is_south) +
+                                    static_cast<label_t>(is_north) +
+                                    static_cast<label_t>(is_back) +
+                                    static_cast<label_t>(is_front);
+
+                                const T value_sum =
+                                    (is_west * bField.West()) +
+                                    (is_east * bField.East()) +
+                                    (is_south * bField.South()) +
+                                    (is_north * bField.North()) +
+                                    (is_back * bField.Back()) +
+                                    (is_front * bField.Front());
+
+                                T value = (boundary_count > 0) ? (value_sum / static_cast<T>(boundary_count)) : (bField.internalField());
+
+                                // Global index in host vector (per‑GPU segmented)
+                                const label_t globalIdx = virtualDeviceIndex * nPointsPerGPU + localIdx;
+                                field[globalIdx] = value;
+                            });
+                    });
+
                 return field;
             }
         };

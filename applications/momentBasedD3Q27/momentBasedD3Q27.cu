@@ -131,7 +131,7 @@ int main(const int argc, const char *const argv[])
                         myz.ptr(virtualDeviceIndex),
                         mzz.ptr(virtualDeviceIndex)},
                     mesh,
-                    0, 0, 0);
+                    virtualDeviceIndex);
             }
 
             fileIO::writeFile<time::instantaneous>(

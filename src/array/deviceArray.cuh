@@ -135,7 +135,7 @@ namespace LBM
                 const host::array<MallocType, T, VelocitySet, TimeType> &hostArray,
                 const programControl &programCtrl,
                 const bool allocate = true)
-                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data(), allocate)),
+                : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data(), allocate, programCtrl)),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh()),
                   programCtrl_(programCtrl)
@@ -157,7 +157,7 @@ namespace LBM
                 const T value,
                 const programControl &programCtrl,
                 const bool allocate = true)
-                : ptr_(allocate_on_devices(mesh, value, allocate)),
+                : ptr_(allocate_on_devices(mesh, value, allocate, programCtrl)),
                   name_(name),
                   mesh_(mesh),
                   programCtrl_(programCtrl)
@@ -177,7 +177,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl,
                 const bool allocate = true)
-                : ptr_(allocate_on_devices(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl), allocate)),
+                : ptr_(allocate_on_devices(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl), allocate, programCtrl)),
                   name_(name),
                   mesh_(mesh),
                   programCtrl_(programCtrl)
@@ -356,7 +356,11 @@ namespace LBM
              * @param[in] mesh The mesh
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const T *hostArrayGlobal, const bool allocate)
+            __host__ [[nodiscard]] static T **allocate_on_devices(
+                const host::latticeMesh &mesh,
+                const T *hostArrayGlobal,
+                const bool allocate,
+                const programControl &programCtrl)
             {
                 if (allocate)
                 {
@@ -374,7 +378,7 @@ namespace LBM
                         {
                             const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
-                            hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z);
+                            hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl);
                         });
 
                     return hostPtrsToDevice;
@@ -389,9 +393,13 @@ namespace LBM
              * @brief Partitions and allocates an existing std::vector on the devices
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(const host::latticeMesh &mesh, const std::vector<T> &hostArrayGlobal, const bool allocate)
+            __host__ [[nodiscard]] static T **allocate_on_devices(
+                const host::latticeMesh &mesh,
+                const std::vector<T> &hostArrayGlobal,
+                const bool allocate,
+                const programControl &programCtrl)
             {
-                return allocate_on_devices(mesh, hostArrayGlobal.data(), allocate);
+                return allocate_on_devices(mesh, hostArrayGlobal.data(), allocate, programCtrl);
             }
 
             /**
@@ -399,9 +407,12 @@ namespace LBM
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
             template <const host::mallocType MallocType>
-            __host__ [[nodiscard]] T **allocate_on_devices(const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal, const bool allocate)
+            __host__ [[nodiscard]] T **allocate_on_devices(
+                const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal,
+                const bool allocate,
+                const programControl &programCtrl)
             {
-                return allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate);
+                return allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate, programCtrl);
             }
 
             /**
@@ -409,10 +420,14 @@ namespace LBM
              * @param[in] mesh The mesh
              * @param[in] hostArrayGlobal Pointer to the array allocated on the host
              **/
-            __host__ [[nodiscard]] T **allocate_on_devices(const host::latticeMesh &mesh, const T val, const bool allocate)
+            __host__ [[nodiscard]] T **allocate_on_devices(
+                const host::latticeMesh &mesh,
+                const T val,
+                const bool allocate,
+                const programControl &programCtrl)
             {
                 const std::vector<T> toAllocate(static_cast<std::size_t>(allocate) * mesh.nPoints<std::size_t>(), val);
-                return allocate_on_devices(mesh, toAllocate, allocate);
+                return allocate_on_devices(mesh, toAllocate, allocate, programCtrl);
             }
 
             /**
@@ -426,7 +441,8 @@ namespace LBM
                 const T *hostArrayGlobal,
                 const label_t GPU_x,
                 const label_t GPU_y,
-                const label_t GPU_z)
+                const label_t GPU_z,
+                const programControl &programCtrl)
             {
                 const label_t nxGPUs = mesh.nDevices<axis::X>();
                 const label_t nyGPUs = mesh.nDevices<axis::Y>();
@@ -438,9 +454,9 @@ namespace LBM
                 const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
                 const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
 
-                T *devPtr = device::allocate<T>(nPointsPerGPU, static_cast<deviceIndex_t>(virtualDeviceIndex));
+                T *devPtr = device::allocate<T>(nPointsPerGPU, programCtrl.deviceList()[virtualDeviceIndex]);
 
-                device::copy(devPtr, &(hostArrayGlobal[startIndex]), nPointsPerGPU);
+                device::copy(devPtr, &(hostArrayGlobal[startIndex]), nPointsPerGPU, programCtrl.deviceList()[virtualDeviceIndex]);
 
                 return devPtr;
             }
