@@ -282,7 +282,8 @@ namespace LBM
                 const programControl &programCtrl)
                 : arr_(initialise_array(mesh, name, programCtrl)),
                   name_(name),
-                  mesh_(mesh){};
+                  mesh_(mesh),
+                  meanCount_(initialiseMeanCount(programCtrl)){};
 
             /**
              * @brief Destructor for the host array class
@@ -369,6 +370,11 @@ namespace LBM
              * @brief Reference to the lattice mesh
              **/
             const host::latticeMesh mesh_;
+
+            /**
+             * @brief Number of time steps averaged over (for time-averaged fields)
+             **/
+            label_t meanCount_;
 
             /**
              * @brief Initialize array from file or initial conditions

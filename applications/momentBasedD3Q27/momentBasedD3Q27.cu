@@ -139,7 +139,8 @@ int main(const int argc, const char *const argv[])
                 mesh,
                 functionObjects::solutionVariableNames,
                 hostWriteBuffer.data(),
-                timeStep);
+                timeStep,
+                rho.meanCount());
 
             runTimeObjects.save(timeStep);
         }

@@ -317,30 +317,22 @@ namespace LBM
                  **/
                 __host__ void calculateInstantaneous([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    // host::constexpr_for<0, N>(
-                    //[&](const auto stream)
-                    //{
                     for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
                             {xx_.ptr(0), xy_.ptr(0), xz_.ptr(0), yy_.ptr(0), yz_.ptr(0), zz_.ptr(0)});
                     }
-                    // });
                 }
 
                 /**
                  * @brief Calculate time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean(const label_t timeStep) noexcept
+                __host__ void calculateMean([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    // Calculate the mean
-                    //  host::constexpr_for<0, N>(
-                    //  [&](const auto stream)
-                    // {
                     for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
@@ -348,20 +340,18 @@ namespace LBM
                             {xxMean_.ptr(0), xyMean_.ptr(0), xzMean_.ptr(0), yyMean_.ptr(0), yzMean_.ptr(0), zzMean_.ptr(0)},
                             invNewCount);
                     }
-                    //});
+
+                    xxMean_.meanCountRef()++;
                 }
 
                 /**
                  * @brief Calculate both the instantaneous and time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneousAndMean(const label_t timeStep) noexcept
+                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    //  host::constexpr_for<0, N>(
-                    // [&](const auto stream)
-                    // {
                     for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
@@ -370,7 +360,8 @@ namespace LBM
                             {xxMean_.ptr(0), xyMean_.ptr(0), xzMean_.ptr(0), yyMean_.ptr(0), yzMean_.ptr(0), zzMean_.ptr(0)},
                             invNewCount);
                     }
-                    // });
+
+                    xxMean_.meanCountRef()++;
                 }
 
                 /**
@@ -391,7 +382,8 @@ namespace LBM
                         mesh_,
                         componentNames_,
                         hostWriteBuffer_.data(),
-                        timeStep);
+                        timeStep,
+                        0);
                 }
 
                 /**
@@ -412,7 +404,8 @@ namespace LBM
                         mesh_,
                         componentNamesMean_,
                         hostWriteBuffer_.data(),
-                        timeStep);
+                        timeStep,
+                        xxMean_.meanCount());
                 }
 
                 /**

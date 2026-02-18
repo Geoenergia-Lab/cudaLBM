@@ -83,7 +83,8 @@ namespace LBM
             const LatticeMesh &mesh,
             const words_t &varNames,
             const T *const ptrRestrict fields,
-            const label_t timeStep)
+            const label_t timeStep,
+            const label_t meanCount)
         {
             types::assertions::validate<T>();
             endian::assertions::validate();
@@ -142,6 +143,13 @@ namespace LBM
             // For now, only writing instantaneous fields
             out << "\ttimeType\t" << timeTypeString<TimeType>() << ";" << std::endl;
             out << std::endl;
+
+            if constexpr (TimeType == time::timeAverage)
+            {
+                out << "\tmeanCount\t" << meanCount << ";" << std::endl;
+                out << std::endl;
+            }
+
             out << "\tnFields\t\t" << nVars << ";" << std::endl;
             out << std::endl;
             out << "\tfieldNames[" << nVars << "]" << std::endl;

@@ -185,7 +185,7 @@ namespace LBM
             __host__ [[nodiscard]] fieldInformation(const words_t &fieldInfoLines)
                 : timeStep_(read<std::size_t>(fieldInfoLines, "timeStep")),
                   timeType_(read<time::type>(fieldInfoLines, "timeType", "instantaneous")),
-                  meanCount_(initialiseMeanCount(fieldInfoLines)),
+                  meanCount_(initialiseMeanCount(fieldInfoLines, timeType_)),
                   nFields_(read<std::size_t>(fieldInfoLines, "nFields")),
                   fieldNames_(readFieldNames(fieldInfoLines, nFields_)){};
 
@@ -205,6 +205,15 @@ namespace LBM
             __host__ [[nodiscard]] time::type timeType() const noexcept
             {
                 return timeType_;
+            }
+
+            /**
+             * @brief Returns the number of fields.
+             * @return The number of fields as a size_t.
+             **/
+            __host__ [[nodiscard]] const std::size_t &meanCount() const noexcept
+            {
+                return meanCount_;
             }
 
             /**
@@ -268,6 +277,13 @@ namespace LBM
                 return words_t(B.begin() + 1, B.end() - 2);
             }
 
+            /**
+             * @brief Initializes the mean count based on the time type and field information lines
+             * @param[in] fieldInfoLines The lines of the field information block
+             * @param[in] TimeType The time type (instantaneous or time average)
+             * @return The mean count as a size_t (0 for instantaneous, read from lines for time average)
+             * @throws std::runtime_error if meanCount is missing or invalid for time average fields
+             **/
             __host__ [[nodiscard]] static std::size_t initialiseMeanCount(const words_t &fieldInfoLines, const time::type TimeType)
             {
                 if (TimeType == time::instantaneous)
@@ -276,8 +292,7 @@ namespace LBM
                 }
                 else
                 {
-                    // Do the read of the time average here
-                    return 1;
+                    return read<std::size_t>(fieldInfoLines, "meanCount");
                 }
             }
         };

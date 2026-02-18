@@ -106,6 +106,57 @@ namespace LBM
             READ_IF_PRESENT = 2
         } type;
     }
+
+    /**
+     * Reads the first N lines from a file.
+     * @param filename Path to the file.
+     * @param n Number of lines to read (non‑negative).
+     * @return A vector containing the first N lines (or fewer if the file ends).
+     */
+    __host__ [[nodiscard]] const std::vector<std::string> read_first_n_lines(const std::string &filename, const std::size_t n)
+    {
+        std::vector<std::string> lines;
+        if (n <= 0)
+        {
+            return lines;
+        } // nothing to read
+
+        std::ifstream file(filename);
+        if (!file.is_open())
+        {
+            std::cerr << "Error: Could not open file " << filename << std::endl;
+            return lines; // return empty vector
+        }
+
+        std::string line;
+        std::size_t count = 0;
+        while (count < n && std::getline(file, line))
+        {
+            lines.push_back(line);
+            ++count;
+        }
+
+        file.close();
+        return lines;
+    }
+
+    __host__ [[nodiscard]] label_t initialiseMeanCount(const programControl &programCtrl)
+    {
+        if (fileIO::hasIndexedFiles(programCtrl.caseName()))
+        {
+            const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
+
+            const words_t lines = read_first_n_lines(fileName, 50);
+
+            const fileIO::fieldInformation fieldInfo(string::extractBlock(lines, "fieldInformation", 0));
+
+            return static_cast<label_t>(fieldInfo.meanCount());
+        }
+        else
+        {
+            return 0;
+        }
+    }
 }
 
 #include "hostArray.cuh"

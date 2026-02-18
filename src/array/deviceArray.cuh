@@ -138,7 +138,8 @@ namespace LBM
                 : ptr_(allocate_on_devices(hostArray.mesh(), hostArray.data(), allocate, programCtrl)),
                   name_(hostArray.name()),
                   mesh_(hostArray.mesh()),
-                  programCtrl_(programCtrl)
+                  programCtrl_(programCtrl),
+                  meanCount_(initialiseMeanCount(programCtrl))
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             };
@@ -160,7 +161,8 @@ namespace LBM
                 : ptr_(allocate_on_devices(mesh, value, allocate, programCtrl)),
                   name_(name),
                   mesh_(mesh),
-                  programCtrl_(programCtrl)
+                  programCtrl_(programCtrl),
+                  meanCount_(initialiseMeanCount(programCtrl))
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             };
@@ -180,7 +182,8 @@ namespace LBM
                 : ptr_(allocate_on_devices(host::array<host::PAGED, T, VelocitySet, TimeType>(name, mesh, programCtrl), allocate, programCtrl)),
                   name_(name),
                   mesh_(mesh),
-                  programCtrl_(programCtrl)
+                  programCtrl_(programCtrl),
+                  meanCount_(initialiseMeanCount(programCtrl))
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             };
@@ -305,6 +308,16 @@ namespace LBM
                 return TimeType;
             }
 
+            __host__ [[nodiscard]] inline constexpr label_t meanCount() const noexcept
+            {
+                return meanCount_;
+            }
+
+            __host__ [[nodiscard]] label_t &meanCountRef() noexcept
+            {
+                return meanCount_;
+            }
+
             /**
              * @brief Copies the array to a host pointer
              * @param hostPtr Pointer to memory allocated on the host
@@ -350,6 +363,11 @@ namespace LBM
              * @brief Reference to the program control
              **/
             const programControl &programCtrl_;
+
+            /**
+             * @brief Number of time steps averaged over (for time-averaged fields)
+             **/
+            label_t meanCount_;
 
             /**
              * @brief Allocates all partitions of the array to the devices

@@ -178,9 +178,9 @@ namespace LBM
                  * @brief Calculate time-averaged total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean(const label_t timeStep) noexcept
+                __host__ void calculateMean([[maybe_unused]] const label_t timeStep) noexcept
                 {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(rhoMean_.meanCount() + 1);
 
                     for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
@@ -199,24 +199,7 @@ namespace LBM
                             invNewCount);
                     }
 
-                    // // Calculate the mean
-                    // host::constexpr_for<0, N>(
-                    //     [&](const auto stream)
-                    //     {
-                    //         moments::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                    //             devPtrs_,
-                    //             {rhoMean_.ptr(0),
-                    //              uMean_.ptr(0),
-                    //              vMean_.ptr(0),
-                    //              wMean_.ptr(0),
-                    //              mxxMean_.ptr(0),
-                    //              mxyMean_.ptr(0),
-                    //              mxzMean_.ptr(0),
-                    //              myyMean_.ptr(0),
-                    //              myzMean_.ptr(0),
-                    //              mzzMean_.ptr(0)},
-                    //             invNewCount);
-                    //     });
+                    rhoMean_.meanCountRef()++;
                 }
 
                 /**
@@ -262,7 +245,8 @@ namespace LBM
                         mesh_,
                         componentNamesMean_,
                         hostWriteBuffer_.data(),
-                        timeStep);
+                        timeStep,
+                        rhoMean_.meanCount());
                 }
 
                 /**
