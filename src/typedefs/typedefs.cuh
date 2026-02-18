@@ -68,12 +68,14 @@ namespace LBM
     /**
      * @brief Endianness of the system: big or little
      **/
-    typedef enum endianEnum : bool
+    namespace endian
     {
-        BIG = false,
-        LITTLE = true
-    } endian_t;
-
+        typedef enum Enum : bool
+        {
+            BIG = false,
+            LITTLE = true
+        } type;
+    }
     /**
      * @brief Time stepping types: instantaneous or time-averaged
      **/
@@ -81,8 +83,8 @@ namespace LBM
     {
         typedef enum Enum : bool
         {
-            instantaneous = 0,
-            timeAverage = 1
+            timeAverage = false,
+            instantaneous = true
         } type;
     }
 

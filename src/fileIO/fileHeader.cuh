@@ -62,9 +62,23 @@ namespace LBM
          * @return The value of the parameter converted to type T
          **/
         template <typename T>
-        __host__ [[nodiscard]] inline T read(const words_t &lines, const name_t &parameterName) noexcept
+        __host__ [[nodiscard]] inline T read(const words_t &lines, const name_t &parameterName)
         {
             return string::extractParameter<T>(lines, parameterName);
+        }
+
+        /**
+         * @brief Reads a parameter of type T from the provided lines by comparing it to a particular string
+         * @tparam T The type of the parameter to read (e.g., int, float)
+         * @param[in] lines The lines of text to search for the parameter
+         * @param[in] parameterName The name of the parameter to read
+         * @param[in] trueString The string corresponding to a value of true
+         * @return The value of the parameter converted to type T
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] T read(const words_t &lines, const name_t &parameterName, const name_t &trueString)
+        {
+            return (string::extractParameterLine(lines, parameterName) == trueString) ? static_cast<T>(true) : static_cast<T>(false);
         }
 
         /**
@@ -87,14 +101,14 @@ namespace LBM
              * @param[in] systemInfoLines Text lines read from the file
              **/
             __host__ [[nodiscard]] systemInformation(const words_t &systemInfoLines)
-                : endianType_(readBinaryType(systemInfoLines)),
+                : endianType_(read<endian::type>(systemInfoLines, "binaryType", "littleEndian")),
                   scalarSize_(read<std::size_t>(systemInfoLines, "scalarSize")){};
 
             /**
              * @brief Returns the endianness of the binary data
-             * @return The endianness as a value of the endian_t enum
+             * @return The endianness as a value of the endian::type enum
              **/
-            __host__ [[nodiscard]] inline constexpr endian_t endianType() const noexcept
+            __host__ [[nodiscard]] inline constexpr endian::type endianType() const noexcept
             {
                 return endianType_;
             }
@@ -112,16 +126,7 @@ namespace LBM
             /**
              * @brief Endianness
              **/
-            const endian_t endianType_;
-
-            /**
-             * @brief Read the endian type
-             * @param[in] systemInfoLines Text lines read from the file
-             **/
-            __host__ [[nodiscard]] static endian_t readBinaryType(const words_t &systemInfoLines)
-            {
-                return (string::extractParameterLine(systemInfoLines, "binaryType") == "littleEndian") ? LITTLE : BIG;
-            }
+            const endian::type endianType_;
 
             /**
              * @brief Size of the floating point type
@@ -179,9 +184,9 @@ namespace LBM
              **/
             __host__ [[nodiscard]] fieldInformation(const words_t &fieldInfoLines)
                 : timeStep_(read<std::size_t>(fieldInfoLines, "timeStep")),
-                  timeType_(readTimeType(fieldInfoLines)),
+                  timeType_(read<time::type>(fieldInfoLines, "timeType", "instantaneous")),
                   nFields_(read<std::size_t>(fieldInfoLines, "nFields")),
-                  fieldNames_(readFieldNames(fieldInfoLines)){};
+                  fieldNames_(readFieldNames(fieldInfoLines, nFields_)){};
 
             /**
              * @brief Returns the time step of the saved fields.
@@ -241,23 +246,13 @@ namespace LBM
             const std::vector<std::string> fieldNames_;
 
             /**
-             * @brief Reads the time type from the field information block.
-             * @param[in] fieldInfoLines The lines of the field information block.
-             * @return The time type (instantaneous or time average).
-             **/
-            __host__ [[nodiscard]] static time::type readTimeType(const words_t &fieldInfoLines)
-            {
-                return (string::extractParameterLine(fieldInfoLines, "timeType") == "instantaneous") ? time::instantaneous : time::timeAverage;
-            }
-
-            /**
              * @brief Reads the field names from the field information block.
              * @param[in] fieldInfoLines The lines of the field information block.
              * @return A vector containing the field names.
              **/
-            __host__ [[nodiscard]] static words_t readFieldNames(const words_t &fieldInfoLines)
+            __host__ [[nodiscard]] static words_t readFieldNames(const words_t &fieldInfoLines, const std::size_t N)
             {
-                words_t B = string::extractBlock(fieldInfoLines, "fieldNames[10]", 0);
+                words_t B = string::extractBlock(fieldInfoLines, "fieldNames[" + std::to_string(N) + "]", 0);
 
                 for (std::size_t i = 1; i < B.size() - 1; i++)
                 {
