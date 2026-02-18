@@ -185,6 +185,7 @@ namespace LBM
             __host__ [[nodiscard]] fieldInformation(const words_t &fieldInfoLines)
                 : timeStep_(read<std::size_t>(fieldInfoLines, "timeStep")),
                   timeType_(read<time::type>(fieldInfoLines, "timeType", "instantaneous")),
+                  meanCount_(initialiseMeanCount(fieldInfoLines)),
                   nFields_(read<std::size_t>(fieldInfoLines, "nFields")),
                   fieldNames_(readFieldNames(fieldInfoLines, nFields_)){};
 
@@ -236,6 +237,11 @@ namespace LBM
             const time::type timeType_;
 
             /**
+             * @brief The number of time steps used to calculate a time average
+             **/
+            const std::size_t meanCount_;
+
+            /**
              * @brief The number of fields as a size_t.
              **/
             const std::size_t nFields_;
@@ -260,6 +266,19 @@ namespace LBM
                 }
 
                 return words_t(B.begin() + 1, B.end() - 2);
+            }
+
+            __host__ [[nodiscard]] static std::size_t initialiseMeanCount(const words_t &fieldInfoLines, const time::type TimeType)
+            {
+                if (TimeType == time::instantaneous)
+                {
+                    return 0;
+                }
+                else
+                {
+                    // Do the read of the time average here
+                    return 1;
+                }
             }
         };
 
