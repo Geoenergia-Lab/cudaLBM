@@ -221,35 +221,35 @@ namespace LBM
                     if (fieldName == "m_xx")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * u)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * u)) / rho0();
                     }
                     else if (fieldName == "m_xy")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * v)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * v)) / rho0();
                     }
                     else if (fieldName == "m_xz")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * w)) / rho0();
                     }
                     else if (fieldName == "m_yy")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * v)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((v * v)) / rho0();
                     }
                     else if (fieldName == "m_yz")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((v * w)) / rho0();
                     }
                     else if (fieldName == "m_zz")
                     {
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((w * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((w * w)) / rho0();
                     }
                     return 0; // Should never get here
                 }

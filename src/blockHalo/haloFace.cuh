@@ -256,7 +256,7 @@ namespace LBM
                         // Contiguous moment access
                         const thread::array<scalar_t, VelocitySet::Q()> pop = VelocitySet::reconstruct(
                             thread::array<scalar_t, 10>{
-                                rho0<scalar_t>() + rho[base],
+                                rho0() + rho[base],
                                 u[base],
                                 v[base],
                                 w[base],

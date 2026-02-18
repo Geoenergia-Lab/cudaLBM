@@ -64,7 +64,7 @@ namespace LBM
     /**
      * @brief Reference density 1.0
      **/
-    template <typename T>
+    template <typename T = scalar_t>
     __device__ __host__ [[nodiscard]] inline consteval T rho0() noexcept
     {
         return static_cast<T>(1);

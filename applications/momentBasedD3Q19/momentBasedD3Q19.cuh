@@ -124,7 +124,7 @@ namespace LBM
                 shared_buffer[ID] = devPtrs.ptr<moment>()[idx];
                 if constexpr (moment == index::rho)
                 {
-                    moments[moment] = shared_buffer[ID] + rho0<scalar_t>();
+                    moments[moment] = shared_buffer[ID] + rho0();
                 }
                 else
                 {
@@ -206,7 +206,7 @@ namespace LBM
         // BlockHalo::transpose_to_shared(pop, shared_buffer);
 
         // Coalesced write to global memory
-        moments[m_i<0>()] = moments[m_i<0>()] - rho0<scalar_t>();
+        moments[m_i<0>()] = moments[m_i<0>()] - rho0();
         device::constexpr_for<0, NUMBER_MOMENTS()>(
             [&](const auto moment)
             {

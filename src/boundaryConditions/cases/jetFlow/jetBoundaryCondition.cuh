@@ -66,18 +66,32 @@ case normalVector::BACK():
 
     if constexpr (new_inlet())
     {
-        const scalar_t is_jet = static_cast<scalar_t>(((dx * dx) + (dy * dy)) < r2());
-        const scalar_t rho = rho0<scalar_t>();
-        moments[m_i<0>()] = rho;                                                    // rho
-        moments[m_i<1>()] = is_jet * device::U_Back[0];                             // ux
-        moments[m_i<2>()] = is_jet * device::U_Back[1];                             // uy
-        moments[m_i<3>()] = is_jet * device::U_Back[2];                             // uz
-        moments[m_i<4>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[0]); // mxx
-        moments[m_i<5>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[1]); // mxy
-        moments[m_i<6>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[2]); // mxz
-        moments[m_i<7>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[1]); // myy
-        moments[m_i<8>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[2]); // myz
-        moments[m_i<9>()] = is_jet * (rho * device::U_Back[2] * device::U_Back[2]); // mzz
+        const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(point.value<axis::X>()) - center_x()) * (static_cast<scalar_t>(point.value<axis::X>()) - center_x()) + (static_cast<scalar_t>(point.value<axis::Y>()) - center_y()) * (static_cast<scalar_t>(point.value<axis::Y>()) - center_y()) < r2());
+
+        const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+        const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+
+        const scalar_t A = static_cast<scalar_t>(3) * (device::U_Back[2] * (device::U_Back[2] * device::U_Back[2]));
+
+        // Density
+        // moments[m_i<0>()] = (static_cast<scalar_t>(6) * rho_I) / (static_cast<scalar_t>(-5) + (A * is_jet));
+        moments[m_i<0>()] = rho0();
+        // moments[m_i<0>()] = rho0() + ((static_cast<scalar_t>(6) * rho_I) / (static_cast<scalar_t>(-5) + (A * is_jet))); // rho
+
+        // Velocity
+        moments[m_i<1>()] = is_jet * device::U_Back[0]; // ux
+        moments[m_i<2>()] = is_jet * device::U_Back[1]; // uy
+        moments[m_i<3>()] = is_jet * device::U_Back[2]; // uz
+
+        // Moments
+        moments[m_i<4>()] = static_cast<scalar_t>(0);
+        moments[m_i<5>()] = static_cast<scalar_t>(0);
+        moments[m_i<6>()] = ((static_cast<scalar_t>(5) * mxz_I) - (A * mxz_I)) / static_cast<scalar_t>(3);
+        // moments[m_i<6>()] = static_cast<scalar_t>(2) * mxz_I * rho_I / moments[m_i<0>()];
+        moments[m_i<7>()] = static_cast<scalar_t>(0);
+        moments[m_i<8>()] = ((static_cast<scalar_t>(5) * myz_I) - (A * myz_I)) / static_cast<scalar_t>(3);
+        // moments[m_i<8>()] = static_cast<scalar_t>(2) * myz_I * rho_I / moments[m_i<0>()];
+        moments[m_i<9>()] = is_jet * (moments[m_i<0>()] * device::U_Back[2] * device::U_Back[2]);
     }
     else
     {
@@ -85,7 +99,7 @@ case normalVector::BACK():
         const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
         const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-        const scalar_t rho = rho0<scalar_t>();
+        const scalar_t rho = rho0();
         const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
         const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
