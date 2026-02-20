@@ -101,7 +101,7 @@ namespace LBM
             /**
              * @brief Destructor
              **/
-            ~array() noexcept {};
+            __host__ ~array() noexcept {}
 
             /**
              * @brief Get const reference to the underlying vector.

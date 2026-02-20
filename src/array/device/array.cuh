@@ -98,12 +98,12 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] programCtrl The program control object
              **/
-            [[nodiscard]] arrayBase(
+            __host__ [[nodiscard]] arrayBase(
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl) noexcept
                 : ptr_(nullptr),
                   mesh_(mesh),
-                  programCtrl_(programCtrl) {};
+                  programCtrl_(programCtrl) {}
 
             /**
              * @brief Construct a base object with an already allocated pointer array.
@@ -111,13 +111,13 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] programCtrl The program control object
              **/
-            [[nodiscard]] arrayBase(
+            __host__ [[nodiscard]] arrayBase(
                 T **ptr,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl) noexcept
                 : ptr_(ptr),
                   mesh_(mesh),
-                  programCtrl_(programCtrl) {};
+                  programCtrl_(programCtrl) {}
 
             /**
              * @brief Allocate and copy one GPU segment of the skeleton array.
@@ -192,14 +192,14 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            arrayBase(const arrayBase &) = delete;
-            arrayBase &operator=(const arrayBase &) = delete;
+            __host__ [[nodiscard]] arrayBase(const arrayBase &) = delete;
+            __host__ [[nodiscard]] arrayBase &operator=(const arrayBase &) = delete;
 
         private:
             /**
              * @brief Free all device pointers and the host-side pointer array.
              **/
-            void free_device_pointers() noexcept
+            __host__ void free_device_pointers() noexcept
             {
                 const label_t nxGPUs = mesh_.nDevices<axis::X>();
                 const label_t nyGPUs = mesh_.nDevices<axis::Y>();

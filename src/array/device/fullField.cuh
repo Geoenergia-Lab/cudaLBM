@@ -307,7 +307,7 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                return (allocate) ? (arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nPointsPerGPU())) : (nullptr);
+                return This::allocate_on_devices(mesh, hostArrayGlobal.data(), allocate, programCtrl, mesh.nPointsPerGPU());
             }
 
             /**
@@ -324,7 +324,7 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                return (allocate) ? (arrayBase<T>::allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), programCtrl, hostArrayGlobal.mesh().nPointsPerGPU())) : (nullptr);
+                return This::allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate, programCtrl, hostArrayGlobal.mesh().nPointsPerGPU());
             }
 
             /**
@@ -342,8 +342,7 @@ namespace LBM
                 const programControl &programCtrl)
             {
                 const std::vector<T> toAllocate(static_cast<std::size_t>(allocate) * mesh.nPoints<std::size_t>(), val);
-
-                return (allocate) ? (arrayBase<T>::allocate_on_devices(mesh, toAllocate.data(), programCtrl, mesh.nPointsPerGPU())) : (nullptr);
+                return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.nPointsPerGPU());
             }
 
             /**

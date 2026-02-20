@@ -60,7 +60,9 @@ namespace LBM
 {
     namespace host
     {
-        // Forward declaration of the primary template
+        /**
+         * @brief Forward declaration of the primary template
+         **/
         template <const host::mallocType AllocationType, typename T, class VelocitySet, const time::type TimeType>
         class array;
 
@@ -95,7 +97,9 @@ namespace LBM
              * @param[in] name Field name.
              * @param[in] mesh The lattice mesh
              **/
-            arrayBase(const name_t &name, const host::latticeMesh &mesh) noexcept
+            __host__ [[nodiscard]] arrayBase(
+                const name_t &name,
+                const host::latticeMesh &mesh) noexcept
                 : name_(name),
                   mesh_(mesh) {}
 
@@ -103,13 +107,13 @@ namespace LBM
             /**
              * @brief Virtual destructor
              **/
-            virtual ~arrayBase() noexcept = default;
+            __host__ virtual ~arrayBase() noexcept = default;
 
             /**
              * @brief Disable copying
              **/
-            arrayBase(const arrayBase &) = delete;
-            arrayBase &operator=(const arrayBase &) = delete;
+            __host__ [[nodiscard]] arrayBase(const arrayBase &) = delete;
+            __host__ [[nodiscard]] arrayBase &operator=(const arrayBase &) = delete;
 
             /**
              * @brief Get the field name.

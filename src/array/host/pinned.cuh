@@ -84,7 +84,9 @@ namespace LBM
              * @param[in] nPoints Number of elements.
              * @param[in] mesh The lattice mesh
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints, const host::latticeMesh &mesh)
+            __host__ [[nodiscard]] array(
+                const label_t nPoints,
+                const host::latticeMesh &mesh)
                 : arrayBase<T, VelocitySet, TimeType>("", mesh),
                   ptr_(host::allocate<T>(nPoints, 0)),
                   nPoints_(nPoints) {}
@@ -95,7 +97,10 @@ namespace LBM
              * @param[in] val Initial value.
              * @param[in] mesh The lattice mesh
              **/
-            __host__ [[nodiscard]] array(const label_t nPoints, const T val, const host::latticeMesh &mesh)
+            __host__ [[nodiscard]] array(
+                const label_t nPoints,
+                const T val,
+                const host::latticeMesh &mesh)
                 : arrayBase<T, VelocitySet, TimeType>("", mesh),
                   ptr_(host::allocate<T>(nPoints, val)),
                   nPoints_(nPoints) {}
@@ -103,18 +108,10 @@ namespace LBM
             /**
              * @brief Destructor – frees the pinned memory.
              **/
-            ~array() noexcept
+            __host__ ~array() noexcept
             {
-                if constexpr (verbose())
-                {
-                    std::cout << "Freeing pinned host pointer" << std::endl;
-                }
                 errorHandler::check(cudaFreeHost(ptr_));
-                if constexpr (verbose())
-                {
-                    std::cout << "Freed pinned host pointer" << std::endl;
-                }
-            }
+            };
 
             /**
              * @brief Get raw pointer to the data (read‑only).
@@ -185,12 +182,7 @@ namespace LBM
 
                 for (label_t field = 0; field < N; ++field)
                 {
-                    errorHandler::check(
-                        cudaMemcpy(
-                            &(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]),
-                            devPtrs[field],
-                            nPointsPerGPU * sizeof(T),
-                            cudaMemcpyDeviceToHost));
+                    errorHandler::check(cudaMemcpy(&(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]), devPtrs[field], nPointsPerGPU * sizeof(T), cudaMemcpyDeviceToHost));
                 }
             }
 
