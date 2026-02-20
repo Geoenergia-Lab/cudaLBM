@@ -201,7 +201,7 @@ namespace LBM
         Collision::collide(moments);
 
         // Calculate post collision populations
-        VelocitySet::reconstruct(pop, moments);
+        // VelocitySet::reconstruct(pop, moments);
 
         // Coalesced write to global memory
         moments[m_i<0>()] = moments[m_i<0>()] - rho0();
@@ -212,7 +212,7 @@ namespace LBM
             });
 
         // Save the populations to the block halo
-        BlockHalo::save(pop, gGhost, Tx, Bx, point);
+        BlockHalo::save(pop, moments, gGhost, Tx, Bx, point);
     }
 }
 

@@ -128,8 +128,6 @@ namespace LBM
             const label_t talpha, const label_t tbeta,
             const block::coordinate &Bx) noexcept
         {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-
             return idxPop<alpha, pop, QF>(talpha, tbeta, Bx.value<axis::X>(), Bx.value<axis::Y>(), Bx.value<axis::Z>());
         }
 
@@ -143,9 +141,7 @@ namespace LBM
             const dim2<alpha> &ij,
             const block::coordinate &Bx) noexcept
         {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-            return idxPop<alpha, pop, QF>(ij.x(), ij.y(), Bx.value<axis::X>(), Bx.value<axis::Y>(), Bx.value<axis::Z>());
+            return idxPop<alpha, pop, QF>(ij.i(), ij.j(), Bx.value<axis::X>(), Bx.value<axis::Y>(), Bx.value<axis::Z>());
         }
     }
 }

@@ -97,7 +97,7 @@ namespace LBM
             /**
              * @brief Destructor - releases all allocated device memory
              **/
-            ~haloFace() noexcept {}
+            __host__ ~haloFace() noexcept {}
 
             /**
              * @name Read-only Accessors

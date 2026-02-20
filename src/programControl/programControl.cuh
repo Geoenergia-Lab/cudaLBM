@@ -115,11 +115,15 @@ namespace LBM
             std::cout << "    saveInterval = " << saveInterval_ << ";" << std::endl;
             std::cout << "    infoInterval = " << infoInterval_ << ";" << std::endl;
             std::cout << "    latestTime = " << latestTime_ << ";" << std::endl;
-            std::cout << "    scalarSize: " << ((sizeof(scalar_t) == 4) ? "32" : "64") << ";" << std::endl;
-            std::cout << "    labelType: " << ((sizeof(label_t) == 4) ? "uint32_t" : "uint64_t") << ";" << std::endl;
+            std::cout << "    scalarSize: " << sizeof(scalar_t) * 8 << ";" << std::endl;
+            std::cout << "    labelType: uint" << sizeof(label_t) * 8 << "_t" << ";" << std::endl;
             std::cout << "};" << std::endl;
             std::cout << std::endl;
 
+            // Make sure we synchronize and set active device to 0
+            // Probably unnecessary but nice to do it anyway
+            errorHandler::check(cudaDeviceSynchronize());
+            errorHandler::check(cudaSetDevice(deviceList()[0]));
             errorHandler::check(cudaDeviceSynchronize());
         };
 

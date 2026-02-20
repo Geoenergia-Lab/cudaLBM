@@ -1,7 +1,7 @@
 make install
 cd D3Q27
-testExecutable
+# testExecutable
 # source cleanCase.sh
-# testExecutable -GPU 0,1
+testExecutable -GPU 0,1
 # fieldConvert -fileType vts -latestTime
 cd ../

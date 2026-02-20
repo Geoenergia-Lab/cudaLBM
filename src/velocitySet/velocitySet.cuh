@@ -429,6 +429,30 @@ namespace LBM
 
             return (VelocitySet::template c<int, alpha>()[q] > 0);
         }
+
+    protected:
+        /**
+         * @brief Returns the string corresponding to a lattice velocity coefficient
+         * @tparam coeff The velocity coefficient
+         **/
+        template <const int coeff>
+        __host__ [[nodiscard]] static inline consteval const char *c()
+        {
+            if constexpr (coeff == 0)
+            {
+                return "0";
+            }
+
+            if constexpr (coeff == -1)
+            {
+                return "-1";
+            }
+
+            if constexpr (coeff == 1)
+            {
+                return "+1";
+            }
+        }
     };
 }
 

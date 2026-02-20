@@ -110,7 +110,7 @@ namespace LBM
              **/
             __host__ ~array() noexcept
             {
-                errorHandler::check(cudaFreeHost(ptr_));
+                errorHandler::check(cudaFreeHost(const_cast<T *>(ptr_)));
             };
 
             /**

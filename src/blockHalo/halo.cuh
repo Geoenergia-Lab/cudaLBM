@@ -104,7 +104,7 @@ namespace LBM
             /**
              * @brief Default destructor
              **/
-            ~halo() {}
+            __host__ ~halo() {}
 
             /**
              * @brief Swaps read and write halo buffers
@@ -152,33 +152,39 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::load, "Potential issue with condition checking (e.g. West, East, etc)."));
 
+                // No boundary check
                 if (Tx.value<axis::X>() == 0)
                 {
                     // West
                     load_face<axis::X, +1, 1>(pop, fGhost, Tx, Bx);
                 }
+                // No boundary check
                 else if (Tx.value<axis::X>() == (block::n<axis::X>() - 1))
                 {
                     // East
                     load_face<axis::X, -1, 0>(pop, fGhost, Tx, Bx);
                 }
 
+                // No boundary check
                 if (Tx.value<axis::Y>() == 0)
                 {
                     // South
                     load_face<axis::Y, +1, 3>(pop, fGhost, Tx, Bx);
                 }
+                // No boundary check
                 else if (Tx.value<axis::Y>() == (block::n<axis::Y>() - 1))
                 {
                     // North
                     load_face<axis::Y, -1, 2>(pop, fGhost, Tx, Bx);
                 }
 
+                // No boundary check
                 if (Tx.value<axis::Z>() == 0)
                 {
                     // Back
                     load_face<axis::Z, +1, 5>(pop, fGhost, Tx, Bx);
                 }
+                // No boundary check
                 else if (Tx.value<axis::Z>() == (block::n<axis::Z>() - 1))
                 {
                     // Front
@@ -194,10 +200,17 @@ namespace LBM
              * This device function saves population values to halo regions for
              * neighboring blocks to read.
              **/
-            __device__ static inline constexpr void save(const thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, scalar_t> &gGhost, const thread::coordinate &Tx, const block::coordinate &Bx, const device::pointCoordinate &point) noexcept
+            __device__ static inline constexpr void save(
+                thread::array<scalar_t, VelocitySet::Q()> &pop,
+                const thread::array<scalar_t, 10> &moments,
+                const device::ptrCollection<6, scalar_t> &gGhost,
+                const thread::coordinate &Tx,
+                const block::coordinate &Bx,
+                const device::pointCoordinate &point) noexcept
             {
-
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::save, "Potential issue with condition checking (e.g. West, East, etc)."));
+
+                VelocitySet::reconstruct<false>(pop, moments);
 
                 if (West(point.value<axis::X>(), Tx))
                 {

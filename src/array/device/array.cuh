@@ -218,13 +218,13 @@ namespace LBM
                             {
                                 errorHandler::check(cudaDeviceSynchronize());
                                 errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[virtualDeviceIndex]));
-                                errorHandler::check(cudaFree(ptr_[virtualDeviceIndex]));
+                                errorHandler::check(cudaFree(const_cast<T *>(ptr_[virtualDeviceIndex])));
                                 errorHandler::check(cudaDeviceSynchronize());
                             }
                         });
 
                 errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[0]));
-                errorHandler::check(cudaFreeHost(ptr_));
+                errorHandler::check(cudaFreeHost(const_cast<T **>(ptr_)));
             }
         };
     }
