@@ -75,7 +75,7 @@ namespace LBM
 
 #ifdef SUBSEAMECHANICALDISPERSION
     using BoundaryConditions = subseaMechanicalDispersion;
-    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return true; }
+    __device__ __host__ [[nodiscard]] inline consteval bool periodicX() noexcept { return false; }
     __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif
 

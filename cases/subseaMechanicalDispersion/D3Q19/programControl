@@ -17,19 +17,19 @@ We              500;
 
 interfaceWidth  4;
 
-u_inf           0.016;
+u_inf           0.05;
 
-L_char          8;
+L_char          13;
 
 startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      100001;
+nTimeSteps      200001;
 
-saveInterval    2500;
+saveInterval    1000;
 
-infoInterval    2500;
+infoInterval    1000;
 
 multiphase      true;
 
