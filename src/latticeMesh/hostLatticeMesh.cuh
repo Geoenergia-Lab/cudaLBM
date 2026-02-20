@@ -90,16 +90,9 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(host::latticeMesh));
 
-                std::cout << "latticeMesh:" << std::endl;
-                std::cout << "{" << std::endl;
-                std::cout << "    nx = " << n_.nx << ";" << std::endl;
-                std::cout << "    ny = " << n_.ny << ";" << std::endl;
-                std::cout << "    nz = " << n_.nz << ";" << std::endl;
-                std::cout << "    Lx = " << L_.x << ";" << std::endl;
-                std::cout << "    Ly = " << L_.y << ";" << std::endl;
-                std::cout << "    Lz = " << L_.z << ";" << std::endl;
-                std::cout << "};" << std::endl;
-                std::cout << std::endl;
+                n_.print("latticeMesh");
+
+                L_.print("meshSize");
 
                 std::cout << "block:" << std::endl;
                 std::cout << "{" << std::endl;
@@ -111,19 +104,19 @@ namespace LBM
 
                 // Perform a block dimensions safety check
                 {
-                    if (!(block::nx() * nxBlocks() == n_.nx))
+                    if (!(block::nx() * nxBlocks() == n_.x))
                     {
                         throw std::runtime_error("block::nx() * mesh.nxBlocks() not equal to mesh.nx()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::ny() * nyBlocks() == n_.ny))
+                    if (!(block::ny() * nyBlocks() == n_.y))
                     {
                         throw std::runtime_error("block::ny() * mesh.nyBlocks() not equal to mesh.ny()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::nz() * nzBlocks() == n_.nz))
+                    if (!(block::nz() * nzBlocks() == n_.z))
                     {
                         throw std::runtime_error("block::nz() * mesh.nzBlocks() not equal to mesh.nz()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() == n_.nx * n_.ny * n_.nz))
+                    if (!(block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() == n_.x * n_.y * n_.z))
                     {
                         throw std::runtime_error("block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() not equal to mesh.nPoints()\nMesh dimensions should be multiples of 8");
                     }
@@ -131,9 +124,9 @@ namespace LBM
 
                 // Safety check for the mesh dimensions
                 {
-                    const uintmax_t nxTemp = static_cast<uintmax_t>(n_.nx);
-                    const uintmax_t nyTemp = static_cast<uintmax_t>(n_.ny);
-                    const uintmax_t nzTemp = static_cast<uintmax_t>(n_.nz);
+                    const uintmax_t nxTemp = static_cast<uintmax_t>(n_.x);
+                    const uintmax_t nyTemp = static_cast<uintmax_t>(n_.y);
+                    const uintmax_t nzTemp = static_cast<uintmax_t>(n_.z);
                     const uintmax_t nPointsTemp = nxTemp * nyTemp * nzTemp;
                     constexpr const uintmax_t typeLimit = static_cast<uintmax_t>(std::numeric_limits<label_t>::max());
 
@@ -152,9 +145,9 @@ namespace LBM
                     for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < programCtrl.deviceList().size(); virtualDeviceIndex++)
                     {
                         // Calculate the per-GPU allocation size
-                        const label_t nxPointsPerGPU = n_.nx / nDevices_.nx;
-                        const label_t nyPointsPerGPU = n_.ny / nDevices_.ny;
-                        const label_t nzPointsPerGPU = n_.nz / nDevices_.nz;
+                        const label_t nxPointsPerGPU = n_.x / nDevices_.x;
+                        const label_t nyPointsPerGPU = n_.y / nDevices_.y;
+                        const label_t nzPointsPerGPU = n_.z / nDevices_.z;
                         const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
                         const cudaDeviceProp props = GPU::properties(programCtrl.deviceList()[virtualDeviceIndex]);
@@ -209,14 +202,14 @@ namespace LBM
                                 device::copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
                             }
 
-                            const label_t nxBlocksPerGPU = nxBlocks() / nDevices_.nx;
-                            const label_t nyBlocksPerGPU = nyBlocks() / nDevices_.ny;
-                            const label_t nzBlocksPerGPU = nzBlocks() / nDevices_.nz;
+                            const label_t nxBlocksPerGPU = nxBlocks() / nDevices_.x;
+                            const label_t nyBlocksPerGPU = nyBlocks() / nDevices_.y;
+                            const label_t nzBlocksPerGPU = nzBlocks() / nDevices_.z;
 
                             // Allocate mesh symbols on the GPU
-                            device::copyToSymbol(device::nx, n_.nx);
-                            device::copyToSymbol(device::ny, n_.ny);
-                            device::copyToSymbol(device::nz, n_.nz);
+                            device::copyToSymbol(device::nx, n_.x);
+                            device::copyToSymbol(device::ny, n_.y);
+                            device::copyToSymbol(device::nz, n_.z);
                             device::copyToSymbol(device::NUM_BLOCK_X, nxBlocksPerGPU);
                             device::copyToSymbol(device::NUM_BLOCK_Y, nyBlocksPerGPU);
                             device::copyToSymbol(device::NUM_BLOCK_Z, nzBlocksPerGPU);
@@ -233,7 +226,7 @@ namespace LBM
              * @param[in] meshDimensions The dimensions of the mesh to construct
              **/
             __host__ [[nodiscard]] latticeMesh(const host::latticeMesh &mesh, const blockLabel_t &meshDimensions) noexcept
-                : n_({meshDimensions.nx, meshDimensions.ny, meshDimensions.nz}),
+                : n_({meshDimensions.x, meshDimensions.y, meshDimensions.z}),
                   nPoints_(meshDimensions.size()),
                   L_(mesh.L()),
                   nDevices_(initialise_device_list("deviceDecomposition")) {}
@@ -246,17 +239,17 @@ namespace LBM
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nx() const noexcept
             {
-                return static_cast<T>(n_.nx);
+                return static_cast<T>(n_.x);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T ny() const noexcept
             {
-                return static_cast<T>(n_.ny);
+                return static_cast<T>(n_.y);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nz() const noexcept
             {
-                return static_cast<T>(n_.nz);
+                return static_cast<T>(n_.z);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nPoints() const noexcept
@@ -266,20 +259,7 @@ namespace LBM
             template <axis::type alpha, typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T n() const noexcept
             {
-                if constexpr (alpha == axis::X)
-                {
-                    return static_cast<T>(n_.nx);
-                }
-
-                if constexpr (alpha == axis::Y)
-                {
-                    return static_cast<T>(n_.ny);
-                }
-
-                if constexpr (alpha == axis::Z)
-                {
-                    return static_cast<T>(n_.nz);
-                }
+                return static_cast<T>(n_.value<alpha>());
             }
 
             /**
@@ -290,17 +270,17 @@ namespace LBM
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nxBlocks() const noexcept
             {
-                return n_.nx / block::nx();
+                return n_.x / block::nx();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nyBlocks() const noexcept
             {
-                return n_.ny / block::ny();
+                return n_.y / block::ny();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nzBlocks() const noexcept
             {
-                return n_.nz / block::nz();
+                return n_.z / block::nz();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nBlocks() const noexcept
@@ -323,7 +303,7 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline constexpr dim3 gridBlock() const noexcept
             {
-                return {static_cast<uint32_t>(n_.nx / block::nx()), static_cast<uint32_t>(n_.ny / block::ny()), static_cast<uint32_t>(n_.nz / block::nz())};
+                return {static_cast<uint32_t>(n_.x / block::nx()), static_cast<uint32_t>(n_.y / block::ny()), static_cast<uint32_t>(n_.z / block::nz())};
             }
 
             /**
@@ -341,7 +321,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr label_t nDims() const noexcept
             {
-                return static_cast<label_t>(n_.nx > 1) + static_cast<label_t>(n_.ny > 1) + static_cast<label_t>(n_.nz > 1);
+                return static_cast<label_t>(n_.x > 1) + static_cast<label_t>(n_.y > 1) + static_cast<label_t>(n_.z > 1);
             }
 
             /**
@@ -355,7 +335,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool East(const label_t x) const noexcept
             {
-                return (x == n_.nx - 1);
+                return (x == n_.x - 1);
             }
             __host__ [[nodiscard]] inline constexpr bool South(const label_t y) const noexcept
             {
@@ -363,7 +343,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool North(const label_t y) const noexcept
             {
-                return (y == n_.ny - 1);
+                return (y == n_.y - 1);
             }
             __host__ [[nodiscard]] inline constexpr bool Back(const label_t z) const noexcept
             {
@@ -371,7 +351,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool Front(const label_t z) const noexcept
             {
-                return (z == n_.nz - 1);
+                return (z == n_.z - 1);
             }
 
             /**
@@ -382,20 +362,7 @@ namespace LBM
             template <const axis::type alpha, typename T = label_t>
             __host__ [[nodiscard]] inline constexpr T nDevices() const noexcept
             {
-                if constexpr (alpha == axis::X)
-                {
-                    return static_cast<T>(nDevices_.nx);
-                }
-
-                if constexpr (alpha == axis::Y)
-                {
-                    return static_cast<T>(nDevices_.ny);
-                }
-
-                if constexpr (alpha == axis::Z)
-                {
-                    return static_cast<T>(nDevices_.nz);
-                }
+                return nDevices_.value<alpha>();
             }
 
             /**
@@ -410,7 +377,7 @@ namespace LBM
 
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-                return n<axis::orthogonal<alpha, 0>()>() * n<axis::orthogonal<alpha, 1>()>() * QF;
+                return n_.x * n_.y * n_.z * QF / block::n<alpha>();
             }
 
             /**
@@ -418,9 +385,9 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr label_t nPointsPerGPU() const noexcept
             {
-                const label_t nxPointsPerGPU = n_.nx / nDevices<axis::X>();
-                const label_t nyPointsPerGPU = n_.ny / nDevices<axis::Y>();
-                const label_t nzPointsPerGPU = n_.nz / nDevices<axis::Z>();
+                const label_t nxPointsPerGPU = n_.x / nDevices<axis::X>();
+                const label_t nyPointsPerGPU = n_.y / nDevices<axis::Y>();
+                const label_t nzPointsPerGPU = n_.z / nDevices<axis::Z>();
                 const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
                 return nPointsPerGPU;

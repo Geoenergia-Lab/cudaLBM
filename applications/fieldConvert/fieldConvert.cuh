@@ -206,20 +206,7 @@ namespace LBM
     {
         axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-        if constexpr (alpha == axis::X)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.ny<std::size_t>() * mesh.nz<std::size_t>(), 0));
-        }
-
-        if constexpr (alpha == axis::Y)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.nx<std::size_t>() * mesh.nz<std::size_t>(), 0));
-        }
-
-        if constexpr (alpha == axis::Z)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.nx<std::size_t>() * mesh.ny<std::size_t>(), 0));
-        }
+        return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.n<axis::orthogonal<alpha, 0>(), std::size_t>() * mesh.n<axis::orthogonal<alpha, 1>(), std::size_t>(), 0));
     }
 
     template <const axis::type alpha>
@@ -227,18 +214,7 @@ namespace LBM
     {
         axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-        if constexpr (alpha == axis::X)
-        {
-            return static_cast<scalar_t>(mesh.nx() - 1) * (pointCoordinate * mesh.L().x);
-        }
-        if constexpr (alpha == axis::Y)
-        {
-            return static_cast<scalar_t>(mesh.ny() - 1) * (pointCoordinate * mesh.L().y);
-        }
-        if constexpr (alpha == axis::Z)
-        {
-            return static_cast<scalar_t>(mesh.nz() - 1) * (pointCoordinate * mesh.L().z);
-        }
+        return static_cast<scalar_t>(mesh.n<alpha>() - 1) * (pointCoordinate * mesh.L().value<alpha>());
     }
 
     template <typename T>

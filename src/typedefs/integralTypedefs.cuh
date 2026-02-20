@@ -109,27 +109,6 @@ namespace LBM
     using q_i = const integralConstant<label_t, label>;
     template <const label_t label>
     using m_i = const integralConstant<label_t, label>;
-
-    /**
-     * @brief Block dimensions descriptor
-     * @details Stores lattice dimensions in 3D space
-     **/
-    struct blockLabel_t
-    {
-        const label_t nx; // < Lattice points in x-direction
-        const label_t ny; // < Lattice points in y-direction
-        const label_t nz; // < Lattice points in z-direction
-
-        __device__ __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
-        {
-            return nx * ny * nz;
-        }
-
-        void print(const name_t &name) const noexcept
-        {
-            std::cout << "    " << name << " = [" << nx << ", " << ny << ", " << nz << "];" << std::endl;
-        }
-    };
 }
 
 #endif

@@ -232,11 +232,11 @@ namespace LBM
         const T nz,
         const F &&f) noexcept
     {
-        for (T z = 0; z < nz - static_cast<T>(Indent.nz); z++)
+        for (T z = 0; z < nz - static_cast<T>(Indent.z); z++)
         {
-            for (T y = 0; y < ny - static_cast<T>(Indent.ny); y++)
+            for (T y = 0; y < ny - static_cast<T>(Indent.y); y++)
             {
-                for (T x = 0; x < nx - static_cast<T>(Indent.nx); x++)
+                for (T x = 0; x < nx - static_cast<T>(Indent.x); x++)
                 {
                     f(x, y, z);
                 }

@@ -70,16 +70,6 @@ namespace LBM
     static_assert(false, "SCALAR_PRECISION not defined");
     typedef float scalar_t;
 #endif
-
-    /**
-     * @brief Struct used to hold three-dimensional coordinates of a point
-     **/
-    struct pointVector
-    {
-        const scalar_t x;
-        const scalar_t y;
-        const scalar_t z;
-    };
 }
 
 #endif

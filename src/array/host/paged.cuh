@@ -96,7 +96,10 @@ namespace LBM
                 const programControl &programCtrl)
                 : arrayBase<T, VelocitySet, TimeType>(name, mesh),
                   arr_(initialise_array(mesh, name, programCtrl)),
-                  meanCount_(initialiseMeanCount(programCtrl)) {}
+                  meanCount_(initialiseMeanCount(programCtrl))
+            {
+                std::cout << "Initialized host::PAGED array '" << name_ << "' with " << arr_.size() << " elements." << std::endl;
+            }
 
             /**
              * @brief Destructor
