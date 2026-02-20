@@ -126,7 +126,7 @@ namespace LBM
         /**
          * @brief Destructor for the programControl class
          **/
-        ~programControl() noexcept {};
+        ~programControl() noexcept {}
 
         /**
          * @brief Returns the name of the case

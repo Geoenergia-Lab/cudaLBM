@@ -61,7 +61,7 @@ namespace LBM
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval invalidBoundaryCondition(){};
+        __device__ __host__ [[nodiscard]] inline consteval invalidBoundaryCondition() {}
 
         /**
          * @brief Periodic boundary definitions

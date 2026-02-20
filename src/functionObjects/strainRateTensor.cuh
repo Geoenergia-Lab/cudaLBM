@@ -291,7 +291,7 @@ namespace LBM
                 /**
                  * @brief Default destructor
                  **/
-                ~tensor() {};
+                ~tensor() {}
 
                 /**
                  * @brief Check if instantaneous calculation is enabled

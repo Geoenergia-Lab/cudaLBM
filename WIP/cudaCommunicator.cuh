@@ -25,7 +25,7 @@ namespace LBM
             std::cout << "Total rank: " << totalRank_ << std::endl;
         };
 
-        ~cudaCommunicator() noexcept {};
+        ~cudaCommunicator() noexcept {}
 
         /**
          * @brief Returns the process MPI rank

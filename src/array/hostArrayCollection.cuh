@@ -72,7 +72,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] arrayCollection(const programControl &programCtrl, const words_t &varNames, const host::latticeMesh &mesh)
                 : arr_(initialiseVector(programCtrl, mesh)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from specific time index
@@ -85,7 +85,7 @@ namespace LBM
                 const words_t &varNames,
                 const label_t timeIndex)
                 : arr_(initialiseVector(programCtrl, timeIndex)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from latest available time
@@ -96,7 +96,7 @@ namespace LBM
                 const programControl &programCtrl,
                 const words_t &varNames)
                 : arr_(initialiseVector(programCtrl)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from a file prefix
@@ -109,12 +109,12 @@ namespace LBM
                 const words_t &varNames,
                 const label_t timeIndex)
                 : arr_(initialiseVector(fileNamePrefix, timeIndex)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Destructor for the host arrayCollection class
              **/
-            ~arrayCollection() {};
+            ~arrayCollection() {}
 
             /**
              * @brief Get read-only access to underlying data

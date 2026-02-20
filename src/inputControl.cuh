@@ -76,12 +76,12 @@ namespace LBM
         __host__ [[nodiscard]] inputControl(const int argc, const char *const argv[]) noexcept
             : nArgs_(nArgsCheck(argc)),
               commandLine_(parseCommandLine(argc, argv)),
-              deviceList_(initialiseDeviceList()){};
+              deviceList_(initialiseDeviceList()) {}
 
         /**
          * @brief Destructor for the inputControl class
          **/
-        ~inputControl() noexcept {};
+        ~inputControl() noexcept {}
 
         /**
          * @brief Returns the device list as a vector of ints

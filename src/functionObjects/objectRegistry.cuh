@@ -87,12 +87,12 @@ namespace LBM
               S_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
               k_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
               functionVector_(functionObjectCallInitialiser(M_, S_, k_)),
-              saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {};
+              saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {}
 
         /**
          * @brief Default destructor
          **/
-        ~objectRegistry() {};
+        ~objectRegistry() {}
 
         /**
          * @brief Executes all registered function object calculations for given time step

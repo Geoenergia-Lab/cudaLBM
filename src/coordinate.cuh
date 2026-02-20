@@ -65,7 +65,7 @@ namespace LBM
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
                 : x(static_cast<label_t>(threadIdx.x)),
                   y(static_cast<label_t>(threadIdx.y)),
-                  z(static_cast<label_t>(threadIdx.z)){};
+                  z(static_cast<label_t>(threadIdx.z)) {}
 
             /**
              * @brief Returns the ordinate in a particular axis
@@ -141,7 +141,7 @@ namespace LBM
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
                 : x(static_cast<label_t>(blockIdx.x)),
                   y(static_cast<label_t>(blockIdx.y)),
-                  z(static_cast<label_t>(blockIdx.z)){};
+                  z(static_cast<label_t>(blockIdx.z)) {}
 
             /**
              * @brief Returns the ordinate in a particular axis
@@ -221,7 +221,7 @@ namespace LBM
                 const block::coordinate &Bx) noexcept
                 : x(Tx.value<axis::X>() + block::nx<label_t>() * (Bx.value<axis::X>() + device::BLOCK_OFFSET_X)),
                   y(Tx.value<axis::Y>() + block::ny<label_t>() * (Bx.value<axis::Y>() + device::BLOCK_OFFSET_Y)),
-                  z(Tx.value<axis::Z>() + block::nz<label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)){};
+                  z(Tx.value<axis::Z>() + block::nz<label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)) {}
 
             /**
              * @brief Returns the ordinate in a particular axis

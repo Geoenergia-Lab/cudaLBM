@@ -80,7 +80,7 @@ namespace LBM
          * @param[in] Bx Block coordinates
          **/
         __device__ [[nodiscard]] inline constexpr normalVector(const device::pointCoordinate &point) noexcept
-            : bitmask_(computeBitmask(point)){};
+            : bitmask_(computeBitmask(point)) {}
 
         /**
          * @name Basic Boundary Flags

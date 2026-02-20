@@ -78,7 +78,7 @@ namespace LBM
                   boundaryValue<VelocitySet, Scaled>(fieldName, "Back"),
                   boundaryValue<VelocitySet, Scaled>(fieldName, "Front"),
                   boundaryValue<VelocitySet, Scaled>(fieldName, "internalField")},
-              fieldName_(fieldName){};
+              fieldName_(fieldName) {}
 
         /**
          * @name Region Accessors

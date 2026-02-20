@@ -238,7 +238,7 @@ namespace LBM
                   nz_(meshDimensions.nz),
                   nPoints_(nx_ * ny_ * nz_),
                   L_(mesh.L()),
-                  nDevices_(initialise_device_list("deviceDecomposition")){};
+                  nDevices_(initialise_device_list("deviceDecomposition")) {}
 
             /**
              * @name Grid Dimension Accessors

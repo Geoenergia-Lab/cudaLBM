@@ -145,7 +145,7 @@ namespace LBM
                 /**
                  * @brief Default destructor
                  **/
-                ~collection() {};
+                ~collection() {}
 
                 /**
                  * @brief Check if instantaneous calculation is enabled

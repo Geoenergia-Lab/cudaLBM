@@ -69,7 +69,7 @@ namespace LBM
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval lidDrivenCavity(){};
+        __device__ __host__ [[nodiscard]] inline consteval lidDrivenCavity() {}
 
         /**
          * @brief Periodic boundary definitions

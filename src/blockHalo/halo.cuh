@@ -99,12 +99,12 @@ namespace LBM
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_yz", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_zz", mesh, programCtrl),
                       mesh,
-                      programCtrl)){};
+                      programCtrl)) {}
 
             /**
              * @brief Default destructor
              **/
-            ~halo() {};
+            ~halo() {}
 
             /**
              * @brief Swaps read and write halo buffers

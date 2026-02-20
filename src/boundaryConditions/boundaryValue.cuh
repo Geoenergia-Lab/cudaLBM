@@ -73,7 +73,7 @@ namespace LBM
          * @throws std::runtime_error if field name is invalid or configuration is malformed
          **/
         __host__ [[nodiscard]] boundaryValue(const name_t &fieldName, const name_t &regionName)
-            : value(initialiseValue(fieldName, regionName)){};
+            : value(initialiseValue(fieldName, regionName)) {}
 
         /**
          * @brief Access the stored boundary value

@@ -90,7 +90,7 @@ namespace LBM
         /**
          * @brief Default constructor (consteval)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval velocitySet() noexcept {};
+        __device__ __host__ [[nodiscard]] inline consteval velocitySet() noexcept {}
 
         /**
          * @brief Get the a^2 constant (3.0)

@@ -90,7 +90,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] systemInformation(const words_t &systemInfoLines)
                 : endianType_(read<endian::type>(systemInfoLines, "binaryType", "littleEndian")),
-                  scalarSize_(read<std::size_t>(systemInfoLines, "scalarSize")){};
+                  scalarSize_(read<std::size_t>(systemInfoLines, "scalarSize")) {}
 
             /**
              * @brief Returns the endianness of the binary data
@@ -131,7 +131,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] meshPrimitive(const words_t &meshLines)
                 : nPoints_({read<label_t>(meshLines, "nx"), read<label_t>(meshLines, "ny"), read<label_t>(meshLines, "nz")}),
-                  nDevices_({read<label_t>(meshLines, "nxGPUs"), read<label_t>(meshLines, "nyGPUs"), read<label_t>(meshLines, "nzGPUs")}){};
+                  nDevices_({read<label_t>(meshLines, "nxGPUs"), read<label_t>(meshLines, "nyGPUs"), read<label_t>(meshLines, "nzGPUs")}) {}
 
             /**
              * @brief Returns the number of lattice points in each direction as a blockLabel_t struct.
@@ -175,7 +175,7 @@ namespace LBM
                   timeType_(read<time::type>(fieldInfoLines, "timeType", "instantaneous")),
                   meanCount_(initialiseMeanCount(fieldInfoLines, timeType_)),
                   nFields_(read<std::size_t>(fieldInfoLines, "nFields")),
-                  fieldNames_(readFieldNames(fieldInfoLines, nFields_)){};
+                  fieldNames_(readFieldNames(fieldInfoLines, nFields_)) {}
 
             /**
              * @brief Returns the time step of the saved fields.

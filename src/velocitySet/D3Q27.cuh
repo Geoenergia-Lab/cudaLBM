@@ -100,7 +100,7 @@ namespace LBM
         /**
          * @brief Default constructor (consteval)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval D3Q27(){};
+        __device__ __host__ [[nodiscard]] inline consteval D3Q27() {}
 
         /**
          * @brief Get number of discrete velocity directions

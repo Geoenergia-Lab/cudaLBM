@@ -73,7 +73,7 @@ namespace LBM
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval jetFlow(){};
+        __device__ __host__ [[nodiscard]] inline consteval jetFlow() {}
 
         /**
          * @brief Periodic boundary definitions

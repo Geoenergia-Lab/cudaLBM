@@ -69,7 +69,7 @@ namespace LBM
             __device__ [[nodiscard]] inline constexpr pointLabel_t(const dim3 &label) noexcept
                 : x(static_cast<label_t>(label.x)),
                   y(static_cast<label_t>(label.y)),
-                  z(static_cast<label_t>(label.z)){};
+                  z(static_cast<label_t>(label.z)) {}
 
             /**
              * @brief Constructor for pointLabel_t
@@ -80,7 +80,7 @@ namespace LBM
             __device__ [[nodiscard]] inline constexpr pointLabel_t(const label_t X, const label_t Y, const label_t Z) noexcept
                 : x(X),
                   y(Y),
-                  z(Z){};
+                  z(Z) {}
 
             const label_t x;
             const label_t y;

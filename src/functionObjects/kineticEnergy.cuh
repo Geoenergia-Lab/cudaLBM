@@ -207,7 +207,7 @@ namespace LBM
                 /**
                  * @brief Default destructor
                  **/
-                ~scalar() {};
+                ~scalar() {}
 
                 /**
                  * @brief Check if instantaneous calculation is enabled
