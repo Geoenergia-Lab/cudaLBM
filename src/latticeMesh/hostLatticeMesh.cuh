@@ -78,10 +78,11 @@ namespace LBM
              * - Initialization of device constants for GPU execution
              **/
             __host__ [[nodiscard]] latticeMesh([[maybe_unused]] const programControl &programCtrl)
-                : n_({string::extractParameter<label_t>(string::readFile("latticeMesh"), "nx"),
-                      string::extractParameter<label_t>(string::readFile("latticeMesh"), "ny"),
-                      string::extractParameter<label_t>(string::readFile("latticeMesh"), "nz")}),
-                  nPoints_(n_.size()),
+                : dimensions_(
+                      {string::extractParameter<label_t>(string::readFile("latticeMesh"), "nx"),
+                       string::extractParameter<label_t>(string::readFile("latticeMesh"), "ny"),
+                       string::extractParameter<label_t>(string::readFile("latticeMesh"), "nz")}),
+                  nPoints_(dimensions_.size()),
                   L_(
                       {string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Lx"),
                        string::extractParameter<scalar_t>(string::readFile("latticeMesh"), "Ly"),
@@ -90,33 +91,27 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(host::latticeMesh));
 
-                n_.print("latticeMesh");
+                dimensions_.print("latticeMesh");
 
                 L_.print("meshSize");
 
-                std::cout << "block:" << std::endl;
-                std::cout << "{" << std::endl;
-                std::cout << "    nx = " << block::nx() << ";" << std::endl;
-                std::cout << "    ny = " << block::ny() << ";" << std::endl;
-                std::cout << "    nz = " << block::nz() << ";" << std::endl;
-                std::cout << "};" << std::endl;
-                std::cout << std::endl;
+                blockLabel_t{block::nx(), block::ny(), block::nz()}.print("blockDimensions");
 
                 // Perform a block dimensions safety check
                 {
-                    if (!(block::nx() * nxBlocks() == n_.x))
+                    if (!(block::nx() * nxBlocks() == dimensions_.x))
                     {
                         throw std::runtime_error("block::nx() * mesh.nxBlocks() not equal to mesh.nx()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::ny() * nyBlocks() == n_.y))
+                    if (!(block::ny() * nyBlocks() == dimensions_.y))
                     {
                         throw std::runtime_error("block::ny() * mesh.nyBlocks() not equal to mesh.ny()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::nz() * nzBlocks() == n_.z))
+                    if (!(block::nz() * nzBlocks() == dimensions_.z))
                     {
                         throw std::runtime_error("block::nz() * mesh.nzBlocks() not equal to mesh.nz()\nMesh dimensions should be multiples of 8");
                     }
-                    if (!(block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() == n_.x * n_.y * n_.z))
+                    if (!(block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() == dimensions_.x * dimensions_.y * dimensions_.z))
                     {
                         throw std::runtime_error("block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() not equal to mesh.nPoints()\nMesh dimensions should be multiples of 8");
                     }
@@ -124,9 +119,9 @@ namespace LBM
 
                 // Safety check for the mesh dimensions
                 {
-                    const uintmax_t nxTemp = static_cast<uintmax_t>(n_.x);
-                    const uintmax_t nyTemp = static_cast<uintmax_t>(n_.y);
-                    const uintmax_t nzTemp = static_cast<uintmax_t>(n_.z);
+                    const uintmax_t nxTemp = static_cast<uintmax_t>(dimensions_.x);
+                    const uintmax_t nyTemp = static_cast<uintmax_t>(dimensions_.y);
+                    const uintmax_t nzTemp = static_cast<uintmax_t>(dimensions_.z);
                     const uintmax_t nPointsTemp = nxTemp * nyTemp * nzTemp;
                     constexpr const uintmax_t typeLimit = static_cast<uintmax_t>(std::numeric_limits<label_t>::max());
 
@@ -145,9 +140,9 @@ namespace LBM
                     for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < programCtrl.deviceList().size(); virtualDeviceIndex++)
                     {
                         // Calculate the per-GPU allocation size
-                        const label_t nxPointsPerGPU = n_.x / nDevices_.x;
-                        const label_t nyPointsPerGPU = n_.y / nDevices_.y;
-                        const label_t nzPointsPerGPU = n_.z / nDevices_.z;
+                        const label_t nxPointsPerGPU = dimensions_.x / nDevices_.x;
+                        const label_t nyPointsPerGPU = dimensions_.y / nDevices_.y;
+                        const label_t nzPointsPerGPU = dimensions_.z / nDevices_.z;
                         const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
                         const cudaDeviceProp props = GPU::properties(programCtrl.deviceList()[virtualDeviceIndex]);
@@ -207,9 +202,9 @@ namespace LBM
                             const label_t nzBlocksPerGPU = nzBlocks() / nDevices_.z;
 
                             // Allocate mesh symbols on the GPU
-                            device::copyToSymbol(device::nx, n_.x);
-                            device::copyToSymbol(device::ny, n_.y);
-                            device::copyToSymbol(device::nz, n_.z);
+                            device::copyToSymbol(device::nx, dimensions_.x);
+                            device::copyToSymbol(device::ny, dimensions_.y);
+                            device::copyToSymbol(device::nz, dimensions_.z);
                             device::copyToSymbol(device::NUM_BLOCK_X, nxBlocksPerGPU);
                             device::copyToSymbol(device::NUM_BLOCK_Y, nyBlocksPerGPU);
                             device::copyToSymbol(device::NUM_BLOCK_Z, nzBlocksPerGPU);
@@ -226,7 +221,7 @@ namespace LBM
              * @param[in] meshDimensions The dimensions of the mesh to construct
              **/
             __host__ [[nodiscard]] latticeMesh(const host::latticeMesh &mesh, const blockLabel_t &meshDimensions) noexcept
-                : n_({meshDimensions.x, meshDimensions.y, meshDimensions.z}),
+                : dimensions_({meshDimensions.x, meshDimensions.y, meshDimensions.z}),
                   nPoints_(meshDimensions.size()),
                   L_(mesh.L()),
                   nDevices_(initialise_device_list("deviceDecomposition")) {}
@@ -239,17 +234,17 @@ namespace LBM
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nx() const noexcept
             {
-                return static_cast<T>(n_.x);
+                return static_cast<T>(dimensions_.x);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T ny() const noexcept
             {
-                return static_cast<T>(n_.y);
+                return static_cast<T>(dimensions_.y);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nz() const noexcept
             {
-                return static_cast<T>(n_.z);
+                return static_cast<T>(dimensions_.z);
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nPoints() const noexcept
@@ -259,7 +254,7 @@ namespace LBM
             template <axis::type alpha, typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T n() const noexcept
             {
-                return static_cast<T>(n_.value<alpha>());
+                return static_cast<T>(dimensions_.value<alpha>());
             }
 
             /**
@@ -270,17 +265,17 @@ namespace LBM
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nxBlocks() const noexcept
             {
-                return n_.x / block::nx();
+                return dimensions_.x / block::nx();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nyBlocks() const noexcept
             {
-                return n_.y / block::ny();
+                return dimensions_.y / block::ny();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nzBlocks() const noexcept
             {
-                return n_.z / block::nz();
+                return dimensions_.z / block::nz();
             }
             template <typename T = label_t>
             __device__ __host__ [[nodiscard]] inline constexpr T nBlocks() const noexcept
@@ -303,7 +298,7 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline constexpr dim3 gridBlock() const noexcept
             {
-                return {static_cast<uint32_t>(n_.x / block::nx()), static_cast<uint32_t>(n_.y / block::ny()), static_cast<uint32_t>(n_.z / block::nz())};
+                return {static_cast<uint32_t>(dimensions_.x / block::nx()), static_cast<uint32_t>(dimensions_.y / block::ny()), static_cast<uint32_t>(dimensions_.z / block::nz())};
             }
 
             /**
@@ -321,7 +316,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr label_t nDims() const noexcept
             {
-                return static_cast<label_t>(n_.x > 1) + static_cast<label_t>(n_.y > 1) + static_cast<label_t>(n_.z > 1);
+                return static_cast<label_t>(dimensions_.x > 1) + static_cast<label_t>(dimensions_.y > 1) + static_cast<label_t>(dimensions_.z > 1);
             }
 
             /**
@@ -335,7 +330,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool East(const label_t x) const noexcept
             {
-                return (x == n_.x - 1);
+                return (x == dimensions_.x - 1);
             }
             __host__ [[nodiscard]] inline constexpr bool South(const label_t y) const noexcept
             {
@@ -343,7 +338,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool North(const label_t y) const noexcept
             {
-                return (y == n_.y - 1);
+                return (y == dimensions_.y - 1);
             }
             __host__ [[nodiscard]] inline constexpr bool Back(const label_t z) const noexcept
             {
@@ -351,7 +346,7 @@ namespace LBM
             }
             __host__ [[nodiscard]] inline constexpr bool Front(const label_t z) const noexcept
             {
-                return (z == n_.z - 1);
+                return (z == dimensions_.z - 1);
             }
 
             /**
@@ -377,7 +372,7 @@ namespace LBM
 
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-                return n_.x * n_.y * n_.z * QF / block::n<alpha>();
+                return dimensions_.x * dimensions_.y * dimensions_.z * QF / block::n<alpha>();
             }
 
             /**
@@ -385,9 +380,9 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr label_t nPointsPerGPU() const noexcept
             {
-                const label_t nxPointsPerGPU = n_.x / nDevices<axis::X>();
-                const label_t nyPointsPerGPU = n_.y / nDevices<axis::Y>();
-                const label_t nzPointsPerGPU = n_.z / nDevices<axis::Z>();
+                const label_t nxPointsPerGPU = dimensions_.x / nDevices<axis::X>();
+                const label_t nyPointsPerGPU = dimensions_.y / nDevices<axis::Y>();
+                const label_t nzPointsPerGPU = dimensions_.z / nDevices<axis::Z>();
                 const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
 
                 return nPointsPerGPU;
@@ -397,7 +392,7 @@ namespace LBM
             /**
              * @brief The number of lattices in the x, y and z directions
              **/
-            const blockLabel_t n_;
+            const blockLabel_t dimensions_;
             const label_t nPoints_;
 
             /**

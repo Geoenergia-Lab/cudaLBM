@@ -200,77 +200,7 @@ namespace LBM
 #include "axisTypedefs.cuh"
 #include "velocityTypedefs.cuh"
 #include "ptrTypedefs.cuh"
-
-namespace LBM
-{
-    template <typename T>
-    struct var3
-    {
-        __device__ __host__ [[nodiscard]] inline constexpr var3(const T x_, const T y_, const T z_) noexcept
-            : x(x_),
-              y(y_),
-              z(z_) {}
-
-        template <axis::type alpha>
-        __device__ __host__ [[nodiscard]] inline constexpr T value() const noexcept
-        {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-            if constexpr (alpha == axis::X)
-            {
-                return x;
-            }
-            else if constexpr (alpha == axis::Y)
-            {
-                return y;
-            }
-            else if constexpr (alpha == axis::Z)
-            {
-                return z;
-            }
-        }
-
-        const T x;
-        const T y;
-        const T z;
-
-        void print(const name_t &name) const noexcept
-        {
-            std::cout << name << std::endl;
-            std::cout << "{" << std::endl;
-            std::cout << "    x = " << x << ";" << std::endl;
-            std::cout << std::endl;
-            std::cout << "    y = " << y << ";" << std::endl;
-            std::cout << std::endl;
-            std::cout << "    z = " << z << ";" << std::endl;
-            std::cout << "};" << std::endl;
-            std::cout << std::endl;
-            // std::cout << "    " << name << " = [" << x << ", " << y << ", " << z << "];" << std::endl;
-        }
-    };
-
-    /**
-     * @brief Block dimensions descriptor
-     * @details Stores lattice dimensions in 3D space
-     **/
-    struct blockLabel_t : var3<label_t>
-    {
-        using var3<label_t>::var3; // inherit constructors
-
-        __device__ __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
-        {
-            return x * y * z; // x,y,z are inherited from base
-        }
-    };
-
-    /**
-     * @brief Struct used to hold three-dimensional values
-     **/
-    struct pointVector : var3<scalar_t>
-    {
-        using var3<scalar_t>::var3;
-    };
-}
+#include "var3.cuh"
 
 #include "../hardwareConfig.cuh"
 #include "../errorHandler.cuh"

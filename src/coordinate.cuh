@@ -56,41 +56,23 @@ namespace LBM
 {
     namespace thread
     {
-        class coordinate
+        /**
+         * @brief Thread coordinate in a 3D grid.
+         *
+         * Stores the three thread indices (x, y, z) and provides access per axis
+         * as well as a method to compute neighbour coordinates with periodic wrap‑around.
+         */
+        struct coordinate : public var3<label_t>
         {
         public:
             /**
              * @brief Constructs from threadIdx
              **/
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
-                : x(static_cast<label_t>(threadIdx.x)),
-                  y(static_cast<label_t>(threadIdx.y)),
-                  z(static_cast<label_t>(threadIdx.z)) {}
-
-            /**
-             * @brief Returns the ordinate in a particular axis
-             * @tparam alpha The axis
-             **/
-            template <axis::type alpha>
-            __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
-            {
-                axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-                if constexpr (alpha == axis::X)
-                {
-                    return x;
-                }
-
-                if constexpr (alpha == axis::Y)
-                {
-                    return y;
-                }
-
-                if constexpr (alpha == axis::Z)
-                {
-                    return z;
-                }
-            }
+                : var3<label_t>(
+                      static_cast<label_t>(threadIdx.x),
+                      static_cast<label_t>(threadIdx.y),
+                      static_cast<label_t>(threadIdx.z)) {}
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
@@ -101,7 +83,6 @@ namespace LBM
             __device__ [[nodiscard]] inline constexpr label_t shifted_coordinate() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
-
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
                 if constexpr (coeff == -1)
@@ -119,65 +100,38 @@ namespace LBM
                     return (value<alpha>() + 1 + block::n<alpha>()) % block::n<alpha>();
                 }
             }
-
-        private:
-            /**
-             * @brief The underlying thread coordinates
-             **/
-            const label_t x;
-            const label_t y;
-            const label_t z;
         };
     }
 
     namespace block
     {
-        class coordinate
+        /**
+         * @brief Block coordinate in a 3D grid.
+         *
+         * Stores the three block indices (x, y, z) and provides access per axis
+         * as well as a method to compute neighbour block indices with periodic wrap‑around.
+         **/
+        struct coordinate : public var3<label_t>
         {
         public:
             /**
              * @brief Constructs from blockIdx
              **/
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
-                : x(static_cast<label_t>(blockIdx.x)),
-                  y(static_cast<label_t>(blockIdx.y)),
-                  z(static_cast<label_t>(blockIdx.z)) {}
-
-            /**
-             * @brief Returns the ordinate in a particular axis
-             * @tparam alpha The axis
-             **/
-            template <axis::type alpha>
-            __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
-            {
-                axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-                if constexpr (alpha == axis::X)
-                {
-                    return x;
-                }
-
-                if constexpr (alpha == axis::Y)
-                {
-                    return y;
-                }
-
-                if constexpr (alpha == axis::Z)
-                {
-                    return z;
-                }
-            }
+                : var3<label_t>(
+                      static_cast<label_t>(blockIdx.x),
+                      static_cast<label_t>(blockIdx.y),
+                      static_cast<label_t>(blockIdx.z)) {}
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
              * @tparam alpha The axis
              * @tparam coeff The coefficient to shift by (-1, 0 or +1)
              **/
-            template <const axis::type alpha, const int coeff>
+            template <axis::type alpha, const int coeff>
             __device__ [[nodiscard]] inline constexpr label_t shifted_block() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
-
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
                 if constexpr (coeff == -1)
@@ -195,20 +149,18 @@ namespace LBM
                     return (value<alpha>() + 1 + device::NUM_BLOCK<alpha>()) % device::NUM_BLOCK<alpha>();
                 }
             }
-
-        private:
-            /**
-             * @brief The underlying block coordinates
-             **/
-            const label_t x;
-            const label_t y;
-            const label_t z;
         };
     }
 
     namespace device
     {
-        class pointCoordinate
+        /**
+         * @brief Global point coordinate (lattice site) combining thread and block positions.
+         *
+         * Stores the absolute x, y, z indices of a lattice cell.
+         * The calculation includes block offsets and thread indices scaled by block dimensions.
+         **/
+        struct pointCoordinate : public var3<label_t>
         {
         public:
             /**
@@ -219,44 +171,13 @@ namespace LBM
             __device__ [[nodiscard]] inline explicit pointCoordinate(
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx) noexcept
-                : x(Tx.value<axis::X>() + block::nx<label_t>() * (Bx.value<axis::X>() + device::BLOCK_OFFSET_X)),
-                  y(Tx.value<axis::Y>() + block::ny<label_t>() * (Bx.value<axis::Y>() + device::BLOCK_OFFSET_Y)),
-                  z(Tx.value<axis::Z>() + block::nz<label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)) {}
-
-            /**
-             * @brief Returns the ordinate in a particular axis
-             * @tparam alpha The axis
-             **/
-            template <axis::type alpha>
-            __device__ __host__ [[nodiscard]] inline constexpr label_t value() const noexcept
-            {
-                axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-                if constexpr (alpha == axis::X)
-                {
-                    return x;
-                }
-
-                if constexpr (alpha == axis::Y)
-                {
-                    return y;
-                }
-
-                if constexpr (alpha == axis::Z)
-                {
-                    return z;
-                }
-            }
-
-        private:
-            /**
-             * @brief The underlying point coordinates
-             **/
-            const label_t x;
-            const label_t y;
-            const label_t z;
+                : var3<label_t>(
+                      Tx.value<axis::X>() + block::nx<label_t>() * (Bx.value<axis::X>() + device::BLOCK_OFFSET_X),
+                      Tx.value<axis::Y>() + block::ny<label_t>() * (Bx.value<axis::Y>() + device::BLOCK_OFFSET_Y),
+                      Tx.value<axis::Z>() + block::nz<label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)) {}
         };
     }
-}
+
+} // namespace LBM
 
 #endif
