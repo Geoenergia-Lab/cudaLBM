@@ -96,7 +96,7 @@ int main(const int argc, const char *const argv[])
     const streamHandler streamsLBM(programCtrl);
 
     // Allocate a buffer of pinned memory on the host for writing
-    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.nPoints() * NUMBER_MOMENTS(), mesh);
+    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS(), mesh);
 
     objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl);
 

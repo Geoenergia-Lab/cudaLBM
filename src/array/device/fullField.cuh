@@ -251,16 +251,14 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION());
 
-                const std::size_t nDevices = mesh_.template nDevices<axis::X>() * mesh_.template nDevices<axis::Y>() * mesh_.template nDevices<axis::Z>();
-                const std::size_t nxPointsPerGPU = mesh_.template nx<std::size_t>() / mesh_.template nDevices<axis::X, std::size_t>();
-                const std::size_t nyPointsPerGPU = mesh_.template ny<std::size_t>() / mesh_.template nDevices<axis::Y, std::size_t>();
-                const std::size_t nzPointsPerGPU = mesh_.template nz<std::size_t>() / mesh_.template nDevices<axis::Z, std::size_t>();
-                const std::size_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+                const std::size_t nPointsPerDevice = mesh_.template sizePerDevice<std::size_t>();
+
+                const std::size_t nDevices = mesh_.template nDevices<std::size_t>();
 
                 for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < nDevices; ++virtualDeviceIndex)
                 {
-                    const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
-                    errorHandler::check(cudaMemcpy(&(hostPtr[startIndex]), ptr_[virtualDeviceIndex], nPointsPerGPU * sizeof(T), cudaMemcpyDeviceToHost));
+                    const label_t startIndex = virtualDeviceIndex * nPointsPerDevice;
+                    errorHandler::check(cudaMemcpy(&(hostPtr[startIndex]), ptr_[virtualDeviceIndex], nPointsPerDevice * sizeof(T), cudaMemcpyDeviceToHost));
                 }
             }
 
@@ -307,7 +305,7 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                return This::allocate_on_devices(mesh, hostArrayGlobal.data(), allocate, programCtrl, mesh.nPointsPerGPU());
+                return This::allocate_on_devices(mesh, hostArrayGlobal.data(), allocate, programCtrl, mesh.sizePerDevice());
             }
 
             /**
@@ -324,7 +322,7 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                return This::allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate, programCtrl, hostArrayGlobal.mesh().nPointsPerGPU());
+                return This::allocate_on_devices(hostArrayGlobal.mesh(), hostArrayGlobal.data(), allocate, programCtrl, hostArrayGlobal.mesh().sizePerDevice());
             }
 
             /**
@@ -341,8 +339,8 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                const std::vector<T> toAllocate(static_cast<std::size_t>(allocate) * mesh.nPoints<std::size_t>(), val);
-                return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.nPointsPerGPU());
+                const std::vector<T> toAllocate(static_cast<std::size_t>(allocate) * mesh.size<std::size_t>(), val);
+                return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.sizePerDevice());
             }
 
             /**

@@ -679,6 +679,30 @@ namespace LBM
         }
 
         /**
+         * @brief Extract a three‑component vector from a configuration file.
+         *
+         * Reads the file to obtain the x, y, z components using keys formed by appending
+         * "x", "y", "z" to the prefix. Each component is extracted via
+         * string::extractParameter<value_type>`
+         *
+         * @tparam T Vector type with nested value_type and constructible from three values.
+         * @param[in] fileName Configuration file path.
+         * @param[in] prefix Common prefix for component keys (e.g., "block").
+         * @return T constructed from the three extracted values.
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] const T extractParameter(const name_t &fileName, const name_t &prefix) noexcept
+        {
+            using value_type = typename T::value_type;
+
+            const words_t fileLines = string::readFile(fileName);
+
+            return {string::extractParameter<value_type>(fileLines, prefix + "x"),
+                    string::extractParameter<value_type>(fileLines, prefix + "y"),
+                    string::extractParameter<value_type>(fileLines, prefix + "z")};
+        }
+
+        /**
          * @brief Parses a name-value pair
          * @param[in] args The list of arguments to be searched
          * @param[in] name The argument to be searched for

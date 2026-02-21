@@ -138,71 +138,73 @@ namespace LBM
         }
     }
 
-    /**
-     * @brief Loop over all GPUs
-     * @tparam F Callable type
-     * @tparam T Index type
-     * @param[in] nxGPUs, nyGPUs, nzGPUs Number of GPUs in the X, Y and Z directions
-     * @param[in] f Function object to execute per iteration
-     **/
-    template <typename F, typename T>
-    __host__ void gpu_for(
-        const T nxGPUs,
-        const T nyGPUs,
-        const T nzGPUs,
-        const F &&f) noexcept
+    namespace GPU
     {
-        // Loops for block indices
-        for (T GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
+        /**
+         * @brief Loop over all GPUs
+         * @tparam F Callable type
+         * @param[in] nGPUs Number of GPUs in the X, Y and Z directions
+         * @param[in] f Function object to execute per iteration
+         *
+         * Example:
+         * @code
+         * GPU::forAll(nGPUs, [&](label_t x, y, z) {
+         *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
+         * });
+         * @endcode
+         **/
+        template <typename F>
+        __host__ void forAll(const blockLabel_t &nGPUs, const F &&f) noexcept
         {
-            for (T GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+            // Loops for block indices
+            for (label_t GPU_z = 0; GPU_z < nGPUs.z; GPU_z++)
             {
-                for (T GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
+                for (label_t GPU_y = 0; GPU_y < nGPUs.y; GPU_y++)
                 {
-                    // Execute the arbitrary loop body
-                    f(GPU_x, GPU_y, GPU_z);
+                    for (label_t GPU_x = 0; GPU_x < nGPUs.x; GPU_x++)
+                    {
+                        // Execute the arbitrary loop body
+                        f(GPU_x, GPU_y, GPU_z);
+                    }
                 }
             }
         }
     }
 
-    /**
-     * @brief Nested loop over block and thread indices
-     * @param[in] nxBlocks Number of blocks in x-dimension
-     * @param[in] nyBlocks Number of blocks in y-dimension
-     * @param[in] nzBlocks Number of blocks in z-dimension
-     * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
-     *
-     * Example:
-     * @code
-     * grid_for(nx, ny, nz, [&](label_t bx, by, bz, tx, ty, tz) {
-     *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
-     * });
-     * @endcode
-     **/
-    template <typename F, typename T>
-    __host__ void grid_for(
-        const T nxBlocks,
-        const T nyBlocks,
-        const T nzBlocks,
-        const F &&f) noexcept
+    namespace host
     {
-        // Loops for block indices
-        for (T bz = 0; bz < nzBlocks; bz++)
+        /**
+         * @brief Nested loop over block and thread indices
+         * @param[in] nBlocks Number of blocks in the X, Y and Z directions
+         * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
+         *
+         * Example:
+         * @code
+         * host::forAll(nBlocks, [&](label_t bx, by, bz, tx, ty, tz) {
+         *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
+         * });
+         * @endcode
+         **/
+        template <typename F>
+        __host__ void forAll(const blockLabel_t &nBlocks, const F &&f) noexcept
         {
-            for (T by = 0; by < nyBlocks; by++)
+            // Loops for block indices
+            for (label_t bz = 0; bz < nBlocks.z; bz++)
             {
-                for (T bx = 0; bx < nxBlocks; bx++)
+                for (label_t by = 0; by < nBlocks.y; by++)
                 {
-                    // Loops for thread indices
-                    for (T tz = 0; tz < block::nz<T>(); tz++)
+                    for (label_t bx = 0; bx < nBlocks.x; bx++)
                     {
-                        for (T ty = 0; ty < block::ny<T>(); ty++)
+                        // Loops for thread indices
+                        for (label_t tz = 0; tz < block::nz<label_t>(); tz++)
                         {
-                            for (T tx = 0; tx < block::nx<T>(); tx++)
+                            for (label_t ty = 0; ty < block::ny<label_t>(); ty++)
                             {
-                                // Execute the arbitrary loop body
-                                f(bx, by, bz, tx, ty, tz);
+                                for (label_t tx = 0; tx < block::nx<label_t>(); tx++)
+                                {
+                                    // Execute the arbitrary loop body
+                                    f(bx, by, bz, tx, ty, tz);
+                                }
                             }
                         }
                     }
@@ -211,34 +213,31 @@ namespace LBM
         }
     }
 
-    /**
-     * @brief Nested loop over global grid indices
-     * @param[in] nx Number of points in x-dimension
-     * @param[in] ny Number of points in y-dimension
-     * @param[in] nz Number of points in z-dimension
-     * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
-     *
-     * Example:
-     * @code
-     * global_for(nx, ny, nz, [&](label_t x, y, z) {
-     *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
-     * });
-     * @endcode
-     **/
-    template <const blockLabel_t Indent, typename F, typename T>
-    __host__ void global_for(
-        const T nx,
-        const T ny,
-        const T nz,
-        const F &&f) noexcept
+    namespace global
     {
-        for (T z = 0; z < nz - static_cast<T>(Indent.z); z++)
+        /**
+         * @brief Nested loop over global grid indices
+         * @param[in] dimensions Number of points in the X, Y and Z directions
+         * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
+         *
+         * Example:
+         * @code
+         * global::forAll<Indent>(dimensions, [&](label_t x, y, z) {
+         *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
+         * });
+         * @endcode
+         **/
+        template <const blockLabel_t Indent, typename F>
+        __host__ void forAll(const blockLabel_t &dimensions, const F &&f) noexcept
         {
-            for (T y = 0; y < ny - static_cast<T>(Indent.y); y++)
+            for (label_t z = 0; z < dimensions.z - Indent.z; z++)
             {
-                for (T x = 0; x < nx - static_cast<T>(Indent.x); x++)
+                for (label_t y = 0; y < dimensions.y - Indent.y; y++)
                 {
-                    f(x, y, z);
+                    for (label_t x = 0; x < dimensions.x - Indent.x; x++)
+                    {
+                        f(x, y, z);
+                    }
                 }
             }
         }
@@ -262,24 +261,6 @@ namespace LBM
         __host__ [[nodiscard]] inline constexpr T idx(const T tx, const T ty, const T tz, const T bx, const T by, const T bz, const T nxBlocks, const T nyBlocks) noexcept
         {
             return (tx + block::nx<T>() * (ty + block::ny<T>() * (tz + block::nz<T>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
-        }
-
-        /**
-         * @brief Memory index (host version)
-         * @param[in] tx,ty,tz Thread-local coordinates
-         * @param[in] bx,by,bz Block indices
-         * @param[in] mesh The lattice mesh
-         * @return Linearized index using mesh constants
-         *
-         * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
-         **/
-        template <class LatticeMesh>
-        __host__ [[nodiscard]] inline label_t idx(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const LatticeMesh &mesh) noexcept
-        {
-            return idx(tx, ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks());
         }
     }
 

@@ -64,12 +64,12 @@ namespace LBM
              * @param[in] w The z component of the vector
              * @param[in] mesh The lattice mesh
              **/
-            template <const label_t SchemeOrder, typename T, class LatticeMesh>
+            template <const label_t SchemeOrder, typename T>
             __host__ [[nodiscard]] const std::vector<T> div(
                 const std::vector<T> &u,
                 const std::vector<T> &v,
                 const std::vector<T> &w,
-                const LatticeMesh &mesh)
+                const host::latticeMesh &mesh)
             {
                 // Calculate the components of div
                 const std::vector<double> dudx = dfdx<SchemeOrder, double>(u, mesh);

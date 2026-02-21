@@ -191,32 +191,30 @@ namespace LBM
                 const label_t nxGPUs = mesh.nDevices<axis::X>();
                 const label_t nyGPUs = mesh.nDevices<axis::Y>();
                 const label_t nzGPUs = mesh.nDevices<axis::Z>();
-                const label_t nPointsPerGPU = mesh.nPointsPerGPU();
+                const label_t nPointsPerDevice = mesh.sizePerDevice();
 
-                std::vector<T> field(mesh.nPoints(), 0);
+                std::vector<T> field(mesh.size(), 0);
 
-                const label_t nxBlocksPerGPU = mesh.nxBlocks() / nxGPUs;
-                const label_t nyBlocksPerGPU = mesh.nyBlocks() / nyGPUs;
-                const label_t nzBlocksPerGPU = mesh.nzBlocks() / nzGPUs;
+                const blockLabel_t nBlocksPerDevice = mesh.nBlocks();
 
-                gpu_for(
-                    nxGPUs, nyGPUs, nzGPUs,
+                GPU::forAll(
+                    mesh.nDevices(),
                     [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
                     {
-                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
 
-                        grid_for(
-                            nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
+                        host::forAll(
+                            nBlocksPerDevice,
                             [&](const label_t bx, const label_t by, const label_t bz,
                                 const label_t tx, const label_t ty, const label_t tz)
                             {
                                 // Global coordinates (for boundary detection)
-                                const label_t x = tx + block::nx() * (bx + (GPU_x * nxBlocksPerGPU));
-                                const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
-                                const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
+                                const label_t x = tx + block::nx() * (bx + (GPU_x * nBlocksPerDevice.value<axis::X>()));
+                                const label_t y = ty + block::ny() * (by + (GPU_y * nBlocksPerDevice.value<axis::Y>()));
+                                const label_t z = tz + block::nz() * (bz + (GPU_z * nBlocksPerDevice.value<axis::Z>()));
 
                                 // Local index within this GPU's segment
-                                const label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
+                                const label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nBlocksPerDevice.value<axis::X>(), nBlocksPerDevice.value<axis::Y>());
 
                                 // Boundary detection
                                 const bool is_west = mesh.West(x);
@@ -245,7 +243,7 @@ namespace LBM
                                 const T value = (boundary_count > 0) ? (value_sum / static_cast<T>(boundary_count)) : bField.internalField();
 
                                 // Global index in host vector (per‑GPU segmented)
-                                const label_t globalIdx = virtualDeviceIndex * nPointsPerGPU + localIdx;
+                                const label_t globalIdx = virtualDeviceIndex * nPointsPerDevice + localIdx;
                                 field[globalIdx] = value;
                             });
                     });

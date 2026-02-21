@@ -81,9 +81,9 @@ namespace LBM
                 uint64_t currentOffset = 0;
 
                 // Calculate extents - note the -1 for the maximum indices
-                const std::size_t dimX = mesh.nx<std::size_t>() - 1;
-                const std::size_t dimY = mesh.ny<std::size_t>() - 1;
-                const std::size_t dimZ = mesh.nz<std::size_t>() - 1;
+                const std::size_t dimX = mesh.dimension<axis::X, std::size_t>() - 1;
+                const std::size_t dimY = mesh.dimension<axis::Y, std::size_t>() - 1;
+                const std::size_t dimZ = mesh.dimension<axis::Z, std::size_t>() - 1;
 
                 xml << "<?xml version=\"1.0\"?>\n";
                 xml << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
@@ -139,7 +139,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames)
             {
-                const std::size_t numNodes = (mesh.nx<std::size_t>()) * (mesh.ny<std::size_t>()) * (mesh.nz<std::size_t>());
+                const std::size_t numNodes = (mesh.dimension<axis::X, std::size_t>()) * (mesh.dimension<axis::Y, std::size_t>()) * (mesh.dimension<axis::Z, std::size_t>());
                 const std::size_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())

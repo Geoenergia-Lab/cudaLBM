@@ -162,19 +162,15 @@ namespace LBM
                 const programControl &programCtrl,
                 const label_t allocationSize)
             {
-                const label_t nxGPUs = mesh.nDevices<axis::X>();
-                const label_t nyGPUs = mesh.nDevices<axis::Y>();
-                const label_t nzGPUs = mesh.nDevices<axis::Z>();
-                const std::size_t nDevices = mesh.nDevices<axis::X, std::size_t>() * mesh.nDevices<axis::Y, std::size_t>() * mesh.nDevices<axis::Z, std::size_t>();
+                T **hostPtrsToDevice = host::allocate<T *>(mesh.nDevices().size(), nullptr);
 
-                T **hostPtrsToDevice = host::allocate<T *>(nDevices, nullptr);
-
-                gpu_for(nxGPUs, nyGPUs, nzGPUs,
-                        [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
-                        {
-                            const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
-                            hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl, allocationSize);
-                        });
+                GPU::forAll(
+                    mesh.nDevices(),
+                    [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                    {
+                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                        hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl, allocationSize);
+                    });
 
                 return hostPtrsToDevice;
             }
@@ -201,30 +197,29 @@ namespace LBM
              **/
             __host__ void free_device_pointers() noexcept
             {
-                const label_t nxGPUs = mesh_.nDevices<axis::X>();
-                const label_t nyGPUs = mesh_.nDevices<axis::Y>();
-                const label_t nzGPUs = mesh_.nDevices<axis::Z>();
-
                 if (ptr_ == nullptr)
                 {
                     return;
                 }
 
-                gpu_for(nxGPUs, nyGPUs, nzGPUs,
-                        [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                GPU::forAll(
+                    mesh_.nDevices(),
+                    [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                    {
+                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh_.nDevices<axis::X>(), mesh_.nDevices<axis::Y>());
+                        if (ptr_[virtualDeviceIndex] != nullptr)
                         {
-                            const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
-                            if (ptr_[virtualDeviceIndex] != nullptr)
-                            {
-                                errorHandler::check(cudaDeviceSynchronize());
-                                errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[virtualDeviceIndex]));
-                                errorHandler::check(cudaFree(const_cast<T *>(ptr_[virtualDeviceIndex])));
-                                errorHandler::check(cudaDeviceSynchronize());
-                            }
-                        });
+                            errorHandler::check(cudaDeviceSynchronize());
+                            errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[virtualDeviceIndex]));
+                            errorHandler::check(cudaFree(const_cast<T *>(ptr_[virtualDeviceIndex])));
+                            errorHandler::check(cudaDeviceSynchronize());
+                        }
+                    });
 
                 errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[0]));
+                errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaFreeHost(const_cast<T **>(ptr_)));
+                errorHandler::check(cudaDeviceSynchronize());
             }
         };
     }

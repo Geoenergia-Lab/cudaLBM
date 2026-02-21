@@ -112,7 +112,7 @@ namespace LBM
 
         /**
          * @brief Returns the command line input as a vector of strings
-         * @return const words_t& The parsed command line arguments
+         * @return The parsed command line arguments
          **/
         __host__ [[nodiscard]] inline constexpr const words_t &commandLine() const noexcept
         {
@@ -121,7 +121,7 @@ namespace LBM
 
         /**
          * @brief Returns the name of the currently running executable
-         * @return const name_t& The executable name
+         * @return The executable name
          **/
         __host__ [[nodiscard]] inline constexpr const name_t &executableName() const noexcept
         {

@@ -229,12 +229,12 @@ namespace LBM
 
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
-                std::vector<scalar_t> face(mesh.nFacesPerGPU<alpha, VelocitySet::QF()>(), 0);
+                std::vector<scalar_t> face(mesh.nFacesPerDevice<alpha, VelocitySet::QF()>(), 0);
 
                 // I think it is correct for this loop to be global
                 // Because the initial conditions and file that we read from are already GPU-ordered
-                grid_for(
-                    mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
+                host::forAll(
+                    mesh.nBlocks(),
                     [&](const label_t bx, const label_t by, const label_t bz,
                         const label_t tx, const label_t ty, const label_t tz)
                     {
@@ -297,7 +297,7 @@ namespace LBM
                         i,
                         tx, ty, tz,
                         bx, by, bz,
-                        mesh.nxBlocks(), mesh.nyBlocks())] = pop[indices[i]];
+                        mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>())] = pop[indices[i]];
                 }
             }
         };

@@ -162,14 +162,14 @@ namespace LBM
             {
                 // Calculate how many blocks each GPU gets in each dimension
                 // Using ceiling division to distribute blocks as evenly as possible
-                const label_t blocksPerGPUx = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
-                const label_t blocksPerGPUy = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
-                const label_t blocksPerGPUz = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
+                const label_t blocksPerDevicex = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
+                const label_t blocksPerDevicey = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
+                const label_t blocksPerDevicez = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
 
                 // Determine which GPU partition this block belongs to
-                const label_t gpuX = blockOffsets.nx / blocksPerGPUx;
-                const label_t gpuY = blockOffsets.ny / blocksPerGPUy;
-                const label_t gpuZ = blockOffsets.nz / blocksPerGPUz;
+                const label_t gpuX = blockOffsets.nx / blocksPerDevicex;
+                const label_t gpuY = blockOffsets.ny / blocksPerDevicey;
+                const label_t gpuZ = blockOffsets.nz / blocksPerDevicez;
 
                 // Calculate and return GPU device ID
                 return static_cast<deviceIndex_t>(gpuX + gpuY * nGPUs.nx + gpuZ * nGPUs.nx * nGPUs.ny);

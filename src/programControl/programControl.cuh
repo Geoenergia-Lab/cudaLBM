@@ -120,6 +120,25 @@ namespace LBM
             std::cout << "};" << std::endl;
             std::cout << std::endl;
 
+            for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < deviceList().size(); virtualDeviceIndex++)
+            {
+                errorHandler::check(cudaSetDevice(deviceList()[virtualDeviceIndex]));
+
+                // Allocate symbols on the GPU
+                const scalar_t viscosityTemp = u_inf() * L_char() / Re();
+                const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
+                const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
+                const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
+                const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
+
+                device::copyToSymbol(device::L_char, L_char());
+                device::copyToSymbol(device::Re, Re());
+                device::copyToSymbol(device::tau, tauTemp);
+                device::copyToSymbol(device::omega, omegaTemp);
+                device::copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
+                device::copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+            }
+
             // Make sure we synchronize and set active device to 0
             // Probably unnecessary but nice to do it anyway
             errorHandler::check(cudaDeviceSynchronize());
@@ -301,7 +320,7 @@ namespace LBM
          * @param[in] varName The name of the variable to read
          **/
         template <typename T>
-        __host__ [[nodiscard]] T initialiseConst(const name_t varName) const noexcept
+        __host__ [[nodiscard]] T initialiseConst(const name_t &varName) const noexcept
         {
             return string::extractParameter<T>(string::readFile("programControl"), varName);
         }

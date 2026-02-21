@@ -93,7 +93,7 @@ int main(const int argc, const char *const argv[])
     device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> myz("m_yz", mesh, programCtrl);
     device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mzz("m_zz", mesh, programCtrl);
 
-    const label_t size = mesh.nx() * mesh.ny() * VelocitySet::QF();
+    const label_t size = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * VelocitySet::QF();
 
     label_t *fGhost_0 = device::allocateArray(std::vector<label_t>(size, 0), programCtrl.deviceList()[0]);
     label_t *gGhost_0 = device::allocateArray(std::vector<label_t>(size, 0), programCtrl.deviceList()[0]);
@@ -176,7 +176,7 @@ int main(const int argc, const char *const argv[])
     // const streamHandler streamsLBM(programCtrl);
 
     // // Allocate a buffer of pinned memory on the host for writing
-    // host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.nPoints() * NUMBER_MOMENTS(), mesh);
+    // host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS(), mesh);
 
     // // objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl);
 
@@ -188,7 +188,7 @@ int main(const int argc, const char *const argv[])
 
     // // Temporarily allocate device halo pointers
     // // Should be allocated on GPU 0 and GPU 1
-    // const label_t face_size = mesh.nx() * mesh.ny() * VelocitySet::QF();
+    // const label_t face_size = mesh.dimension<axis::X>(() * mesh.dimension<axis::Y>() * VelocitySet::QF();
 
     // scalar_t *const ptrRestrict ptr_0 = device::allocate(face_size, programCtrl.deviceList()[0]);
     // scalar_t *const ptrRestrict ptr_1 = device::allocate(face_size, programCtrl.deviceList()[1]);

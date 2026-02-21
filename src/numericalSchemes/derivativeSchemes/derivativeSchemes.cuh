@@ -64,18 +64,18 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+            template <const label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdx(
                 const std::vector<T> &f,
-                const LatticeMesh &mesh)
+                const host::latticeMesh &mesh)
             {
                 LBM::numericalSchemes::assertions::validate<SchemeOrder, maxSchemeOrder()>();
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdx));
 
-                const label_t nx = mesh.nx();
-                const label_t ny = mesh.ny();
-                const label_t nz = mesh.nz();
+                const label_t nx = mesh.dimension<axis::X>();
+                const label_t ny = mesh.dimension<axis::Y>();
+                const label_t nz = mesh.dimension<axis::Z>();
 
                 const double dx = 1;
 
@@ -155,18 +155,18 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+            template <const label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdy(
                 const std::vector<T> &f,
-                const LatticeMesh &mesh)
+                const host::latticeMesh &mesh)
             {
                 LBM::numericalSchemes::assertions::validate<SchemeOrder, maxSchemeOrder()>();
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdy));
 
-                const label_t nx = mesh.nx();
-                const label_t ny = mesh.ny();
-                const label_t nz = mesh.nz();
+                const label_t nx = mesh.dimension<axis::X>();
+                const label_t ny = mesh.dimension<axis::Y>();
+                const label_t nz = mesh.dimension<axis::Z>();
                 constexpr const double dy = 1; // Adjust based on actual grid spacing
 
                 std::vector<TReturn> dfdy(f.size(), 0);
@@ -245,18 +245,18 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+            template <const label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdz(
                 const std::vector<T> &f,
-                const LatticeMesh &mesh)
+                const host::latticeMesh &mesh)
             {
                 LBM::numericalSchemes::assertions::validate<SchemeOrder, maxSchemeOrder()>();
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdz));
 
-                const label_t nx = mesh.nx();
-                const label_t ny = mesh.ny();
-                const label_t nz = mesh.nz();
+                const label_t nx = mesh.dimension<axis::X>();
+                const label_t ny = mesh.dimension<axis::Y>();
+                const label_t nz = mesh.dimension<axis::Z>();
                 constexpr const double dz = 1; // Adjust based on actual grid spacing
 
                 std::vector<TReturn> dfdz(f.size(), 0);

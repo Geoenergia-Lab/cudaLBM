@@ -170,19 +170,19 @@ namespace LBM
                 const label_t nyGPUs = mesh.nDevices<axis::Y>();
                 const label_t nzGPUs = mesh.nDevices<axis::Z>();
 
-                const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
-                const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
-                const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
-                const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+                const label_t nxPointsPerDevice = mesh.dimension<axis::X>() / nxGPUs;
+                const label_t nyPointsPerDevice = mesh.dimension<axis::Y>() / nyGPUs;
+                const label_t nzPointsPerDevice = mesh.dimension<axis::Z>() / nzGPUs;
+                const label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
 
-                if (mesh.nPoints() * N > nPoints_)
+                if (mesh.size() * N > nPoints_)
                 {
                     throw std::runtime_error("Insufficient host array size");
                 }
 
                 for (label_t field = 0; field < N; ++field)
                 {
-                    errorHandler::check(cudaMemcpy(&(ptr_[(field * mesh.nPoints()) + (virtualDeviceIndex * nPointsPerGPU)]), devPtrs[field], nPointsPerGPU * sizeof(T), cudaMemcpyDeviceToHost));
+                    errorHandler::check(cudaMemcpy(&(ptr_[(field * mesh.size()) + (virtualDeviceIndex * nPointsPerDevice)]), devPtrs[field], nPointsPerDevice * sizeof(T), cudaMemcpyDeviceToHost));
                 }
             }
 

@@ -60,6 +60,8 @@ namespace LBM
     struct var3
     {
     public:
+        using value_type = T;
+
         /**
          * @brief Public members
          */
@@ -80,24 +82,24 @@ namespace LBM
          * @brief Access the data by axis
          * @tparam alpha The axis (X, Y or Z)
          */
-        template <axis::type alpha>
-        __host__ __device__ [[nodiscard]] constexpr T value() const noexcept
+        template <axis::type alpha, typename ValueType = value_type>
+        __host__ __device__ [[nodiscard]] constexpr ValueType value() const noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 
             if constexpr (alpha == axis::X)
             {
-                return x;
+                return static_cast<ValueType>(x);
             }
 
             if constexpr (alpha == axis::Y)
             {
-                return y;
+                return static_cast<ValueType>(y);
             }
 
             if constexpr (alpha == axis::Z)
             {
-                return z;
+                return static_cast<ValueType>(z);
             }
         }
 
@@ -125,14 +127,15 @@ namespace LBM
         /**
          * @brief Inherit constructors
          */
-        using var3<label_t>::var3;
+        using var3<value_type>::var3;
 
         /**
          * @brief Total size
          */
-        __host__ __device__ [[nodiscard]] inline constexpr label_t size() const noexcept
+        template <typename ValueType = value_type>
+        __host__ __device__ [[nodiscard]] inline constexpr ValueType size() const noexcept
         {
-            return value<axis::X>() * value<axis::Y>() * value<axis::Z>();
+            return value<axis::X, ValueType>() * value<axis::Y, ValueType>() * value<axis::Z, ValueType>();
         }
     };
 
@@ -142,7 +145,7 @@ namespace LBM
     struct pointVector : var3<scalar_t>
     {
     public:
-        using var3<scalar_t>::var3;
+        using var3<value_type>::var3;
     };
 
 } // namespace LBM

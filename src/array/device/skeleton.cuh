@@ -155,7 +155,7 @@ namespace LBM
                 const std::vector<T> &hostArrayGlobal,
                 const programControl &programCtrl)
             {
-                return arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerGPU<alpha, VelocitySet::QF()>());
+                return arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
             }
         };
     }

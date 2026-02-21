@@ -63,18 +63,18 @@ namespace LBM
          * @note This function uses the cumulative trapezoidal rule. The integration constant is set by
          * assuming the integral is zero at x=0 for each (y, z) line.
          **/
-        template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+        template <const label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_x(
             const std::vector<T> &f,
-            const LatticeMesh &mesh)
+            const host::latticeMesh &mesh)
         {
             LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_x));
 
-            const std::size_t nx = mesh.template nx<std::size_t>();
-            const std::size_t ny = mesh.template ny<std::size_t>();
-            const std::size_t nz = mesh.template nz<std::size_t>();
+            const std::size_t nx = mesh.dimension<axis::X, std::size_t>();
+            const std::size_t ny = mesh.dimension<axis::Y, std::size_t>();
+            const std::size_t nz = mesh.dimension<axis::Z, std::size_t>();
             constexpr const double dx = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);
@@ -102,18 +102,18 @@ namespace LBM
         /**
          * @brief Calculates the integral of a scalar field along the y-axis.
          **/
-        template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+        template <const label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_y(
             const std::vector<T> &f,
-            const LatticeMesh &mesh)
+            const host::latticeMesh &mesh)
         {
             LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_y));
 
-            const std::size_t nx = mesh.template nx<std::size_t>();
-            const std::size_t ny = mesh.template ny<std::size_t>();
-            const std::size_t nz = mesh.template nz<std::size_t>();
+            const std::size_t nx = mesh.dimension<axis::X, std::size_t>();
+            const std::size_t ny = mesh.dimension<axis::Y, std::size_t>();
+            const std::size_t nz = mesh.dimension<axis::Z, std::size_t>();
             constexpr const double dy = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);
@@ -141,18 +141,18 @@ namespace LBM
         /**
          * @brief Calculates the integral of a scalar field along the z-axis.
          **/
-        template <const label_t SchemeOrder, typename TReturn, typename T, class LatticeMesh>
+        template <const label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_z(
             const std::vector<T> &f,
-            const LatticeMesh &mesh)
+            const host::latticeMesh &mesh)
         {
             LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_z));
 
-            const std::size_t nx = mesh.template nx<std::size_t>();
-            const std::size_t ny = mesh.template ny<std::size_t>();
-            const std::size_t nz = mesh.template nz<std::size_t>();
+            const std::size_t nx = mesh.dimension<axis::X, std::size_t>();
+            const std::size_t ny = mesh.dimension<axis::Y, std::size_t>();
+            const std::size_t nz = mesh.dimension<axis::Z, std::size_t>();
             constexpr const double dz = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);

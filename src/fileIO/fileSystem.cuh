@@ -240,7 +240,7 @@ namespace LBM
         template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh, typename T>
         __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const LatticeMesh &mesh, const T nVars) noexcept
         {
-            return expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), static_cast<uintmax_t>(nVars));
+            return expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), static_cast<uintmax_t>(nVars));
         }
 
         /**
@@ -259,7 +259,7 @@ namespace LBM
         __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const uintmax_t nVars)
         {
             // Calculated the approximate required space
-            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), nVars);
+            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), nVars);
 
             // Check enough space is available
             return fileSystem::hasEnoughSpace(requiredDiskSpace);
@@ -281,7 +281,7 @@ namespace LBM
         template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
         __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const name_t &fileName)
         {
-            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.nx()), static_cast<uintmax_t>(mesh.ny()), static_cast<uintmax_t>(mesh.nz()), static_cast<uintmax_t>(nVars));
+            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), static_cast<uintmax_t>(nVars));
 
             if (!diskSpaceCheck<Format, hasFields, hasPoints, hasElements, hasOffsets>(mesh, static_cast<uintmax_t>(nVars)))
             {

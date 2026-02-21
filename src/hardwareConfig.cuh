@@ -111,20 +111,7 @@ namespace LBM
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-            if constexpr (alpha == axis::X)
-            {
-                return nx<T>();
-            }
-
-            if constexpr (alpha == axis::Y)
-            {
-                return ny<T>();
-            }
-
-            if constexpr (alpha == axis::Z)
-            {
-                return nz<T>();
-            }
+            return var3<T>(block::nx<T>(), block::ny<T>(), block::nz<T>()).template value<alpha>();
         }
 
         /**

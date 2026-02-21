@@ -90,7 +90,7 @@ namespace LBM
             endian::assertions::validate();
 
             const uintmax_t nVars = static_cast<uintmax_t>(varNames.size());
-            const uintmax_t nPoints = static_cast<uintmax_t>(mesh.nx()) * static_cast<uintmax_t>(mesh.ny()) * static_cast<uintmax_t>(mesh.nz());
+            const uintmax_t nPoints = static_cast<uintmax_t>(mesh.template dimension<axis::X>()) * static_cast<uintmax_t>(mesh.template dimension<axis::Y>()) * static_cast<uintmax_t>(mesh.template dimension<axis::Z>());
             const uintmax_t expectedSize = nPoints * nVars;
 
             // Check if there is enough disk space to store the file
@@ -121,11 +121,11 @@ namespace LBM
             // Write the mesh information: number of points, number of devices
             out << "latticeMesh" << std::endl;
             out << "{" << std::endl;
-            out << "\tnx\t\t" << mesh.nx() << ";" << std::endl;
+            out << "\tnx\t\t" << mesh.template dimension<axis::X>() << ";" << std::endl;
             out << std::endl;
-            out << "\tny\t\t" << mesh.ny() << ";" << std::endl;
+            out << "\tny\t\t" << mesh.template dimension<axis::Y>() << ";" << std::endl;
             out << std::endl;
-            out << "\tnz\t\t" << mesh.nz() << ";" << std::endl;
+            out << "\tnz\t\t" << mesh.template dimension<axis::Z>() << ";" << std::endl;
             out << std::endl;
             out << "\tnxGPUs\t\t" << mesh.template nDevices<axis::X>() << ";" << std::endl;
             out << std::endl;
@@ -174,7 +174,7 @@ namespace LBM
             out << "{" << std::endl;
             out << "\tfieldType\tnonUniform;" << std::endl;
             out << std::endl;
-            out << "\tfield[" << expectedSize << "][" << nVars << "][" << mesh.nz() << "][" << mesh.ny() << "][" << mesh.nx() << "]" << std::endl;
+            out << "\tfield[" << expectedSize << "][" << nVars << "][" << mesh.template dimension<axis::Z>() << "][" << mesh.template dimension<axis::Y>() << "][" << mesh.template dimension<axis::X>() << "]" << std::endl;
             out << "\t{" << std::endl;
             // out.flush();
             out.write(reinterpret_cast<const char *>(fields), static_cast<std::streamsize>(byteSize));

@@ -210,7 +210,7 @@ namespace LBM
             return isLatestTime ? static_cast<label_t>(fileNameIndices.size() - 1) : 0;
         }
 
-        __host__ [[nodiscard]] label_t getStartIndex(const name_t fileNamePrefix, const bool isLatestTime)
+        __host__ [[nodiscard]] label_t getStartIndex(const name_t &fileNamePrefix, const bool isLatestTime)
         {
             const std::vector<label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
@@ -230,7 +230,7 @@ namespace LBM
         }
 
         template <class ProgramControl>
-        __host__ [[nodiscard]] label_t getStartIndex(const name_t fileNamePrefix, const ProgramControl &programCtrl)
+        __host__ [[nodiscard]] label_t getStartIndex(const name_t &fileNamePrefix, const ProgramControl &programCtrl)
         {
             return getStartIndex(fileNamePrefix, programCtrl.input().isArgPresent("-latestTime"));
         }

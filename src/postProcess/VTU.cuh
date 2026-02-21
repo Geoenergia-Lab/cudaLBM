@@ -73,8 +73,8 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames) noexcept
             {
-                const label_t numNodes = mesh.nx() * mesh.ny() * mesh.nz();
-                const label_t numElements = (mesh.nx() - 1) * (mesh.ny() - 1) * (mesh.nz() - 1);
+                const label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
                 const std::size_t numVars = solutionVars.size();
 
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
@@ -147,7 +147,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames)
             {
-                const uint64_t numNodes = mesh.nx<uint64_t>() * mesh.ny<uint64_t>() * mesh.nz<uint64_t>();
+                const uint64_t numNodes = mesh.dimension<axis::X, uint64_t>() * mesh.dimension<axis::Y, uint64_t>() * mesh.dimension<axis::Z, uint64_t>();
                 const std::size_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())

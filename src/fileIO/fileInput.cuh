@@ -342,7 +342,7 @@ namespace LBM
         template <typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const std::vector<T> &fMom, const LatticeMesh &mesh)
         {
-            const std::size_t nNodes = mesh.template nx<std::size_t>() * mesh.template ny<std::size_t>() * mesh.template nz<std::size_t>();
+            const std::size_t nNodes = mesh.template dimension<axis::X, std::size_t>() * mesh.template dimension<axis::Y, std::size_t>() * mesh.template dimension<axis::Z, std::size_t>();
             if (fMom.size() % nNodes != 0)
             {
                 throw std::invalid_argument("fMom size (" + std::to_string(fMom.size()) + ") is not divisible by mesh points (" + std::to_string(nNodes) + ")");
@@ -355,39 +355,39 @@ namespace LBM
             const std::size_t nyGPUs = mesh.template nDevices<axis::Y, std::size_t>();
             const std::size_t nzGPUs = mesh.template nDevices<axis::Z, std::size_t>();
 
-            const std::size_t nxBlocksPerGPU = mesh.template nxBlocks<std::size_t>() / nxGPUs;
-            const std::size_t nyBlocksPerGPU = mesh.template nyBlocks<std::size_t>() / nyGPUs;
-            const std::size_t nzBlocksPerGPU = mesh.template nzBlocks<std::size_t>() / nzGPUs;
+            const std::size_t nxBlocksPerDevice = mesh.template nBlocks<axis::X, std::size_t>() / nxGPUs;
+            const std::size_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y, std::size_t>() / nyGPUs;
+            const std::size_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z, std::size_t>() / nzGPUs;
 
             const std::size_t pointsPerBlock = block::size<std::size_t>();
-            const std::size_t nPointsPerGPU = nxBlocksPerGPU * nyBlocksPerGPU * nzBlocksPerGPU * pointsPerBlock;
+            const std::size_t nPointsPerDevice = nxBlocksPerDevice * nyBlocksPerDevice * nzBlocksPerDevice * pointsPerBlock;
 
-            gpu_for(
-                nxGPUs, nyGPUs, nzGPUs,
+            GPU::forAll(
+                mesh.nDevices(),
                 [&](const std::size_t GPU_x, const std::size_t GPU_y, const std::size_t GPU_z)
                 {
                     const std::size_t virtualDeviceIndex = GPU::idx<std::size_t>(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
-                    grid_for(
-                        nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
+                    host::forAll(
+                        mesh.nBlocks(),
                         [&](const std::size_t bx, const std::size_t by, const std::size_t bz,
                             const std::size_t tx, const std::size_t ty, const std::size_t tz)
                         {
                             // Global coordinates (for output)
-                            const std::size_t x = (GPU_x * nxBlocksPerGPU + bx) * block::nx<std::size_t>() + tx;
-                            const std::size_t y = (GPU_y * nyBlocksPerGPU + by) * block::ny<std::size_t>() + ty;
-                            const std::size_t z = (GPU_z * nzBlocksPerGPU + bz) * block::nz<std::size_t>() + tz;
+                            const std::size_t x = (GPU_x * nxBlocksPerDevice + bx) * block::nx<std::size_t>() + tx;
+                            const std::size_t y = (GPU_y * nyBlocksPerDevice + by) * block::ny<std::size_t>() + ty;
+                            const std::size_t z = (GPU_z * nzBlocksPerDevice + bz) * block::nz<std::size_t>() + tz;
 
-                            const std::size_t idxGlobal = global::idx(x, y, z, mesh.template nx<std::size_t>(), mesh.template ny<std::size_t>());
+                            const std::size_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X, std::size_t>(), mesh.template dimension<axis::Y, std::size_t>());
 
                             // Local index within this GPU's storage (block‑major order)
-                            const std::size_t blockLin = (bz * nyBlocksPerGPU + by) * nxBlocksPerGPU + bx;
+                            const std::size_t blockLin = (bz * nyBlocksPerDevice + by) * nxBlocksPerDevice + bx;
                             const std::size_t threadLin = (tz * block::ny<std::size_t>() + ty) * block::nx<std::size_t>() + tx;
                             const std::size_t localIdx = blockLin * pointsPerBlock + threadLin;
 
                             for (std::size_t field = 0; field < nFields; field++)
                             {
-                                const std::size_t srcIdx = field * nNodes + virtualDeviceIndex * nPointsPerGPU + localIdx;
+                                const std::size_t srcIdx = field * nNodes + virtualDeviceIndex * nPointsPerDevice + localIdx;
                                 soa[field][idxGlobal] = fMom[srcIdx];
                             }
                         });

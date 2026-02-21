@@ -148,12 +148,12 @@ namespace LBM
             const std::chrono::high_resolution_clock::time_point &start,
             const std::chrono::high_resolution_clock::time_point &end) noexcept
         {
-            if ((programCtrl.nt() == (programCtrl.latestTime() - 1)) | mesh.nPoints() == 0)
+            if ((programCtrl.nt() == (programCtrl.latestTime() - 1)) | mesh.size() == 0)
             {
                 return 0;
             }
 
-            const uint64_t nPoints = mesh.nx<uint64_t>() * mesh.ny<uint64_t>() * mesh.nz<uint64_t>();
+            const uint64_t nPoints = mesh.dimension<axis::X, uint64_t>() * mesh.dimension<axis::Y, uint64_t>() * mesh.dimension<axis::Z, uint64_t>();
 
             const uint64_t nTime = programCtrl.nt<uint64_t>() - programCtrl.latestTime<uint64_t>() - 1;
 
