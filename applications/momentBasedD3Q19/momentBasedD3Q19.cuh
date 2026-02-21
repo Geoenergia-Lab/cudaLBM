@@ -201,16 +201,18 @@ namespace LBM
         // Collide
         Collision::collide(moments);
 
-        // Calculate post collision populations
-        // VelocitySet::reconstruct(pop, moments);
-        // BlockHalo::transpose_to_shared(pop, shared_buffer);
-
         // Coalesced write to global memory
-        moments[m_i<0>()] = moments[m_i<0>()] - rho0();
         device::constexpr_for<0, NUMBER_MOMENTS()>(
             [&](const auto moment)
             {
-                devPtrs.ptr<moment>()[idx] = moments[moment];
+                if constexpr (moment == index::rho)
+                {
+                    devPtrs.ptr<moment>()[idx] = moments[moment] - rho0();
+                }
+                else
+                {
+                    devPtrs.ptr<moment>()[idx] = moments[moment];
+                }
             });
 
         // Save the populations to the block halo
