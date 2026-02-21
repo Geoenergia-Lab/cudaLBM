@@ -138,6 +138,12 @@ namespace LBM
         }
     }
 
+    template <typename T>
+    __device__ __host__ [[nodiscard]] inline constexpr T rms_sq(const T x, const T y) noexcept
+    {
+        return (x * x) + (y * y);
+    }
+
     namespace GPU
     {
         /**
