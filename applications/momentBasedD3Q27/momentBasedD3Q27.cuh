@@ -85,6 +85,8 @@ namespace LBM
     {
         const thread::coordinate Tx;
 
+        // const normalVector blockNormal(Tx);
+
         const block::coordinate Bx;
 
         const device::pointCoordinate point(Tx, Bx);
@@ -148,7 +150,7 @@ namespace LBM
         }
 
         // Load pop from global memory in cover nodes
-        BlockHalo::load(pop, fGhost, Tx, Bx);
+        BlockHalo::load(pop, fGhost, Tx, Bx, point);
 
         if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
         {

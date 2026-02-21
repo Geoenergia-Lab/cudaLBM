@@ -149,7 +149,7 @@ namespace LBM
         }
 
         // Load pop from global memory in cover nodes
-        BlockHalo::load(pop, fGhost, Tx, Bx);
+        BlockHalo::load(pop, fGhost, Tx, Bx, point);
 
         if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
         {

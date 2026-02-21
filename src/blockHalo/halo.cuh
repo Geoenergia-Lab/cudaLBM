@@ -148,44 +148,49 @@ namespace LBM
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            __device__ static inline constexpr void load(thread::array<scalar_t, VelocitySet::Q()> &pop, const device::ptrCollection<6, const scalar_t> &fGhost, const thread::coordinate &Tx, const block::coordinate &Bx) noexcept
+            __device__ static inline constexpr void load(
+                thread::array<scalar_t, VelocitySet::Q()> &pop,
+                const device::ptrCollection<6, const scalar_t> &fGhost,
+                const thread::coordinate &Tx,
+                const block::coordinate &Bx,
+                const device::pointCoordinate &point) noexcept
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::load, "Potential issue with condition checking (e.g. West, East, etc)."));
 
                 // No boundary check
-                if (Tx.value<axis::X>() == 0)
+                if (West(point.value<axis::X>(), Tx))
                 {
                     // West
                     load_face<axis::X, +1, 1>(pop, fGhost, Tx, Bx);
                 }
                 // No boundary check
-                else if (Tx.value<axis::X>() == (block::n<axis::X>() - 1))
+                else if (East(point.value<axis::X>(), Tx))
                 {
                     // East
                     load_face<axis::X, -1, 0>(pop, fGhost, Tx, Bx);
                 }
 
                 // No boundary check
-                if (Tx.value<axis::Y>() == 0)
+                if (South(point.value<axis::Y>(), Tx))
                 {
                     // South
                     load_face<axis::Y, +1, 3>(pop, fGhost, Tx, Bx);
                 }
                 // No boundary check
-                else if (Tx.value<axis::Y>() == (block::n<axis::Y>() - 1))
+                else if (North(point.value<axis::Y>(), Tx))
                 {
                     // North
                     load_face<axis::Y, -1, 2>(pop, fGhost, Tx, Bx);
                 }
 
                 // No boundary check
-                if (Tx.value<axis::Z>() == 0)
+                if (Back(point.value<axis::Z>(), Tx))
                 {
                     // Back
                     load_face<axis::Z, +1, 5>(pop, fGhost, Tx, Bx);
                 }
                 // No boundary check
-                else if (Tx.value<axis::Z>() == (block::n<axis::Z>() - 1))
+                else if (Front(point.value<axis::Z>(), Tx))
                 {
                     // Front
                     load_face<axis::Z, -1, 4>(pop, fGhost, Tx, Bx);
