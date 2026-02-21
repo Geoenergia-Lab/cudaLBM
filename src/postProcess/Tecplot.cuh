@@ -56,11 +56,12 @@ namespace LBM
     {
         namespace Tecplot
         {
-            __host__ [[nodiscard]] inline consteval bool hasFields() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasPoints() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasElements() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasOffsets() { return true; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() { return ".dat"; }
+            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::ASCII; }
+            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".dat"; }
 
             /**
              * @brief Writes solution data to a Tecplot ASCII file in unstructured grid format
@@ -194,23 +195,28 @@ namespace LBM
                     std::cout << "    directoryStatus: OK;" << std::endl;
                 }
 
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+                std::cout << "    fileSize: "
+                          << fileSystem::to_mebibytes<double>(
+                                 fileSystem::expectedDiskUsage<
+                                     format(),
+                                     hasFields(),
+                                     hasPoints(),
+                                     hasElements(),
+                                     hasOffsets()>(
+                                     mesh,
+                                     solutionVars.size()))
+                          << " MiB;" << std::endl;
 
                 // Check if there is enough disk space to store the file
-                if (!fileSystem::diskSpaceCheck<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size()))
-                {
-                    std::cout << "    diskSpace: insufficient (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                    std::cout << "    writeStatus: fail (insufficient disk space)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    throw std::runtime_error("Error: Insufficient disk space on drive " + fileSystem::diskName());
-                }
-                else
-                {
-                    std::cout << "    diskSpace: OK (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                }
-
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
+                fileSystem::diskSpaceAssertion<
+                    format(),
+                    hasFields(),
+                    hasPoints(),
+                    hasElements(),
+                    hasOffsets()>(
+                    mesh,
+                    solutionVars.size(),
+                    fileName);
 
                 const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 

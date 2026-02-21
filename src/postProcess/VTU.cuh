@@ -56,11 +56,12 @@ namespace LBM
     {
         namespace VTU
         {
-            __host__ [[nodiscard]] inline consteval bool hasFields() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasPoints() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasElements() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasOffsets() { return true; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() { return ".vtu"; }
+            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::BINARY; }
+            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".vtu"; }
 
             /**
              * @brief Auxiliary template function that performs the VTU file writing.
@@ -182,23 +183,18 @@ namespace LBM
                     std::cout << "    directoryStatus: OK;" << std::endl;
                 }
 
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<format(), hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
 
                 // Check if there is enough disk space to store the file
-                if (!fileSystem::diskSpaceCheck<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size()))
-                {
-                    std::cout << "    diskSpace: Insufficient (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                    std::cout << "    writeStatus: Fail (insufficient disk space)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    throw std::runtime_error("Error: Insufficient disk space on drive " + fileSystem::diskName());
-                }
-                else
-                {
-                    std::cout << "    diskSpace: OK (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                }
-
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
+                fileSystem::diskSpaceAssertion<
+                    format(),
+                    hasFields(),
+                    hasPoints(),
+                    hasElements(),
+                    hasOffsets()>(
+                    mesh,
+                    solutionVars.size(),
+                    fileName);
 
                 constexpr const uint64_t limit32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
 

@@ -90,18 +90,19 @@ namespace LBM
             endian::assertions::validate();
 
             const uintmax_t nVars = static_cast<uintmax_t>(varNames.size());
-            const uintmax_t nPoints = static_cast<uintmax_t>(mesh.template dimension<axis::X>()) * static_cast<uintmax_t>(mesh.template dimension<axis::Y>()) * static_cast<uintmax_t>(mesh.template dimension<axis::Z>());
+            const uintmax_t nPoints = mesh.template size<uintmax_t>();
             const uintmax_t expectedSize = nPoints * nVars;
 
             // Check if there is enough disk space to store the file
-            {
-                const uintmax_t expectedDiskUsage = expectedSize * static_cast<uintmax_t>(sizeof(T));
-                if (!fileSystem::hasEnoughSpace(expectedDiskUsage))
-                {
-                    const uintmax_t availableSpace = fileSystem::availableDiskSpace();
-                    throw std::runtime_error("Insufficient disk space to write file " + fileName + "\nRequired: " + std::to_string(expectedDiskUsage) + "\nAvailable: " + std::to_string(availableSpace));
-                }
-            }
+            fileSystem::diskSpaceAssertion<
+                fileSystem::BINARY,
+                fileSystem::fields::Yes,
+                fileSystem::points::No,
+                fileSystem::elements::No,
+                fileSystem::offsets::No>(
+                mesh,
+                varNames.size(),
+                fileName);
 
             std::ofstream out(fileName, std::ios::binary);
             if (!out)

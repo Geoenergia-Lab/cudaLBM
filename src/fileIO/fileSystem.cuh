@@ -59,7 +59,7 @@ namespace LBM
     namespace fileSystem
     {
         /**
-         * @brief Enumeration for file formats
+         * @brief File format enumeration
          **/
         typedef enum Enum : int
         {
@@ -68,25 +68,180 @@ namespace LBM
             UNDEFINED = 2
         } format;
 
-        namespace assertions
+        namespace scalar
         {
-            template <const format Format>
-            __device__ __host__ inline consteval void validate() noexcept
+            /**
+             * @brief Disk space for scalar data
+             * @tparam Fields Whether fields are included
+             * @tparam Format File format (ASCII or BINARY)
+             * @param[in] nx, ny, nz Number of mesh points
+             * @param[in] nVars Number of variables
+             */
+            template <typename T, const T Present, const format Format>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
             {
-                static_assert((Format == ASCII) || (Format == BINARY), "Invalid format: must be ASCII or BINARY");
+                static_assert(Format == ASCII || Format == BINARY, "Format must be ASCII or BINARY");
+
+                if constexpr (static_cast<bool>(Present))
+                {
+                    const uintmax_t nElements = nx * ny * nz;
+                    if constexpr (Format == BINARY)
+                    {
+                        return nVars * nElements * sizeof(scalar_t);
+                    }
+                    else
+                    {
+                        // ASCII estimate
+                        if constexpr (std::is_same_v<scalar_t, double>)
+                        {
+                            return nVars * nElements * 25;
+                        }
+                        else
+                        {
+                            return nVars * nElements * 15;
+                        }
+                    }
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+
+        namespace connectivity
+        {
+            /**
+             * @brief Disk space for element connectivity
+             * @tparam Elements Whether elements are included
+             * @tparam N Number of labels per element
+             */
+            template <typename T, const T Present, const uintmax_t N>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            {
+                if constexpr (static_cast<bool>(Present))
+                {
+                    return N * (nx - 1) * (ny - 1) * (nz - 1) * sizeof(label_t);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+
+        namespace fields
+        {
+            typedef enum Enum : bool
+            {
+                No = false,
+                Yes = true
+            } contained;
+
+            /**
+             * @brief Disk space for field data (multiple variables per grid point)
+             * @tparam Fields Whether fields are included
+             * @tparam Format File format (ASCII or BINARY)
+             * @param[in] nx, ny, nz Mesh dimensions
+             * @param[in] nVars Number of variables
+             */
+            template <const contained Fields, const format Format>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+            {
+                return scalar::usage<contained, Fields, Format>(nx, ny, nz, nVars);
+            }
+        }
+
+        namespace points
+        {
+            typedef enum Enum : bool
+            {
+                No = false,
+                Yes = true
+            } contained;
+
+            /**
+             * @brief Disk space for point coordinates (always 3 components per node)
+             * @tparam Points Whether points are included
+             * @tparam Format File format
+             * @param[in] nx, ny, nz Mesh dimensions
+             */
+            template <const contained Points, const format Format>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            {
+                return scalar::usage<contained, Points, Format>(nx, ny, nz, 3);
+            }
+        }
+
+        namespace elements
+        {
+            typedef enum Enum : bool
+            {
+                No = false,
+                Yes = true
+            } contained;
+
+            /**
+             * @brief Disk space for element connectivity (8 labels per element)
+             * @tparam Elements Whether elements are included
+             * @param[in] nx, ny, nz Mesh dimensions
+             */
+            template <const contained Elements>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            {
+                return connectivity::usage<contained, Elements, 8>(nx, ny, nz);
+            }
+        }
+
+        namespace offsets
+        {
+            typedef enum Enum : bool
+            {
+                No = false,
+                Yes = true
+            } contained;
+
+            /**
+             * @brief Disk space for offset data (1 label per element)
+             * @tparam Offsets Whether offsets are included
+             * @param[in] nx, ny, nz Mesh dimensions
+             */
+            template <const contained Offsets>
+            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            {
+                return connectivity::usage<contained, Offsets, 1>(nx, ny, nz);
             }
         }
 
         /**
-         * @brief Convert bytes to mebibytes (binary megabytes, 1024*1024 bytes)
-         * @tparam T The return type for the converted value
-         * @param[in] nBytes Number of bytes to convert
-         * @return The equivalent value in mebibytes as type T
-         **/
-        template <typename T>
-        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const uintmax_t nBytes) noexcept
+         * @brief Compute total expected disk space for all output components
+         * @tparam Format File format
+         * @tparam fields Whether field data is included
+         * @tparam points Whether point coordinates are included
+         * @tparam elements Whether element connectivity is included
+         * @tparam offsets Whether offset data is included
+         * @param[in] nx, ny, nz Mesh dimensions
+         * @param[in] nVars Number of field variables (ignored if fields == No)
+         * @return Total bytes required
+         */
+        template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets>
+        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
         {
-            return static_cast<T>(static_cast<double>(nBytes) / (static_cast<double>(1024 * 1024)));
+            return fields::usage<Fields, Format>(nx, ny, nz, nVars) + points::usage<Points, Format>(nx, ny, nz) + elements::usage<Elements>(nx, ny, nz) + offsets::usage<Offsets>(nx, ny, nz);
+        }
+
+        /**
+         * @brief Overload for usage with a mesh object.
+         * @tparam Format,fields, points, elements, offsets Same as above.
+         * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, uintmax_t>(), etc.).
+         * @param[in] mesh The lattice mesh.
+         * @param[in] nVars Number of field variables.
+         * @return Total bytes required.
+         */
+        template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
+        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const LatticeMesh &mesh, const uintmax_t nVars) noexcept
+        {
+            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X, uintmax_t>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y, uintmax_t>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z, uintmax_t>()), nVars);
         }
 
         /**
@@ -119,176 +274,76 @@ namespace LBM
         }
 
         /**
-         * @brief Gets the available storage space on the disk on which dir is located
+         * @brief Gets the available storage space on the disk containing dir.
          * @param[in] dir The directory to query
-         * @return The available storage space in bytes on a dir
-         **/
+         * @return Available bytes.
+         */
         __host__ [[nodiscard]] uintmax_t availableDiskSpace(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             std::error_code ec;
-
-            const std::filesystem::space_info si = std::filesystem::space(diskName(dir), ec);
-
-            return si.available;
+            const std::filesystem::space_info space = std::filesystem::space(diskName(dir), ec);
+            return ec ? 0 : space.available;
         }
 
         /**
-         * @brief Checks if there exists enough space to write nBytes in a given directory
-         * @param[in] nBytes The number of bytes to be written
-         * @param[in] dir The directory in which we wish to write
-         * @return True if there is enough space, false otherwise
-         **/
-        __host__ [[nodiscard]] bool hasEnoughSpace(const uintmax_t nBytes, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+         * @brief Checks if at least `required` bytes are available on the disk of `dir`.
+         */
+        __host__ [[nodiscard]] inline bool hasEnoughSpace(const uintmax_t required, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
-            return (nBytes < availableDiskSpace(dir));
+            return required < availableDiskSpace(dir);
         }
 
         /**
-         * @brief Calculate the disk space required for field data storage
-         * @tparam hasFields Whether field data is present
-         * @tparam Format The file format (ASCII or BINARY)
-         * @param[in] nx Number of grid points in x-direction
-         * @param[in] ny Number of grid points in y-direction
-         * @param[in] nz Number of grid points in z-direction
-         * @param[in] nVars Number of field variables
-         * @return The estimated disk space required for field data in bytes
-         **/
-        template <const bool hasFields, const format Format>
-        __host__ [[nodiscard]] inline constexpr uintmax_t fieldsDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+         * @brief Throws a runtime_error due to insufficient disk space
+         */
+        __host__ void insufficientDiskSpace(const std::string &fileName, const uintmax_t expected, const uintmax_t available = availableDiskSpace())
         {
-            if constexpr (hasFields)
-            {
-                assertions::validate<Format>();
+            throw std::runtime_error("Insufficient disk space to write " + fileName + "\nRequired: " + std::to_string(expected) + "\nAvailable: " + std::to_string(available));
+        }
 
-                if constexpr (Format == BINARY)
-                {
-                    return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * static_cast<uintmax_t>(sizeof(scalar_t));
-                }
-                else
-                {
-                    if constexpr (std::is_same_v<scalar_t, double>)
-                    {
-                        // Handle double
-                        return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * 25;
-                    }
-                    else if constexpr (std::is_same_v<scalar_t, float>)
-                    {
-                        // Handle float
-                        return static_cast<uintmax_t>(nVars) * static_cast<uintmax_t>(nx) * static_cast<uintmax_t>(ny) * static_cast<uintmax_t>(nz) * 15;
-                    }
-                }
-            }
-            else
+        /**
+         * @brief Throws if insufficient disk space.
+         */
+        __host__ void ensureDiskSpace(const std::string &fileName, const uintmax_t required, const uintmax_t available = availableDiskSpace())
+        {
+            if (required > available)
             {
-                return 0;
+                insufficientDiskSpace(fileName, required, available);
             }
         }
 
         /**
-         * @brief Calculate the disk space required for element data storage
-         * @tparam hasElements Whether element data is present
-         * @tparam labelsPerElement Number of labels per element (typically 8 for hexahedra)
-         * @param[in] nx Number of grid points in x-direction
-         * @param[in] ny Number of grid points in y-direction
-         * @param[in] nz Number of grid points in z-direction
-         * @return The estimated disk space required for element data in bytes
-         **/
-        template <const bool hasElements, const uintmax_t labelsPerElement>
-        __host__ [[nodiscard]] inline constexpr uintmax_t elementsDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+         * @brief Check whether sufficient disk space exists for a given output config.
+         */
+        template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
+        __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const uintmax_t nVars, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
-            if constexpr (hasElements)
-            {
-                return labelsPerElement * static_cast<uintmax_t>(nx - 1) * static_cast<uintmax_t>(ny - 1) * static_cast<uintmax_t>(nz - 1) * static_cast<uintmax_t>(sizeof(label_t));
-            }
-            else
-            {
-                return 0;
-            }
+            const uintmax_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
+            return hasEnoughSpace(needed, dir);
         }
 
         /**
-         * @brief Calculate total expected disk usage for all components
-         * @tparam Format The file format (ASCII or BINARY)
-         * @tparam hasFields Whether field data is present
-         * @tparam hasPoints Whether point data is present
-         * @tparam hasElements Whether element data is present
-         * @tparam hasOffsets Whether offset data is present
-         * @param[in] nx Number of grid points in x-direction
-         * @param[in] ny Number of grid points in y-direction
-         * @param[in] nz Number of grid points in z-direction
-         * @param[in] nVars Number of field variables
-         * @return The total estimated disk space required in bytes
-         **/
-        template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets>
-        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+         * @brief Assert (throw) that sufficient disk space exists.
+         */
+        template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
+        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const std::string &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
         {
-            return fieldsDiskUsage<hasFields, Format>(nx, ny, nz, nVars) + fieldsDiskUsage<hasPoints, Format>(nx, ny, nz, 3) + elementsDiskUsage<hasElements, 8>(nx, ny, nz) + elementsDiskUsage<hasOffsets, 1>(nx, ny, nz);
+            const uintmax_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
+
+            ensureDiskSpace(fileName, needed, availableDiskSpace(dir));
         }
 
         /**
-         * @brief Calculate total expected disk usage for all components using mesh dimensions
-         * @tparam Format The file format (ASCII or BINARY)
-         * @tparam hasFields Whether field data is present
-         * @tparam hasPoints Whether point data is present
-         * @tparam hasElements Whether element data is present
-         * @tparam hasOffsets Whether offset data is present
-         * @tparam Mesh The mesh type
-         * @param[in] mesh The lattice mesh
-         * @param[in] nVars Number of field variables
-         * @return The total estimated disk space required in bytes
-         **/
-        template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh, typename T>
-        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const LatticeMesh &mesh, const T nVars) noexcept
+         * @brief Convert bytes to mebibytes
+         * @tparam T Return type
+         * @param[in] bytes Number of bytes
+         */
+        template <typename T>
+        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const uintmax_t bytes) noexcept
         {
-            return expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), static_cast<uintmax_t>(nVars));
+            return static_cast<T>(static_cast<double>(bytes) / (1024.0 * 1024.0));
         }
 
-        /**
-         * @brief Check if sufficient disk space is available for writing
-         * @tparam Format The file format (ASCII or BINARY)
-         * @tparam hasFields Whether field data is present
-         * @tparam hasPoints Whether point data is present
-         * @tparam hasElements Whether element data is present
-         * @tparam hasOffsets Whether offset data is present
-         * @tparam Mesh The mesh type
-         * @param[in] mesh The lattice mesh
-         * @param[in] nVars Number of field variables
-         * @return True if sufficient disk space is available, false otherwise
-         **/
-        template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
-        __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const uintmax_t nVars)
-        {
-            // Calculated the approximate required space
-            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), nVars);
-
-            // Check enough space is available
-            return fileSystem::hasEnoughSpace(requiredDiskSpace);
-        }
-
-        /**
-         * @brief Assert that sufficient disk space is available, throw error if not
-         * @tparam Format The file format (ASCII or BINARY)
-         * @tparam hasFields Whether field data is present
-         * @tparam hasPoints Whether point data is present
-         * @tparam hasElements Whether element data is present
-         * @tparam hasOffsets Whether offset data is present
-         * @tparam Mesh The mesh type
-         * @param[in] mesh The lattice mesh
-         * @param[in] nVars Number of field variables
-         * @param[in] fileName Name of the file being written (for error message)
-         * @throws std::runtime_error if insufficient disk space is available
-         **/
-        template <const format Format, const bool hasFields, const bool hasPoints, const bool hasElements, const bool hasOffsets, class LatticeMesh>
-        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const name_t &fileName)
-        {
-            const uintmax_t requiredDiskSpace = expectedDiskUsage<Format, hasFields, hasPoints, hasElements, hasOffsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z>()), static_cast<uintmax_t>(nVars));
-
-            if (!diskSpaceCheck<Format, hasFields, hasPoints, hasElements, hasOffsets>(mesh, static_cast<uintmax_t>(nVars)))
-            {
-                const uintmax_t availableSpace = fileSystem::availableDiskSpace();
-                throw std::runtime_error("Insufficient disk space to write file " + fileName + "\nRequired: " + std::to_string(requiredDiskSpace) + "\nAvailable: " + std::to_string(availableSpace));
-            }
-        }
     }
 }
 
