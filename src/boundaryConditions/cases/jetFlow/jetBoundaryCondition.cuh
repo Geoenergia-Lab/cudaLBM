@@ -65,42 +65,27 @@ case normalVector::BACK():
     const scalar_t dx = static_cast<scalar_t>(x) - center_x();
     const scalar_t dy = static_cast<scalar_t>(y) - center_y();
 
-    if constexpr (new_inlet())
-    {
-        const scalar_t is_jet = static_cast<scalar_t>(((dx * dx) + (dy * dy)) < r2());
-        const scalar_t rho = rho0<scalar_t>();
-        moments[m_i<0>()] = rho;                                                    // rho
-        moments[m_i<1>()] = is_jet * device::U_Back[0];                             // ux
-        moments[m_i<2>()] = is_jet * device::U_Back[1];                             // uy
-        moments[m_i<3>()] = is_jet * device::U_Back[2];                             // uz
-        moments[m_i<4>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[0]); // mxx
-        moments[m_i<5>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[1]); // mxy
-        moments[m_i<6>()] = is_jet * (rho * device::U_Back[0] * device::U_Back[2]); // mxz
-        moments[m_i<7>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[1]); // myy
-        moments[m_i<8>()] = is_jet * (rho * device::U_Back[1] * device::U_Back[2]); // myz
-        moments[m_i<9>()] = is_jet * (rho * device::U_Back[2] * device::U_Back[2]); // mzz
-    }
-    else
-    {
-        const scalar_t is_jet = static_cast<scalar_t>((static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) + (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) < r2());
-        const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
-        const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t is_jet = static_cast<scalar_t>(
+        (static_cast<scalar_t>(x) - center_x()) * (static_cast<scalar_t>(x) - center_x()) +
+            (static_cast<scalar_t>(y) - center_y()) * (static_cast<scalar_t>(y) - center_y()) <
+        r2());
+    const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
+    const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-        const scalar_t rho = rho0<scalar_t>();
-        const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
-        const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
+    const scalar_t rho = -static_cast<scalar_t>(6) * rho_I / (-static_cast<scalar_t>(5) + static_cast<scalar_t>(3) * is_jet * u_inlet() + static_cast<scalar_t>(3) * is_jet * u_inlet() * u_inlet());
+    const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
+    const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
-        moments[m_i<0>()] = rho;                                                    // rho
-        moments[m_i<1>()] = static_cast<scalar_t>(0);                             // ux
-        moments[m_i<2>()] = static_cast<scalar_t>(0);                             // uy
-        moments[m_i<3>()] = is_jet * u_inlet();                             // uz
-        moments[m_i<4>()] = static_cast<scalar_t>(0);                               // mxx
-        moments[m_i<5>()] = static_cast<scalar_t>(0);                               // mxy
-        moments[m_i<6>()] = mxz;                                                    // mxz
-        moments[m_i<7>()] = static_cast<scalar_t>(0);                               // myy
-        moments[m_i<8>()] = myz;                                                    // myz
-        moments[m_i<9>()] = is_jet * (rho * u_inlet() *  u_inlet()); // mzz
-    }
+    moments[m_i<0>()] = rho;                              // rho
+    moments[m_i<1>()] = static_cast<scalar_t>(0);         // ux
+    moments[m_i<2>()] = static_cast<scalar_t>(0);         // uy
+    moments[m_i<3>()] = is_jet * u_inlet();               // uz
+    moments[m_i<4>()] = static_cast<scalar_t>(0);         // mxx
+    moments[m_i<5>()] = static_cast<scalar_t>(0);         // mxy
+    moments[m_i<6>()] = mxz;                              // mxz
+    moments[m_i<7>()] = static_cast<scalar_t>(0);         // myy
+    moments[m_i<8>()] = myz;                              // myz
+    moments[m_i<9>()] = is_jet * (u_inlet() * u_inlet()); // mzz
 
     return;
 }

@@ -301,16 +301,12 @@ namespace LBM
             // const scalar_t Delta_m = static_cast<scalar_t>(0.0);
 
             // --- ISOTHERMAL ON ---
-            const scalar_t Delta_m = static_cast<scalar_t>(1.0)/static_cast<scalar_t>(3.0) * 
-               (moments[m_i<1>()] * moments[m_i<1>()] + 
-                moments[m_i<2>()] * moments[m_i<2>()] +
-                moments[m_i<3>()] * moments[m_i<3>()] -
-                moments[m_i<4>()] - moments[m_i<7>()] - moments[m_i<9>()]);
+            const scalar_t Delta_m = delta_m<false>(moments);
 
             const scalar_t mxxMod = moments[m_i<4>()] + Delta_m;
             const scalar_t myyMod = moments[m_i<7>()] + Delta_m;
             const scalar_t mzzMod = moments[m_i<9>()] + Delta_m;
-            
+
             const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (mxxMod + myyMod + mzzMod);
 
             const scalar_t rhow_0 = moments[m_i<0>()] * w_0<scalar_t>();

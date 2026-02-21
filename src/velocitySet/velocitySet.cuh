@@ -160,6 +160,23 @@ namespace LBM
             moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
         }
 
+        template <const bool IsIsothermal>
+        __device__ __host__ [[nodiscard]] static inline scalar_t delta_m(const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
+        {
+            if constexpr (!IsIsothermal)
+            {
+                return static_cast<scalar_t>(0);
+            }
+            else
+            {
+                return static_cast<scalar_t>(1) / static_cast<scalar_t>(3) *
+                       (moments[m_i<1>()] * moments[m_i<1>()] +
+                        moments[m_i<2>()] * moments[m_i<2>()] +
+                        moments[m_i<3>()] * moments[m_i<3>()] -
+                        moments[m_i<4>()] - moments[m_i<7>()] - moments[m_i<9>()]);
+            }
+        }
+
         /**
          * @brief Calculate a specific moment of the distribution function
          * @tparam VelocitySet The velocity set type
