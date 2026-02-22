@@ -414,8 +414,16 @@ namespace LBM
             __host__ inline void print() const noexcept
             {
                 dimensions_.print("latticeMesh");
+                std::cout << std::endl;
+
                 L_.print("meshSize");
+                std::cout << std::endl;
+
                 blockLabel_t{block::nx(), block::ny(), block::nz()}.print("blockDimensions");
+                std::cout << std::endl;
+
+                nDevices_.print("deviceDecomposition");
+                std::cout << std::endl;
             }
         };
     }

@@ -43,12 +43,12 @@ Namespace
     LBM, LBM::block
 
 SourceFiles
-    hardwareConfig.cuh
+    blockConfig.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_HARDWARECONFIG_CUH
-#define __MBLBM_HARDWARECONFIG_CUH
+#ifndef __MBLBM_BLOCKCONFIG_CUH
+#define __MBLBM_BLOCKCONFIG_CUH
 
 namespace LBM
 {

@@ -53,7 +53,7 @@ SourceFiles
 #include "../LBMIncludes.cuh"
 #include "../typedefs/typedefs.cuh"
 #include "../strings.cuh"
-#include "../inputControl.cuh"
+#include "inputControl.cuh"
 #include "../fileIO/fileIO.cuh"
 
 namespace LBM

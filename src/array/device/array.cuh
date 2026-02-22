@@ -77,6 +77,8 @@ namespace LBM
         template <typename T>
         class arrayBase
         {
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::arrayBase, "Need to ensure that device::arrayBase and host::arrayBase check the device decomposition of the file from which they read; this is not always going to be the same as the decomposition specified in the deviceDecomposition file."));
+
         protected:
             /**
              * @brief Array of device pointers (one per GPU)

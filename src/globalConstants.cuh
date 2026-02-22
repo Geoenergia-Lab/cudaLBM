@@ -50,6 +50,8 @@ SourceFiles
 #ifndef __MBLBM_GLOBALCONSTANTS_CUH
 #define __MBLBM_GLOBALCONSTANTS_CUH
 
+#include "errorHandler.cuh"
+
 namespace LBM
 {
     /**
@@ -104,56 +106,6 @@ namespace LBM
         __device__ __constant__ label_t BLOCK_OFFSET_X;
         __device__ __constant__ label_t BLOCK_OFFSET_Y;
         __device__ __constant__ label_t BLOCK_OFFSET_Z;
-
-        /**
-         * @brief Returns the global mesh size in a particular axis direction
-         * @tparam alpha The axis
-         **/
-        template <axis::type alpha>
-        __device__ [[nodiscard]] inline constexpr label_t n() noexcept
-        {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-            if constexpr (alpha == axis::X)
-            {
-                return nx;
-            }
-
-            if constexpr (alpha == axis::Y)
-            {
-                return ny;
-            }
-
-            if constexpr (alpha == axis::Z)
-            {
-                return nz;
-            }
-        }
-
-        /**
-         * @brief Returns the number of mesh blocks per GPU in a particular axis direction
-         * @tparam alpha The axis
-         **/
-        template <axis::type alpha>
-        __device__ [[nodiscard]] inline constexpr label_t NUM_BLOCK() noexcept
-        {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-
-            if constexpr (alpha == axis::X)
-            {
-                return NUM_BLOCK_X;
-            }
-
-            if constexpr (alpha == axis::Y)
-            {
-                return NUM_BLOCK_Y;
-            }
-
-            if constexpr (alpha == axis::Z)
-            {
-                return NUM_BLOCK_Z;
-            }
-        }
 
         /**
          * @brief Allocates a symbol of type T to the device

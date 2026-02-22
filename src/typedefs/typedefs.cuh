@@ -201,51 +201,6 @@ namespace LBM
 #include "velocityTypedefs.cuh"
 #include "ptrTypedefs.cuh"
 #include "var3.cuh"
-
-#include "../hardwareConfig.cuh"
-#include "../errorHandler.cuh"
-
-namespace LBM
-{
-    /**
-     * @brief Struct used to represent 2D indices in a more readable way
-     **/
-    template <const axis::type alpha>
-    class dim2
-    {
-    public:
-        /**
-         * @brief Constructs from a linear index of a flattened 2D array with dimensions (block::n<alpha>(), block::n<beta>())
-         * @param[in] linearIdx The linear index to convert to 2D indices
-         **/
-        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t linearIdx) noexcept
-            : i_(linearIdx % (block::n<axis::orthogonal<alpha, 0>()>())),
-              j_(linearIdx / (block::n<axis::orthogonal<alpha, 0>()>()))
-        {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-        };
-
-        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t a, const label_t b) noexcept
-            : i_(a),
-              j_(b)
-        {
-            axis::assertions::validate<alpha, axis::NOT_NULL>();
-        };
-
-        __device__ __host__ [[nodiscard]] inline constexpr label_t i() const noexcept
-        {
-            return i_;
-        }
-
-        __device__ __host__ [[nodiscard]] inline constexpr label_t j() const noexcept
-        {
-            return j_;
-        }
-
-    private:
-        const label_t i_;
-        const label_t j_;
-    };
-}
+#include "coordinateTypedefs.cuh"
 
 #endif

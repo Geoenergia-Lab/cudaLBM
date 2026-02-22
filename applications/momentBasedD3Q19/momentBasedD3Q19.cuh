@@ -146,10 +146,10 @@ namespace LBM
 
             // Pull from shared memory
             streaming::pull<VelocitySet>(pop, shared_buffer, Tx);
-        }
 
-        // Load pop from global memory in cover nodes
-        BlockHalo::load(pop, fGhost, Tx, Bx, point);
+            // Pull pop from global memory in cover nodes
+            BlockHalo::pull(pop, fGhost, Tx, Bx, point);
+        }
 
         if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
         {

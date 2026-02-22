@@ -120,20 +120,10 @@ namespace LBM
             out << std::endl;
 
             // Write the mesh information: number of points, number of devices
-            out << "latticeMesh" << std::endl;
-            out << "{" << std::endl;
-            out << "\tnx\t\t" << mesh.template dimension<axis::X>() << ";" << std::endl;
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(fileIO::writeFile, "Multi-GPU must write GPU decomposition information to the file"));
+            mesh.dimensions().print("latticeMesh", out);
             out << std::endl;
-            out << "\tny\t\t" << mesh.template dimension<axis::Y>() << ";" << std::endl;
-            out << std::endl;
-            out << "\tnz\t\t" << mesh.template dimension<axis::Z>() << ";" << std::endl;
-            out << std::endl;
-            out << "\tnxGPUs\t\t" << mesh.template nDevices<axis::X>() << ";" << std::endl;
-            out << std::endl;
-            out << "\tnyGPUs\t\t" << mesh.template nDevices<axis::Y>() << ";" << std::endl;
-            out << std::endl;
-            out << "\tnzGPUs\t\t" << mesh.template nDevices<axis::Z>() << ";" << std::endl;
-            out << "};" << std::endl;
+            mesh.nDevices().print("deviceDecomposition", out);
             out << std::endl;
 
             // Write the field information: instantaneous or time-averaged, field names

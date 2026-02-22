@@ -53,8 +53,6 @@ SourceFiles
 
 #include "LBMIncludes.cuh"
 #include "typedefs/typedefs.cuh"
-#include "globalConstants.cuh"
-#include "coordinate.cuh"
 
 namespace LBM
 {

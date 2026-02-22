@@ -53,7 +53,7 @@ SourceFiles
 #include "../../src/LBMIncludes.cuh"
 #include "../../src/typedefs/typedefs.cuh"
 #include "../../src/globalFunctions.cuh"
-#include "../../src/inputControl.cuh"
+#include "../../src/programControl/programControl.cuh"
 
 namespace LBM
 {

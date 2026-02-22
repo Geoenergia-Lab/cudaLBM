@@ -59,7 +59,7 @@ SourceFiles
 #include "../../src/fileIO/fileIO.cuh"
 #include "../../src/runTimeIO/runTimeIO.cuh"
 #include "../../src/postProcess/postProcess.cuh"
-#include "../../src/inputControl.cuh"
+#include "../../src/programControl/programControl.cuh"
 #include "../../src/functionObjects/functionObjects.cuh"
 
 namespace LBM

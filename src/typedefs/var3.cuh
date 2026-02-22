@@ -104,17 +104,27 @@ namespace LBM
         }
 
         /**
-         * @brief Print the struct to cout
-         * @param[in] name Name of the struct
+         * @brief Print the structure to an output stream
+         * @param[in] name Name to identify the structure in the output
+         * @param[in] os Output stream to write to
          */
+        void print(const name_t &name, std::ostream &os) const noexcept
+        {
+            os << name << std::endl;
+            os << "{" << std::endl;
+            os << "    x = " << x << ";" << std::endl;
+            os << "    y = " << y << ";" << std::endl;
+            os << "    z = " << z << ";" << std::endl;
+            os << "};" << std::endl;
+        }
+
+        /**
+         * @brief Print the structure to std::cout
+         * @param[in] name Name to identify the structure in the output
+         **/
         void print(const name_t &name) const noexcept
         {
-            std::cout << name << std::endl;
-            std::cout << "{" << std::endl;
-            std::cout << "    x = " << x << ";" << std::endl;
-            std::cout << "    y = " << y << ";" << std::endl;
-            std::cout << "    z = " << z << ";" << std::endl;
-            std::cout << "};" << std::endl;
+            print(name, std::cout);
         }
     };
 

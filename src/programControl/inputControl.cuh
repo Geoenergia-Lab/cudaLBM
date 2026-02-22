@@ -50,10 +50,6 @@ SourceFiles
 #ifndef __MBLBM_INPUTCONTROL_CUH
 #define __MBLBM_INPUTCONTROL_CUH
 
-#include "LBMIncludes.cuh"
-#include "typedefs/typedefs.cuh"
-#include "strings.cuh"
-
 namespace LBM
 {
     /**

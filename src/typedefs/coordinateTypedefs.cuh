@@ -50,10 +50,64 @@ SourceFiles
 #ifndef __MBLBM_COORDINATETYPEDEFS_CUH
 #define __MBLBM_COORDINATETYPEDEFS_CUH
 
-#include "globalConstants.cuh"
+#include "../blockConfig.cuh"
+#include "../globalConstants.cuh"
 
 namespace LBM
 {
+    namespace device
+    {
+        /**
+         * @brief Returns the global mesh size in a particular axis direction
+         * @tparam alpha The axis
+         **/
+        template <axis::type alpha>
+        __device__ [[nodiscard]] inline constexpr label_t n() noexcept
+        {
+            axis::assertions::validate<alpha, axis::NOT_NULL>();
+
+            if constexpr (alpha == axis::X)
+            {
+                return nx;
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return ny;
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return nz;
+            }
+        }
+
+        /**
+         * @brief Returns the number of mesh blocks per GPU in a particular axis direction
+         * @tparam alpha The axis
+         **/
+        template <axis::type alpha>
+        __device__ [[nodiscard]] inline constexpr label_t NUM_BLOCK() noexcept
+        {
+            axis::assertions::validate<alpha, axis::NOT_NULL>();
+
+            if constexpr (alpha == axis::X)
+            {
+                return NUM_BLOCK_X;
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return NUM_BLOCK_Y;
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return NUM_BLOCK_Z;
+            }
+        }
+    }
+
     namespace thread
     {
         /**
@@ -178,6 +232,45 @@ namespace LBM
         };
     }
 
+    /**
+     * @brief Struct used to represent 2D indices in a more readable way
+     **/
+    template <const axis::type alpha>
+    class dim2
+    {
+    public:
+        /**
+         * @brief Constructs from a linear index of a flattened 2D array with dimensions (block::n<alpha>(), block::n<beta>())
+         * @param[in] linearIdx The linear index to convert to 2D indices
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t linearIdx) noexcept
+            : i_(linearIdx % (block::n<axis::orthogonal<alpha, 0>()>())),
+              j_(linearIdx / (block::n<axis::orthogonal<alpha, 0>()>()))
+        {
+            axis::assertions::validate<alpha, axis::NOT_NULL>();
+        };
+
+        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t a, const label_t b) noexcept
+            : i_(a),
+              j_(b)
+        {
+            axis::assertions::validate<alpha, axis::NOT_NULL>();
+        };
+
+        __device__ __host__ [[nodiscard]] inline constexpr label_t i() const noexcept
+        {
+            return i_;
+        }
+
+        __device__ __host__ [[nodiscard]] inline constexpr label_t j() const noexcept
+        {
+            return j_;
+        }
+
+    private:
+        const label_t i_;
+        const label_t j_;
+    };
 } // namespace LBM
 
 #endif

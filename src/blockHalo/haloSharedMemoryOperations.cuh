@@ -51,6 +51,50 @@ SourceFiles
 #ifndef __MBLBM_HALOSHAREDMEMORYOPERATIONS_CUH
 #define __MBLBM_HALOSHAREDMEMORYOPERATIONS_CUH
 
+#ifdef HALO_SHARED_MEMORY_OPERATIONS_IMPL
+
+/**
+ * @brief Computes linear index for a thread within a block
+ * @param[in] tx Thread x-coordinate within block
+ * @param[in] ty Thread y-coordinate within block
+ * @param[in] tz Thread z-coordinate within block
+ * @return Linearized index in shared memory
+ *
+ * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
+ **/
+__device__ __host__ [[nodiscard]] static inline constexpr label_t idx_block(const label_t tx, const label_t ty, const label_t tz) noexcept
+{
+    return tx + block::nx() * (ty + block::ny() * tz);
+}
+
+/**
+ * @brief Computes the warp number of a particular thread within a block
+ * @param[in] tx Thread x-coordinate within block
+ * @param[in] ty Thread y-coordinate within block
+ * @param[in] tz Thread z-coordinate within block
+ * @return The unique ID of the warp corresponding to a particular thread
+ *
+ * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
+ **/
+__device__ __host__ [[nodiscard]] static inline constexpr label_t warpID(const label_t tx, const label_t ty, const label_t tz) noexcept
+{
+    return idx_block(tx, ty, tz) / block::warp_size();
+}
+
+/**
+ * @brief Computes the linear index of a thread within a warp
+ * @param[in] tx Thread x-coordinate within block
+ * @param[in] ty Thread y-coordinate within block
+ * @param[in] tz Thread z-coordinate within block
+ * @return The unique ID of a thread within a warp, in the range [0, warp_size]
+ *
+ * Memory layout: [tz][ty][tx] (tz slowest varying, tx fastest)
+ **/
+__device__ __host__ [[nodiscard]] static inline constexpr label_t idxWarp(const label_t tx, const label_t ty, const label_t tz) noexcept
+{
+    return idx_block(tx, ty, tz) % block::warp_size();
+}
+
 /**
  * @brief Transposes the block halo into the shared memory
  * @param[in] pop Array containing the populations for the particular thread
@@ -255,5 +299,7 @@ __device__ static inline void save_from_shared(
     }
     }
 }
+
+#endif
 
 #endif
