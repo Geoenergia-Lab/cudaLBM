@@ -11,11 +11,11 @@
 
 caseName        multiphaseJet;
 
-Re              3000;
+Re              1000;
 
 We              500;
 
-interfaceWidth  4;
+interfaceWidth  3;
 
 u_inf           0.016;
 

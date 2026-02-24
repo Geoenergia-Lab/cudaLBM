@@ -296,32 +296,38 @@ namespace LBM
          **/
         __device__ static inline void reconstruct(thread::array<scalar_t, vs::Q()> &pop, const thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments) noexcept
         {
-            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
+            const scalar_t deltaM = delta_m(moments);
+
+            const scalar_t mxx_mod = moments[m_i<4>()] + deltaM;
+            const scalar_t myy_mod = moments[m_i<7>()] + deltaM;
+            const scalar_t mzz_mod = moments[m_i<9>()] + deltaM;
+
+            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (mxx_mod + myy_mod + mzz_mod);
 
             const scalar_t rhow_0 = moments[m_i<0>()] * w_0<scalar_t>();
             pop[q_i<0>()] = rhow_0 * pics2;
 
             const scalar_t rhow_1 = moments[m_i<0>()] * w_1<scalar_t>();
-            pop[q_i<1>()] = rhow_1 * (pics2 + moments[m_i<1>()] + moments[m_i<4>()]);
-            pop[q_i<2>()] = rhow_1 * (pics2 - moments[m_i<1>()] + moments[m_i<4>()]);
-            pop[q_i<3>()] = rhow_1 * (pics2 + moments[m_i<2>()] + moments[m_i<7>()]);
-            pop[q_i<4>()] = rhow_1 * (pics2 - moments[m_i<2>()] + moments[m_i<7>()]);
-            pop[q_i<5>()] = rhow_1 * (pics2 + moments[m_i<3>()] + moments[m_i<9>()]);
-            pop[q_i<6>()] = rhow_1 * (pics2 - moments[m_i<3>()] + moments[m_i<9>()]);
+            pop[q_i<1>()] = rhow_1 * (pics2 + moments[m_i<1>()] + mxx_mod);
+            pop[q_i<2>()] = rhow_1 * (pics2 - moments[m_i<1>()] + mxx_mod);
+            pop[q_i<3>()] = rhow_1 * (pics2 + moments[m_i<2>()] + myy_mod);
+            pop[q_i<4>()] = rhow_1 * (pics2 - moments[m_i<2>()] + myy_mod);
+            pop[q_i<5>()] = rhow_1 * (pics2 + moments[m_i<3>()] + mzz_mod);
+            pop[q_i<6>()] = rhow_1 * (pics2 - moments[m_i<3>()] + mzz_mod);
 
             const scalar_t rhow_2 = moments[m_i<0>()] * w_2<scalar_t>();
-            pop[q_i<7>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]);
-            pop[q_i<8>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]);
-            pop[q_i<9>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]);
-            pop[q_i<10>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]);
-            pop[q_i<11>()] = rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]);
-            pop[q_i<12>()] = rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]);
-            pop[q_i<13>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]);
-            pop[q_i<14>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]);
-            pop[q_i<15>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]);
-            pop[q_i<16>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]);
-            pop[q_i<17>()] = rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]);
-            pop[q_i<18>()] = rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]);
+            pop[q_i<7>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]);
+            pop[q_i<8>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]);
+            pop[q_i<9>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]);
+            pop[q_i<10>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]);
+            pop[q_i<11>()] = rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]);
+            pop[q_i<12>()] = rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]);
+            pop[q_i<13>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]);
+            pop[q_i<14>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]);
+            pop[q_i<15>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]);
+            pop[q_i<16>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]);
+            pop[q_i<17>()] = rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]);
+            pop[q_i<18>()] = rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]);
         }
 
         /**
@@ -331,7 +337,13 @@ namespace LBM
          **/
         __device__ __host__ [[nodiscard]] static inline thread::array<scalar_t, vs::Q()> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments) noexcept
         {
-            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
+            const scalar_t deltaM = delta_m(moments);
+
+            const scalar_t mxx_mod = moments[m_i<4>()] + deltaM;
+            const scalar_t myy_mod = moments[m_i<7>()] + deltaM;
+            const scalar_t mzz_mod = moments[m_i<9>()] + deltaM;
+
+            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (mxx_mod + myy_mod + mzz_mod);
 
             const scalar_t rhow_0 = moments[m_i<0>()] * w_0<scalar_t>();
             const scalar_t rhow_1 = moments[m_i<0>()] * w_1<scalar_t>();
@@ -339,24 +351,24 @@ namespace LBM
 
             return {
                 rhow_0 * pics2,
-                rhow_1 * (pics2 + moments[m_i<1>()] + moments[m_i<4>()]),
-                rhow_1 * (pics2 - moments[m_i<1>()] + moments[m_i<4>()]),
-                rhow_1 * (pics2 + moments[m_i<2>()] + moments[m_i<7>()]),
-                rhow_1 * (pics2 - moments[m_i<2>()] + moments[m_i<7>()]),
-                rhow_1 * (pics2 + moments[m_i<3>()] + moments[m_i<9>()]),
-                rhow_1 * (pics2 - moments[m_i<3>()] + moments[m_i<9>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]),
-                rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]),
-                rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]),
-                rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]),
-                rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()])};
+                rhow_1 * (pics2 + moments[m_i<1>()] + mxx_mod),
+                rhow_1 * (pics2 - moments[m_i<1>()] + mxx_mod),
+                rhow_1 * (pics2 + moments[m_i<2>()] + myy_mod),
+                rhow_1 * (pics2 - moments[m_i<2>()] + myy_mod),
+                rhow_1 * (pics2 + moments[m_i<3>()] + mzz_mod),
+                rhow_1 * (pics2 - moments[m_i<3>()] + mzz_mod),
+                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]),
+                rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]),
+                rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]),
+                rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]),
+                rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()])};
         }
 
         /**
@@ -366,32 +378,38 @@ namespace LBM
          **/
         __device__ static inline void reconstruct(thread::array<scalar_t, vs::Q()> &pop, const thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments) noexcept
         {
-            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
+            const scalar_t deltaM = delta_m(moments);
+
+            const scalar_t mxx_mod = moments[m_i<4>()] + deltaM;
+            const scalar_t myy_mod = moments[m_i<7>()] + deltaM;
+            const scalar_t mzz_mod = moments[m_i<9>()] + deltaM;
+
+            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (mxx_mod + myy_mod + mzz_mod);
 
             const scalar_t rhow_0 = moments[m_i<0>()] * w_0<scalar_t>();
             pop[q_i<0>()] = rhow_0 * pics2;
 
             const scalar_t rhow_1 = moments[m_i<0>()] * w_1<scalar_t>();
-            pop[q_i<1>()] = rhow_1 * (pics2 + moments[m_i<1>()] + moments[m_i<4>()]);
-            pop[q_i<2>()] = rhow_1 * (pics2 - moments[m_i<1>()] + moments[m_i<4>()]);
-            pop[q_i<3>()] = rhow_1 * (pics2 + moments[m_i<2>()] + moments[m_i<7>()]);
-            pop[q_i<4>()] = rhow_1 * (pics2 - moments[m_i<2>()] + moments[m_i<7>()]);
-            pop[q_i<5>()] = rhow_1 * (pics2 + moments[m_i<3>()] + moments[m_i<9>()]);
-            pop[q_i<6>()] = rhow_1 * (pics2 - moments[m_i<3>()] + moments[m_i<9>()]);
+            pop[q_i<1>()] = rhow_1 * (pics2 + moments[m_i<1>()] + mxx_mod);
+            pop[q_i<2>()] = rhow_1 * (pics2 - moments[m_i<1>()] + mxx_mod);
+            pop[q_i<3>()] = rhow_1 * (pics2 + moments[m_i<2>()] + myy_mod);
+            pop[q_i<4>()] = rhow_1 * (pics2 - moments[m_i<2>()] + myy_mod);
+            pop[q_i<5>()] = rhow_1 * (pics2 + moments[m_i<3>()] + mzz_mod);
+            pop[q_i<6>()] = rhow_1 * (pics2 - moments[m_i<3>()] + mzz_mod);
 
             const scalar_t rhow_2 = moments[m_i<0>()] * w_2<scalar_t>();
-            pop[q_i<7>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]);
-            pop[q_i<8>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]);
-            pop[q_i<9>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]);
-            pop[q_i<10>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]);
-            pop[q_i<11>()] = rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]);
-            pop[q_i<12>()] = rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]);
-            pop[q_i<13>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]);
-            pop[q_i<14>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]);
-            pop[q_i<15>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]);
-            pop[q_i<16>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]);
-            pop[q_i<17>()] = rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]);
-            pop[q_i<18>()] = rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]);
+            pop[q_i<7>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]);
+            pop[q_i<8>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]);
+            pop[q_i<9>()] = rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]);
+            pop[q_i<10>()] = rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]);
+            pop[q_i<11>()] = rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]);
+            pop[q_i<12>()] = rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]);
+            pop[q_i<13>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]);
+            pop[q_i<14>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]);
+            pop[q_i<15>()] = rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]);
+            pop[q_i<16>()] = rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]);
+            pop[q_i<17>()] = rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]);
+            pop[q_i<18>()] = rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]);
         }
 
         /**
@@ -399,9 +417,15 @@ namespace LBM
          * @param[in] moments Moment array (11 components)
          * @return Population array with 19 components
          **/
-        __device__ __host__ static inline thread::array<scalar_t, vs::Q()> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments) noexcept
+        __device__ __host__ [[nodiscard]] static inline thread::array<scalar_t, vs::Q()> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments) noexcept
         {
-            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<9>()]);
+            const scalar_t deltaM = delta_m(moments);
+
+            const scalar_t mxx_mod = moments[m_i<4>()] + deltaM;
+            const scalar_t myy_mod = moments[m_i<7>()] + deltaM;
+            const scalar_t mzz_mod = moments[m_i<9>()] + deltaM;
+
+            const scalar_t pics2 = static_cast<scalar_t>(1.0) - cs2<scalar_t>() * (mxx_mod + myy_mod + mzz_mod);
 
             const scalar_t rhow_0 = moments[m_i<0>()] * w_0<scalar_t>();
             const scalar_t rhow_1 = moments[m_i<0>()] * w_1<scalar_t>();
@@ -409,24 +433,24 @@ namespace LBM
 
             return {
                 rhow_0 * pics2,
-                rhow_1 * (pics2 + moments[m_i<1>()] + moments[m_i<4>()]),
-                rhow_1 * (pics2 - moments[m_i<1>()] + moments[m_i<4>()]),
-                rhow_1 * (pics2 + moments[m_i<2>()] + moments[m_i<7>()]),
-                rhow_1 * (pics2 - moments[m_i<2>()] + moments[m_i<7>()]),
-                rhow_1 * (pics2 + moments[m_i<3>()] + moments[m_i<9>()]),
-                rhow_1 * (pics2 - moments[m_i<3>()] + moments[m_i<9>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] + moments[m_i<5>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] + moments[m_i<6>()]),
-                rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]),
-                rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] + moments[m_i<8>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + moments[m_i<4>()] + moments[m_i<7>()] - moments[m_i<5>()]),
-                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]),
-                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + moments[m_i<4>()] + moments[m_i<9>()] - moments[m_i<6>()]),
-                rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()]),
-                rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + moments[m_i<7>()] + moments[m_i<9>()] - moments[m_i<8>()])};
+                rhow_1 * (pics2 + moments[m_i<1>()] + mxx_mod),
+                rhow_1 * (pics2 - moments[m_i<1>()] + mxx_mod),
+                rhow_1 * (pics2 + moments[m_i<2>()] + myy_mod),
+                rhow_1 * (pics2 - moments[m_i<2>()] + myy_mod),
+                rhow_1 * (pics2 + moments[m_i<3>()] + mzz_mod),
+                rhow_1 * (pics2 - moments[m_i<3>()] + mzz_mod),
+                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod + moments[m_i<5>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod + moments[m_i<6>()]),
+                rhow_2 * (pics2 + moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]),
+                rhow_2 * (pics2 - moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod + moments[m_i<8>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<2>()] + mxx_mod + myy_mod - moments[m_i<5>()]),
+                rhow_2 * (pics2 + moments[m_i<1>()] - moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]),
+                rhow_2 * (pics2 - moments[m_i<1>()] + moments[m_i<3>()] + mxx_mod + mzz_mod - moments[m_i<6>()]),
+                rhow_2 * (pics2 + moments[m_i<2>()] - moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()]),
+                rhow_2 * (pics2 - moments[m_i<2>()] + moments[m_i<3>()] + myy_mod + mzz_mod - moments[m_i<8>()])};
         }
 
         /**

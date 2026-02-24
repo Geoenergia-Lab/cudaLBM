@@ -92,9 +92,13 @@ case normalVector::BACK():
         const scalar_t mxz = static_cast<scalar_t>(2) * mxz_I * rho_I / rho;
         const scalar_t myz = static_cast<scalar_t>(2) * myz_I * rho_I / rho;
 
+        const scalar_t sigma_u = static_cast<scalar_t>(0.08) * device::U_Back[2];
+        const scalar_t zx = white_noise<0xA341316Cu>(x, y, step);
+        const scalar_t zy = white_noise<0xC8013EA4u>(x, y, step);
+
         moments[m_i<0>()] = rho;                                                    // rho
-        moments[m_i<1>()] = is_jet * device::U_Back[0];                             // ux
-        moments[m_i<2>()] = is_jet * device::U_Back[1];                             // uy
+        moments[m_i<1>()] = is_jet * sigma_u * zx;                                  // ux
+        moments[m_i<2>()] = is_jet * sigma_u * zy;                                  // uy
         moments[m_i<3>()] = is_jet * device::U_Back[2];                             // uz
         moments[m_i<4>()] = static_cast<scalar_t>(0);                               // mxx
         moments[m_i<5>()] = static_cast<scalar_t>(0);                               // mxy

@@ -37,19 +37,19 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Main kernels for the multiphase moment representation with the D3Q19
+    Main kernels for the multiphase moment representation with the D3Q27
     velocity set for hydrodynamics and D3Q7 for phase field evolution
 
 Namespace
     LBM
 
 SourceFiles
-    phaseFieldD3Q19shared.cuh
+    phaseFieldD3Q27shared.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_PHASEFIELDD3Q19_CUH
-#define __MBLBM_PHASEFIELDD3Q19_CUH
+#ifndef __MBLBM_PHASEFIELDD3Q27_CUH
+#define __MBLBM_PHASEFIELDD3Q27_CUH
 
 #include "../../src/LBMIncludes.cuh"
 #include "../../src/LBMTypedefs.cuh"
@@ -79,7 +79,7 @@ namespace LBM
     __device__ __host__ [[nodiscard]] inline consteval bool periodicY() noexcept { return false; }
 #endif
 
-    using VelocitySet = D3Q19;
+    using VelocitySet = D3Q27;
     using PhaseVelocitySet = D3Q7;
     using Collision = secondOrder;
 
@@ -93,10 +93,10 @@ namespace LBM
     }
 
     __host__ [[nodiscard]] inline consteval label_t MIN_BLOCKS_PER_MP() noexcept { return 2; }
-#define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
+#define launchBoundsD3Q27 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
     /**
-     * @brief Performs the streaming step of the lattice Boltzmann method using the multiphase moment representation (D3Q19 hydrodynamics + D3Q7 phase field)
+     * @brief Performs the streaming step of the lattice Boltzmann method using the multiphase moment representation (D3Q27 hydrodynamics + D3Q7 phase field)
      * @param devPtrs Collection of 11 pointers to device arrays on the GPU
      * @param normx Pointer to x-component of the unit interface normal
      * @param normy Pointer to y-component of the unit interface normal
@@ -105,7 +105,7 @@ namespace LBM
      * @param gBlockHalo Object containing pointers to the individual block halo faces used to exchange the phase population densities
      * @note Currently only immutable halos are used due to kernel split
      **/
-    launchBoundsD3Q19 __global__ void phaseFieldStream(
+    launchBoundsD3Q27 __global__ void phaseFieldStream(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, const scalar_t> ghostHydro,
         const device::ptrCollection<6, const scalar_t> ghostPhase,
@@ -179,6 +179,14 @@ namespace LBM
             const scalar_t phi_x_yp1_zm1 = phi[i_yp - dzm];
             const scalar_t phi_x_ym1_zp1 = phi[i_ym + dzp];
             const scalar_t phi_x_ym1_zm1 = phi[i_ym - dzm];
+            const scalar_t phi_xp1_yp1_zp1 = phi[i_xp + dyp + dzp];
+            const scalar_t phi_xp1_yp1_zm1 = phi[i_xp + dyp - dzm];
+            const scalar_t phi_xp1_ym1_zp1 = phi[i_xp - dym + dzp];
+            const scalar_t phi_xp1_ym1_zm1 = phi[i_xp - dym - dzm];
+            const scalar_t phi_xm1_yp1_zp1 = phi[i_xm + dyp + dzp];
+            const scalar_t phi_xm1_yp1_zm1 = phi[i_xm + dyp - dzm];
+            const scalar_t phi_xm1_ym1_zp1 = phi[i_xm - dym + dzp];
+            const scalar_t phi_xm1_ym1_zm1 = phi[i_xm - dym - dzm];
 
             // Compute gradients
             const scalar_t sgx =
@@ -186,21 +194,34 @@ namespace LBM
                 VelocitySet::w_2<scalar_t>() * (phi_xp1_yp1_z - phi_xm1_ym1_z +
                                                 phi_xp1_y_zp1 - phi_xm1_y_zm1 +
                                                 phi_xp1_ym1_z - phi_xm1_yp1_z +
-                                                phi_xp1_y_zm1 - phi_xm1_y_zp1);
+                                                phi_xp1_y_zm1 - phi_xm1_y_zp1) +
+                VelocitySet::w_3<scalar_t>() * (phi_xp1_yp1_zp1 - phi_xm1_ym1_zm1 +
+                                                phi_xp1_yp1_zm1 - phi_xm1_ym1_zp1 +
+                                                phi_xp1_ym1_zp1 - phi_xm1_yp1_zm1 +
+                                                phi_xp1_ym1_zm1 - phi_xm1_yp1_zp1);
+            ;
 
             const scalar_t sgy =
                 VelocitySet::w_1<scalar_t>() * (phi[i_yp] - phi[i_ym]) +
                 VelocitySet::w_2<scalar_t>() * (phi_xp1_yp1_z - phi_xm1_ym1_z +
                                                 phi_x_yp1_zp1 - phi_x_ym1_zm1 +
                                                 phi_xm1_yp1_z - phi_xp1_ym1_z +
-                                                phi_x_yp1_zm1 - phi_x_ym1_zp1);
+                                                phi_x_yp1_zm1 - phi_x_ym1_zp1) +
+                VelocitySet::w_3<scalar_t>() * (phi_xp1_yp1_zp1 - phi_xm1_ym1_zm1 +
+                                                phi_xp1_yp1_zm1 - phi_xm1_ym1_zp1 +
+                                                phi_xm1_yp1_zm1 - phi_xp1_ym1_zp1 +
+                                                phi_xm1_yp1_zp1 - phi_xp1_ym1_zm1);
 
             const scalar_t sgz =
                 VelocitySet::w_1<scalar_t>() * (phi[i_zp] - phi[i_zm]) +
                 VelocitySet::w_2<scalar_t>() * (phi_xp1_y_zp1 - phi_xm1_y_zm1 +
                                                 phi_x_yp1_zp1 - phi_x_ym1_zm1 +
                                                 phi_xm1_y_zp1 - phi_xp1_y_zm1 +
-                                                phi_x_ym1_zp1 - phi_x_yp1_zm1);
+                                                phi_x_ym1_zp1 - phi_x_yp1_zm1) +
+                VelocitySet::w_3<scalar_t>() * (phi_xp1_yp1_zp1 - phi_xm1_ym1_zm1 +
+                                                phi_xm1_ym1_zp1 - phi_xp1_yp1_zm1 +
+                                                phi_xp1_ym1_zp1 - phi_xm1_yp1_zm1 +
+                                                phi_xm1_yp1_zp1 - phi_xp1_ym1_zm1);
 
             const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
             const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
@@ -311,13 +332,13 @@ namespace LBM
     }
 
     /**
-     * @brief Performs the collision step of the lattice Boltzmann method using the multiphase moment representation (D3Q19 hydrodynamics + D3Q7 phase field)
+     * @brief Performs the collision step of the lattice Boltzmann method using the multiphase moment representation (D3Q27 hydrodynamics + D3Q7 phase field)
      * @param devPtrs Collection of 11 pointers to device arrays on the GPU
      * @param fBlockHalo Object containing pointers to the individual block halo faces used to exchange the hydrodynamic population densities
      * @param gBlockHalo Object containing pointers to the individual block halo faces used to exchange the phase population densities
      * @note Currently only immutable halos are used due to kernel split
      **/
-    launchBoundsD3Q19 __global__ void phaseFieldCollide(
+    launchBoundsD3Q27 __global__ void phaseFieldCollide(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, scalar_t> ghostHydro,
         const device::ptrCollection<6, scalar_t> ghostPhase)
@@ -449,27 +470,39 @@ namespace LBM
                             sh_nz[iz][iy][ix] = static_cast<scalar_t>(0);
                         }
 
-                        // Isotropic discrete gradient (D3Q19-consistent stencil)
+                        // Isotropic discrete gradient (D3Q27-consistent stencil)
                         const scalar_t sgx =
                             VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
                             VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
                                                             sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
                                                             sh_phi[pz][py - 1][px + 1] - sh_phi[pz][py + 1][px - 1] +
-                                                            sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]);
+                                                            sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]) +
+                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                            sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                            sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                            sh_phi[pz - 1][py - 1][px + 1] - sh_phi[pz + 1][py + 1][px - 1]);
 
                         const scalar_t sgy =
                             VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py + 1][px] - sh_phi[pz][py - 1][px]) +
                             VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
                                                             sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
                                                             sh_phi[pz][py + 1][px - 1] - sh_phi[pz][py - 1][px + 1] +
-                                                            sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]);
+                                                            sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]) +
+                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                            sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                            sh_phi[pz - 1][py + 1][px - 1] - sh_phi[pz + 1][py - 1][px + 1] +
+                                                            sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
                         const scalar_t sgz =
                             VelocitySet::w_1<scalar_t>() * (sh_phi[pz + 1][py][px] - sh_phi[pz - 1][py][px]) +
                             VelocitySet::w_2<scalar_t>() * (sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
                                                             sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
                                                             sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
-                                                            sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]);
+                                                            sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]) +
+                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                            sh_phi[pz + 1][py - 1][px - 1] - sh_phi[pz - 1][py + 1][px + 1] +
+                                                            sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                            sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
                         // Convert lattice-gradient to physical gradient
                         const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
@@ -512,27 +545,39 @@ namespace LBM
                 const label_t py = threadIdx.y + 2;
                 const label_t pz = threadIdx.z + 2;
 
-                // Isotropic discrete gradient (D3Q19-consistent stencil)
+                // Isotropic discrete gradient (D3Q27-consistent stencil)
                 const scalar_t sgx =
                     VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
                     VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
                                                     sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
                                                     sh_phi[pz][py - 1][px + 1] - sh_phi[pz][py + 1][px - 1] +
-                                                    sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]);
+                                                    sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                    sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                    sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                    sh_phi[pz - 1][py - 1][px + 1] - sh_phi[pz + 1][py + 1][px - 1]);
 
                 const scalar_t sgy =
                     VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py + 1][px] - sh_phi[pz][py - 1][px]) +
                     VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
                                                     sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
                                                     sh_phi[pz][py + 1][px - 1] - sh_phi[pz][py - 1][px + 1] +
-                                                    sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]);
+                                                    sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                    sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                    sh_phi[pz - 1][py + 1][px - 1] - sh_phi[pz + 1][py - 1][px + 1] +
+                                                    sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
                 const scalar_t sgz =
                     VelocitySet::w_1<scalar_t>() * (sh_phi[pz + 1][py][px] - sh_phi[pz - 1][py][px]) +
                     VelocitySet::w_2<scalar_t>() * (sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
                                                     sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
                                                     sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
-                                                    sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]);
+                                                    sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                    sh_phi[pz + 1][py - 1][px - 1] - sh_phi[pz - 1][py + 1][px + 1] +
+                                                    sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                    sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
                 // Convert lattice-gradient to physical gradient
                 const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
@@ -548,21 +593,33 @@ namespace LBM
                     VelocitySet::w_2<scalar_t>() * (sh_nx[iz][iy + 1][ix + 1] - sh_nx[iz][iy - 1][ix - 1] +
                                                     sh_nx[iz + 1][iy][ix + 1] - sh_nx[iz - 1][iy][ix - 1] +
                                                     sh_nx[iz][iy - 1][ix + 1] - sh_nx[iz][iy + 1][ix - 1] +
-                                                    sh_nx[iz - 1][iy][ix + 1] - sh_nx[iz + 1][iy][ix - 1]);
+                                                    sh_nx[iz - 1][iy][ix + 1] - sh_nx[iz + 1][iy][ix - 1]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_nx[iz + 1][iy + 1][ix + 1] - sh_nx[iz - 1][iy - 1][ix - 1] +
+                                                    sh_nx[iz - 1][iy - 1][ix + 1] - sh_nx[iz + 1][iy + 1][ix - 1] +
+                                                    sh_nx[iz + 1][iy - 1][ix + 1] - sh_nx[iz - 1][iy + 1][ix - 1] +
+                                                    sh_nx[iz - 1][iy + 1][ix + 1] - sh_nx[iz + 1][iy - 1][ix - 1]);
 
                 const scalar_t scy =
                     VelocitySet::w_1<scalar_t>() * (sh_ny[iz][iy + 1][ix] - sh_ny[iz][iy - 1][ix]) +
                     VelocitySet::w_2<scalar_t>() * (sh_ny[iz][iy + 1][ix + 1] - sh_ny[iz][iy - 1][ix - 1] +
                                                     sh_ny[iz + 1][iy + 1][ix] - sh_ny[iz - 1][iy - 1][ix] +
                                                     sh_ny[iz][iy + 1][ix - 1] - sh_ny[iz][iy - 1][ix + 1] +
-                                                    sh_ny[iz - 1][iy + 1][ix] - sh_ny[iz + 1][iy - 1][ix]);
+                                                    sh_ny[iz - 1][iy + 1][ix] - sh_ny[iz + 1][iy - 1][ix]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_ny[iz + 1][iy + 1][ix + 1] - sh_ny[iz - 1][iy - 1][ix - 1] +
+                                                    sh_ny[iz - 1][iy + 1][ix + 1] - sh_ny[iz + 1][iy - 1][ix - 1] +
+                                                    sh_ny[iz - 1][iy + 1][ix - 1] - sh_ny[iz + 1][iy - 1][ix + 1] +
+                                                    sh_ny[iz + 1][iy + 1][ix - 1] - sh_ny[iz - 1][iy - 1][ix + 1]);
 
                 const scalar_t scz =
                     VelocitySet::w_1<scalar_t>() * (sh_nz[iz + 1][iy][ix] - sh_nz[iz - 1][iy][ix]) +
                     VelocitySet::w_2<scalar_t>() * (sh_nz[iz + 1][iy][ix + 1] - sh_nz[iz - 1][iy][ix - 1] +
                                                     sh_nz[iz + 1][iy + 1][ix] - sh_nz[iz - 1][iy - 1][ix] +
                                                     sh_nz[iz + 1][iy][ix - 1] - sh_nz[iz - 1][iy][ix + 1] +
-                                                    sh_nz[iz + 1][iy - 1][ix] - sh_nz[iz - 1][iy + 1][ix]);
+                                                    sh_nz[iz + 1][iy - 1][ix] - sh_nz[iz - 1][iy + 1][ix]) +
+                    VelocitySet::w_3<scalar_t>() * (sh_nz[iz + 1][iy + 1][ix + 1] - sh_nz[iz - 1][iy - 1][ix - 1] +
+                                                    sh_nz[iz + 1][iy - 1][ix - 1] - sh_nz[iz - 1][iy + 1][ix + 1] +
+                                                    sh_nz[iz + 1][iy - 1][ix + 1] - sh_nz[iz - 1][iy + 1][ix - 1] +
+                                                    sh_nz[iz + 1][iy + 1][ix - 1] - sh_nz[iz - 1][iy - 1][ix + 1]);
 
                 const scalar_t curvature = velocitySet::as2<scalar_t>() * (scx + scy + scz);
                 const scalar_t stCurv = -device::sigma * curvature * ind_;

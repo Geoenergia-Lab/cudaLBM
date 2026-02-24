@@ -89,7 +89,8 @@ namespace LBM
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments,
             const normalVector &boundaryNormal,
-            const scalar_t *const ptrRestrict shared_buffer) noexcept
+            const scalar_t *const ptrRestrict shared_buffer,
+            const label_t step) noexcept
         {
 #include "ssmdBoundaryCondition.cuh"
         }
@@ -99,7 +100,8 @@ namespace LBM
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments,
             const normalVector &boundaryNormal,
-            const thread::array<scalar_t, N> &shared_buffer) noexcept
+            const thread::array<scalar_t, N> &shared_buffer,
+            const label_t step) noexcept
         {
 #include "ssmdBoundaryCondition.cuh"
         }

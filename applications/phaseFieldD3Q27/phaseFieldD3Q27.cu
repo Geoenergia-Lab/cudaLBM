@@ -37,23 +37,23 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Implementation of the multiphase moment representation with the D3Q19
+    Implementation of the multiphase moment representation with the D3Q27
     velocity set for hydrodynamics and D3Q7 for phase field evolution
 
 Namespace
     LBM
 
 SourceFiles
-    phaseFieldD3Q19.cu
+    phaseFieldD3Q27.cu
 
 \*---------------------------------------------------------------------------*/
 
 // #define PHASEFIELD_GLOBAL
 
 #if defined(PHASEFIELD_GLOBAL)
-#include "phaseFieldD3Q19global.cuh" // Uses four extra global pointers
+#include "phaseFieldD3Q27global.cuh" // Uses four extra global pointers
 #else
-#include "phaseFieldD3Q19shared.cuh" // Reduced global memory footprint
+#include "phaseFieldD3Q27shared.cuh" // Reduced global memory footprint
 #endif
 
 using namespace LBM;

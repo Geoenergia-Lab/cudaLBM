@@ -143,6 +143,46 @@ namespace LBM
         }
 
     private:
+        // __device__ [[nodiscard]] static inline scalar_t sponge_ramp(const label_t z) noexcept
+        // {
+        //     const scalar_t zn = static_cast<scalar_t>(z) * sponge::inv_nz_m1();
+        //     scalar_t s = (zn - sponge::z_start()) * sponge::inv_sponge();
+        //     s = fminf(fmaxf(s, static_cast<scalar_t>(0)), static_cast<scalar_t>(1));
+        //     return s * s * (static_cast<scalar_t>(3) - static_cast<scalar_t>(2) * s); // cubic smoothstep
+        // }
+
+        // namespace sponge
+        // {
+        //     __device__ __host__ [[nodiscard]] static inline consteval scalar_t K_gain() noexcept
+        //     {
+        //         return static_cast<scalar_t>(100);
+        //     }
+
+        //     __device__ __host__ [[nodiscard]] static inline constexpr int sponge_cells() noexcept
+        //     {
+        //         return static_cast<int>(device::nz / 12);
+        //     }
+
+        //     __device__ __host__ [[nodiscard]] static inline constexpr scalar_t sponge() noexcept
+        //     {
+        //         return static_cast<scalar_t>(sponge_cells()) / static_cast<scalar_t>(device::nz - 1);
+        //     }
+
+        //     __device__ __host__ [[nodiscard]] static inline constexpr scalar_t z_start() noexcept
+        //     {
+        //         return static_cast<scalar_t>(device::nz - 1 - sponge_cells()) / static_cast<scalar_t>(device::nz - 1);
+        //     }
+
+        //     __device__ __host__ [[nodiscard]] static inline constexpr scalar_t inv_nz_m1() noexcept
+        //     {
+        //         return static_cast<scalar_t>(1) / static_cast<scalar_t>(device::nz - 1);
+        //     }
+
+        //     __device__ __host__ [[nodiscard]] static inline constexpr scalar_t inv_sponge() noexcept
+        //     {
+        //         return static_cast<scalar_t>(static_cast<double>(1) / static_cast<double>(sponge()));
+        //     }
+        // }
     };
 }
 
