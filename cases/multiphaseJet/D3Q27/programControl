@@ -17,7 +17,7 @@ We              500;
 
 interfaceWidth  3;
 
-u_inf           0.016;
+u_inf           0.05;
 
 L_char          8;
 

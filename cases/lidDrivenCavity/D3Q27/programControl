@@ -15,16 +15,18 @@ Re              10000;
 
 u_inf           0.0256;
 
-L_char          255;
+L_char          63;
 
 startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      20001;
+nTimeSteps      10001;
 
-saveInterval    20000;
+saveInterval    1000;
 
-infoInterval    2000;
+infoInterval    1000;
+
+multiphase      false;
 
 \*---------------------------------------------------------------------------*/

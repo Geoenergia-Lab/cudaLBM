@@ -11,21 +11,21 @@
 
 caseName        subseaMechanicalDispersion;
 
-Re              1400;
+Re              1000;
 
 We              500;
 
-interfaceWidth  4;
+interfaceWidth  3;
 
 u_inf           0.05;
 
-L_char          13;
+L_char          8;
 
 startFrom       latestTime;
 
 startTime       0;
 
-nTimeSteps      200001;
+nTimeSteps      10001;
 
 saveInterval    1000;
 
