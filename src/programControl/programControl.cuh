@@ -69,16 +69,18 @@ namespace LBM
         __host__ [[nodiscard]] programControl(const int argc, const char *const argv[]) noexcept
             : input_(inputControl(argc, argv)),
               caseName_(string::extractParameter<std::string>(string::readFile("programControl"), "caseName")),
-              Re_(initialiseConst<scalar_t>("Re")),
-              We_(string::extractParameter<bool>(string::readFile("programControl"), "multiphase") ? initialiseConst<scalar_t>("We") : static_cast<scalar_t>(0)),
-              interfaceWidth_(string::extractParameter<bool>(string::readFile("programControl"), "multiphase") ? initialiseConst<scalar_t>("interfaceWidth") : static_cast<scalar_t>(0)),
+              multiphase_(string::extractParameter<bool>(string::readFile("programControl"), "multiphase")),
+              Re_(multiphase_ ? static_cast<scalar_t>(0) : initialiseConst<scalar_t>("Re")),
+              ReA_(multiphase_ ? initialiseConst<scalar_t>("ReA") : static_cast<scalar_t>(0)),
+              ReB_(multiphase_ ? initialiseConst<scalar_t>("ReB") : static_cast<scalar_t>(0)),
+              We_(multiphase_ ? initialiseConst<scalar_t>("We") : static_cast<scalar_t>(0)),
+              interfaceWidth_(multiphase_ ? initialiseConst<scalar_t>("interfaceWidth") : static_cast<scalar_t>(0)),
               u_inf_(initialiseConst<scalar_t>("u_inf")),
               L_char_(initialiseConst<scalar_t>("L_char")),
               nTimeSteps_(string::extractParameter<label_t>(string::readFile("programControl"), "nTimeSteps")),
               saveInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "saveInterval")),
               infoInterval_(string::extractParameter<label_t>(string::readFile("programControl"), "infoInterval")),
-              latestTime_(fileIO::latestTime(caseName_)),
-              multiphase_(string::extractParameter<bool>(string::readFile("programControl"), "multiphase"))
+              latestTime_(fileIO::latestTime(caseName_))
         {
             static_assert((std::is_same_v<scalar_t, float>) | (std::is_same_v<scalar_t, double>), "Invalid floating point size: must be either 32 or 64 bit");
 
@@ -114,9 +116,14 @@ namespace LBM
             }
             std::cout << deviceList()[deviceList().size() - 1] << "];" << std::endl;
             std::cout << "    caseName: " << caseName_ << ";" << std::endl;
-            std::cout << "    Re = " << Re_ << ";" << std::endl;
-            if (multiphase_)
+            if (!multiphase_)
             {
+                std::cout << "    Re = " << Re_ << ";" << std::endl;
+            }
+            else
+            {
+                std::cout << "    ReA = " << ReA_ << ";" << std::endl;
+                std::cout << "    ReB = " << ReB_ << ";" << std::endl;
                 std::cout << "    We = " << We_ << ";" << std::endl;
                 std::cout << "    interfaceWidth = " << interfaceWidth_ << ";" << std::endl;
             }
@@ -147,6 +154,15 @@ namespace LBM
         }
 
         /**
+         * @brief Returns multiphase or not
+         * @return Multiphase bool
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr bool isMultiphase() const noexcept
+        {
+            return multiphase_;
+        }
+
+        /**
          * @brief Returns the array of device indices
          * @return A read-only reference to deviceList_ contained within input_
          **/
@@ -162,6 +178,24 @@ namespace LBM
         __device__ __host__ [[nodiscard]] inline constexpr scalar_t Re() const noexcept
         {
             return Re_;
+        }
+
+        /**
+         * @brief Returns the fluid A Reynolds number
+         * @return The Reynolds number for fluid A
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr scalar_t ReA() const noexcept
+        {
+            return ReA_;
+        }
+
+        /**
+         * @brief Returns the fluid B Reynolds number
+         * @return The Reynolds number for fluid B
+         **/
+        __device__ __host__ [[nodiscard]] inline constexpr scalar_t ReB() const noexcept
+        {
+            return ReB_;
         }
 
         /**
@@ -237,15 +271,6 @@ namespace LBM
         }
 
         /**
-         * @brief Returns multiphase or not
-         * @return Multiphase bool
-         **/
-        __device__ __host__ [[nodiscard]] inline constexpr bool isMultiphase() const noexcept
-        {
-            return multiphase_;
-        }
-
-        /**
          * @brief Provides read-only access to the input control
          * @return A const reference to an inputControl object
          **/
@@ -303,9 +328,24 @@ namespace LBM
         const std::string caseName_;
 
         /**
+         * @brief Whether the simulation is multiphase
+         **/
+        const bool multiphase_;
+
+        /**
          * @brief The Reynolds number
          **/
         const scalar_t Re_;
+
+        /**
+         * @brief The fluid A Reynolds number
+         **/
+        const scalar_t ReA_;
+
+        /**
+         * @brief The fluid B Reynolds number
+         **/
+        const scalar_t ReB_;
 
         /**
          * @brief The Weber number
@@ -334,11 +374,6 @@ namespace LBM
         const label_t saveInterval_;
         const label_t infoInterval_;
         const label_t latestTime_;
-
-        /**
-         * @brief Whether the simulation is multiphase
-         **/
-        const bool multiphase_;
 
         /**
          * @brief Reads a variable from the caseInfo file into a parameter of type T

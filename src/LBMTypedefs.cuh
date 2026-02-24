@@ -335,7 +335,6 @@ namespace LBM
         __device__ __constant__ label_t nx;
         __device__ __constant__ label_t ny;
         __device__ __constant__ label_t nz;
-        __device__ __constant__ scalar_t Re;
         __device__ __constant__ scalar_t tau;
         __device__ __constant__ scalar_t L_char;
 
@@ -349,13 +348,14 @@ namespace LBM
         __device__ __constant__ scalar_t omega;
         __device__ __constant__ scalar_t t_omegaVar;
         __device__ __constant__ scalar_t omegaVar_d2;
+
         __device__ __constant__ label_t NUM_BLOCK_X;
         __device__ __constant__ label_t NUM_BLOCK_Y;
         __device__ __constant__ label_t NUM_BLOCK_Z;
 
         // Extra for multiphase
-        __device__ __constant__ scalar_t tt_omegaVar;
-        __device__ __constant__ scalar_t tt_omegaVar_t3;
+        __device__ __constant__ scalar_t tauA;
+        __device__ __constant__ scalar_t tauB;
         __device__ __constant__ scalar_t sigma;
         __device__ __constant__ scalar_t gamma;
 

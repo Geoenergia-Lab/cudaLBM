@@ -182,50 +182,35 @@ namespace LBM
 #else
                 // Allocate programControl symbols on the GPU (clean up later)
                 {
-                    const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
-                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
-                    const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
-                    const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
-                    const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
-
                     copyToSymbol(device::L_char, programCtrl.L_char());
-                    copyToSymbol(device::Re, programCtrl.Re());
-                    copyToSymbol(device::tau, tauTemp);
-                    copyToSymbol(device::omega, omegaTemp);
-                    copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
-                    copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
 
-                    if (programCtrl.isMultiphase())
+                    if (!programCtrl.isMultiphase())
                     {
-                        const scalar_t tt_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp * static_cast<scalar_t>(0.5);
-                        const scalar_t tt_omegaVar_t3Temp = tt_omegaVarTemp * static_cast<scalar_t>(3);
+                        const scalar_t viscosityTemp = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.Re();
+                        const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
+                        const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
+                        const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
+                        const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
 
-                        // Weber is define at case programControl
+                        copyToSymbol(device::tau, tauTemp);
+                        copyToSymbol(device::omega, omegaTemp);
+                        copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
+                        copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+                    }
+                    else
+                    {
+                        const scalar_t viscosityTempA = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.ReA();
+                        const scalar_t viscosityTempB = programCtrl.u_inf() * programCtrl.L_char() / programCtrl.ReB();
+                        const scalar_t tauTempA = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempA;
+                        const scalar_t tauTempB = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempB;
                         const scalar_t sigmaTemp = (programCtrl.u_inf() * programCtrl.u_inf() * programCtrl.L_char()) / programCtrl.We();
-
-                        // This gamma definition hardcodes tau_g = 1 and phase field cs2 = 1/4
                         const scalar_t gammaTemp = static_cast<scalar_t>(2) / programCtrl.interfaceWidth();
 
-                        copyToSymbol(device::tt_omegaVar, tt_omegaVarTemp);
-                        copyToSymbol(device::tt_omegaVar_t3, tt_omegaVar_t3Temp);
-                        copyToSymbol(device::sigma, sigmaTemp);
+                        copyToSymbol(device::tau, tauTempA); // For compatibility. Ctrl+Shift+F -> CHECKPOINT to find place of future fix
+                        copyToSymbol(device::tauA, tauTempA);
+                        copyToSymbol(device::tauB, tauTempB);
                         copyToSymbol(device::gamma, gammaTemp);
-
-                        // Debug multiphase device constant vars
-                        // scalar_t h_We = -1;
-                        // scalar_t h_sigma = -1;
-                        // scalar_t h_gamma = -1;
-
-                        // checkCudaErrors(cudaMemcpyFromSymbol(&h_We, device::We, sizeof(scalar_t)));
-                        // checkCudaErrors(cudaMemcpyFromSymbol(&h_sigma, device::sigma, sizeof(scalar_t)));
-                        // checkCudaErrors(cudaMemcpyFromSymbol(&h_gamma, device::gamma, sizeof(scalar_t)));
-
-                        // std::cout << "We (host)    = " << programCtrl.We() << '\n'
-                        //           << "sigma (host) = " << sigmaTemp << '\n'
-                        //           << "gamma (host) = " << gammaTemp << '\n'
-                        //           << "We (device)  = " << h_We << '\n'
-                        //           << "sigma (dev)  = " << h_sigma << '\n'
-                        //           << "gamma (dev)  = " << h_gamma << std::endl;
+                        copyToSymbol(device::sigma, sigmaTemp);
                     }
                 }
 
