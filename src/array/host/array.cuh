@@ -107,7 +107,7 @@ namespace LBM
             /**
              * @brief Virtual destructor
              **/
-            __host__ virtual ~arrayBase() noexcept = default;
+            __host__ virtual ~arrayBase() {}
 
             /**
              * @brief Disable copying

@@ -180,9 +180,8 @@ namespace LBM
         public:
             /**
              * @brief Virtual destructor – automatically releases all device memory.
-             * @note Noexcept guarantee: failsafe if cudaFree fails.
              **/
-            virtual ~arrayBase() noexcept
+            __host__ virtual ~arrayBase()
             {
                 free_device_pointers();
             }

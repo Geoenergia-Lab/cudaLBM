@@ -98,7 +98,7 @@ SourceFiles
 
 namespace LBM
 {
-    __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return false; }
+    __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return true; }
 
     /**
      * @brief Verbose logging
