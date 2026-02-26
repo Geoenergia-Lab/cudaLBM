@@ -257,9 +257,21 @@ namespace LBM
                 const ValueType nxPointsPerDevice = dimensions_.value<axis::X, ValueType>() / nDevices<axis::X, ValueType>();
                 const ValueType nyPointsPerDevice = dimensions_.value<axis::Y, ValueType>() / nDevices<axis::Y, ValueType>();
                 const ValueType nzPointsPerDevice = dimensions_.value<axis::Z, ValueType>() / nDevices<axis::Z, ValueType>();
-                const ValueType nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
 
-                return nPointsPerDevice;
+                return nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
+            }
+
+            /**
+             * @brief Computes the allocation size for the number of blocks per GPU
+             **/
+            template <const axis::type alpha, typename ValueType = label_t>
+            __host__ [[nodiscard]] inline constexpr ValueType blocksPerDevice() const noexcept
+            {
+                return nBlocks<alpha>() / nDevices_.value<alpha, ValueType>();
+            }
+            __host__ [[nodiscard]] inline constexpr blockLabel_t blocksPerDevice() const noexcept
+            {
+                return {nBlocks<axis::X>() / nDevices_.value<axis::X>(), nBlocks<axis::Y>() / nDevices_.value<axis::Y>(), nBlocks<axis::Z>() / nDevices_.value<axis::Z>()};
             }
 
         private:

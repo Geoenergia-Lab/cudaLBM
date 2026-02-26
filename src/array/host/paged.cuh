@@ -101,7 +101,7 @@ namespace LBM
             /**
              * @brief Destructor
              **/
-            __host__ ~array() noexcept {}
+            __host__ ~array() {}
 
             /**
              * @brief Get const reference to the underlying vector.
@@ -195,7 +195,7 @@ namespace LBM
 
                 std::vector<T> field(mesh.size(), 0);
 
-                const blockLabel_t nBlocksPerDevice = mesh.nBlocks();
+                const blockLabel_t nBlocksPerDevice = mesh.blocksPerDevice();
 
                 GPU::forAll(
                     mesh.nDevices(),

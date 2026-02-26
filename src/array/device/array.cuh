@@ -198,6 +198,8 @@ namespace LBM
              **/
             __host__ void free_device_pointers() noexcept
             {
+                errorHandler::check(cudaDeviceSynchronize());
+
                 if (ptr_ == nullptr)
                 {
                     return;
@@ -212,11 +214,13 @@ namespace LBM
                         {
                             errorHandler::check(cudaDeviceSynchronize());
                             errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[virtualDeviceIndex]));
+                            errorHandler::check(cudaDeviceSynchronize());
                             errorHandler::check(cudaFree(const_cast<T *>(ptr_[virtualDeviceIndex])));
                             errorHandler::check(cudaDeviceSynchronize());
                         }
                     });
 
+                errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaSetDevice(programCtrl_.deviceList()[0]));
                 errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaFreeHost(const_cast<T **>(ptr_)));

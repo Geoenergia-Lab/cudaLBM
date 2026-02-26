@@ -104,7 +104,7 @@ namespace LBM
                 const bool allocate = true)
                 : arrayBase<T>(
                       This::allocate_on_devices(
-                          hostArray.mesh(), hostArray.data(), allocate, programCtrl),
+                          hostArray, allocate, programCtrl),
                       hostArray.mesh(),
                       programCtrl),
                   name_(hostArray.name()),

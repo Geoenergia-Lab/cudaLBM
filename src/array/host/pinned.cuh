@@ -108,7 +108,7 @@ namespace LBM
             /**
              * @brief Destructor – frees the pinned memory.
              **/
-            __host__ ~array() noexcept
+            __host__ ~array()
             {
                 errorHandler::check(cudaFreeHost(const_cast<T *>(ptr_)));
             };
