@@ -449,13 +449,8 @@ namespace LBM
                         const label_t global_x = x0 + ix - 1;
                         const label_t px = ix + 1;
 
-                        // Outside domain: normals forced to zero (no interface contribution)
-                        if (!in_domain(global_x, global_y, global_z))
-                        {
-                            sh_nx[iz][iy][ix] = static_cast<scalar_t>(0);
-                            sh_ny[iz][iy][ix] = static_cast<scalar_t>(0);
-                            sh_nz[iz][iy][ix] = static_cast<scalar_t>(0);
-                        }
+                        // Outside of domain
+                        const bool outside = !in_domain(global_x, global_y, global_z);
 
                         // Physical boundaries: normals suppressed to avoid spurious wall forcing
                         const bool isBoundary =
@@ -463,60 +458,62 @@ namespace LBM
                             (global_y == 0) || (global_y == device::ny - 1) ||
                             (global_z == 0) || (global_z == device::nz - 1);
 
-                        if (isBoundary)
+                        if (outside || isBoundary)
                         {
                             sh_nx[iz][iy][ix] = static_cast<scalar_t>(0);
                             sh_ny[iz][iy][ix] = static_cast<scalar_t>(0);
                             sh_nz[iz][iy][ix] = static_cast<scalar_t>(0);
                         }
+                        else
+                        {
+                            // Isotropic discrete gradient (D3Q27-consistent stencil)
+                            const scalar_t sgx =
+                                VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
+                                VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
+                                                                sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
+                                                                sh_phi[pz][py - 1][px + 1] - sh_phi[pz][py + 1][px - 1] +
+                                                                sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]) +
+                                VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                                sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                                sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                                sh_phi[pz - 1][py - 1][px + 1] - sh_phi[pz + 1][py + 1][px - 1]);
 
-                        // Isotropic discrete gradient (D3Q27-consistent stencil)
-                        const scalar_t sgx =
-                            VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py][px + 1] - sh_phi[pz][py][px - 1]) +
-                            VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
-                                                            sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
-                                                            sh_phi[pz][py - 1][px + 1] - sh_phi[pz][py + 1][px - 1] +
-                                                            sh_phi[pz - 1][py][px + 1] - sh_phi[pz + 1][py][px - 1]) +
-                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
-                                                            sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
-                                                            sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
-                                                            sh_phi[pz - 1][py - 1][px + 1] - sh_phi[pz + 1][py + 1][px - 1]);
+                            const scalar_t sgy =
+                                VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py + 1][px] - sh_phi[pz][py - 1][px]) +
+                                VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
+                                                                sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
+                                                                sh_phi[pz][py + 1][px - 1] - sh_phi[pz][py - 1][px + 1] +
+                                                                sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]) +
+                                VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                                sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
+                                                                sh_phi[pz - 1][py + 1][px - 1] - sh_phi[pz + 1][py - 1][px + 1] +
+                                                                sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
-                        const scalar_t sgy =
-                            VelocitySet::w_1<scalar_t>() * (sh_phi[pz][py + 1][px] - sh_phi[pz][py - 1][px]) +
-                            VelocitySet::w_2<scalar_t>() * (sh_phi[pz][py + 1][px + 1] - sh_phi[pz][py - 1][px - 1] +
-                                                            sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
-                                                            sh_phi[pz][py + 1][px - 1] - sh_phi[pz][py - 1][px + 1] +
-                                                            sh_phi[pz - 1][py + 1][px] - sh_phi[pz + 1][py - 1][px]) +
-                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
-                                                            sh_phi[pz - 1][py + 1][px + 1] - sh_phi[pz + 1][py - 1][px - 1] +
-                                                            sh_phi[pz - 1][py + 1][px - 1] - sh_phi[pz + 1][py - 1][px + 1] +
-                                                            sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
+                            const scalar_t sgz =
+                                VelocitySet::w_1<scalar_t>() * (sh_phi[pz + 1][py][px] - sh_phi[pz - 1][py][px]) +
+                                VelocitySet::w_2<scalar_t>() * (sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
+                                                                sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
+                                                                sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
+                                                                sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]) +
+                                VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
+                                                                sh_phi[pz + 1][py - 1][px - 1] - sh_phi[pz - 1][py + 1][px + 1] +
+                                                                sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
+                                                                sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
 
-                        const scalar_t sgz =
-                            VelocitySet::w_1<scalar_t>() * (sh_phi[pz + 1][py][px] - sh_phi[pz - 1][py][px]) +
-                            VelocitySet::w_2<scalar_t>() * (sh_phi[pz + 1][py][px + 1] - sh_phi[pz - 1][py][px - 1] +
-                                                            sh_phi[pz + 1][py + 1][px] - sh_phi[pz - 1][py - 1][px] +
-                                                            sh_phi[pz + 1][py][px - 1] - sh_phi[pz - 1][py][px + 1] +
-                                                            sh_phi[pz + 1][py - 1][px] - sh_phi[pz - 1][py + 1][px]) +
-                            VelocitySet::w_3<scalar_t>() * (sh_phi[pz + 1][py + 1][px + 1] - sh_phi[pz - 1][py - 1][px - 1] +
-                                                            sh_phi[pz + 1][py - 1][px - 1] - sh_phi[pz - 1][py + 1][px + 1] +
-                                                            sh_phi[pz + 1][py - 1][px + 1] - sh_phi[pz - 1][py + 1][px - 1] +
-                                                            sh_phi[pz + 1][py + 1][px - 1] - sh_phi[pz - 1][py - 1][px + 1]);
+                            // Convert lattice-gradient to physical gradient
+                            const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
+                            const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
+                            const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
-                        // Convert lattice-gradient to physical gradient
-                        const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
-                        const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
-                        const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
+                            // Normalization with epsilon to avoid division by zero in bulk
+                            const scalar_t ind2 = gx * gx + gy * gy + gz * gz;
+                            const scalar_t ind = sqrtf(ind2);
+                            const scalar_t invInd = static_cast<scalar_t>(1) / (ind + static_cast<scalar_t>(1e-9));
 
-                        // Normalization with epsilon to avoid division by zero in bulk
-                        const scalar_t ind2 = gx * gx + gy * gy + gz * gz;
-                        const scalar_t ind = sqrtf(ind2);
-                        const scalar_t invInd = static_cast<scalar_t>(1) / (ind + static_cast<scalar_t>(1e-9));
-
-                        sh_nx[iz][iy][ix] = gx * invInd;
-                        sh_ny[iz][iy][ix] = gy * invInd;
-                        sh_nz[iz][iy][ix] = gz * invInd;
+                            sh_nx[iz][iy][ix] = gx * invInd;
+                            sh_ny[iz][iy][ix] = gy * invInd;
+                            sh_nz[iz][iy][ix] = gz * invInd;
+                        }
                     }
                 }
             }

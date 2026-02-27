@@ -211,7 +211,7 @@ namespace LBM
                             const scalar_t viscosityTempB = programCtrl.u_inf_B() * programCtrl.L_char_B() / programCtrl.Re_B();
                             tauTempA = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempA;
                             tauTempB = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempB;
-                            const scalar_t sigmaTemp = (programCtrl.u_inf_A() * programCtrl.u_inf_A() * programCtrl.L_char_A()) / programCtrl.We();
+                            const scalar_t sigmaTemp = (programCtrl.u_inf_B() * programCtrl.u_inf_B() * programCtrl.L_char_B()) / programCtrl.We();
 
                             copyToSymbol(device::L_char_A, programCtrl.L_char_A());
                             copyToSymbol(device::L_char_B, programCtrl.L_char_B());
