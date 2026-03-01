@@ -89,16 +89,13 @@ namespace LBM
          * - Total elapsed time in HH:MM:SS format
          * - MLUPS (Million Lattice Updates Per Second) performance metric
          **/
-        ~runTimeIO()
+        inline ~runTimeIO() noexcept
         {
             const std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
             std::cout << std::endl;
             std::cout << "Elapsed time: " << runTimeIO::duration(std::chrono::duration_cast<std::chrono::seconds>(end - start_).count()) << std::endl;
             std::cout << std::endl;
             std::cout << "MLUPS: " << runTimeIO::MLUPS<double>(mesh_, programCtrl_, start_, end) << std::endl;
-            std::cout << std::endl;
-            std::cout << "End" << std::endl;
-            std::cout << std::endl;
         };
 
         /**

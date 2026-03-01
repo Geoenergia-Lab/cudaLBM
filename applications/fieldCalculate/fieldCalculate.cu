@@ -80,9 +80,6 @@ int main(const int argc, const char *const argv[])
 
             containsNaN(hostMoments, mesh, fileNameIndices[timeStep]);
         }
-
-        std::cout << "End" << std::endl;
-        std::cout << std::endl;
     }
 
     if (calculationTypeString == "spatialMean")
@@ -100,9 +97,6 @@ int main(const int argc, const char *const argv[])
 
             spatialMean(hostMoments, mesh, fileNameIndices[timeStep]);
         }
-
-        std::cout << "End" << std::endl;
-        std::cout << std::endl;
     }
 
     if (calculationTypeString == "vorticity")
@@ -138,9 +132,6 @@ int main(const int argc, const char *const argv[])
                 writer({omega[0], omega[1], omega[2], magomega}, fileName, mesh, {"omega_x", "omega_y", "omega_z", "mag[omega]"});
             }
         }
-
-        std::cout << "End" << std::endl;
-        std::cout << std::endl;
     }
 
     if (calculationTypeString == "div[U]")
@@ -175,9 +166,6 @@ int main(const int argc, const char *const argv[])
                 writer({divu}, fileName, mesh, {"div[U]"});
             }
         }
-
-        std::cout << "End" << std::endl;
-        std::cout << std::endl;
     }
 
     // constexpr label_t IntegrationOrder = 2;

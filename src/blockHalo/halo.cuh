@@ -221,12 +221,12 @@ namespace LBM
              * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The normal direction; -1 for negative face, +1 for positive face
              * @tparam isPeriodic Whether the domain is periodic in this direction
-             * @param[in] t The global coordinate in the alpha direction
-             * @param[in] Tx The thread coordinates
+             * @param[in] alpha_v The global coordinate in the alpha direction
+             * @param[in] Tx Three-dimensional thread coordinates
              * @return True if the thread is at the specified block boundary and not at the domain edge (if non-periodic)
              **/
             template <const axis::type alpha, const int coeff, const bool isPeriodic>
-            __device__ [[nodiscard]] static inline constexpr bool boundaryCheck(const label_t t, const thread::coordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool boundaryCheck(const label_t alpha_v, const thread::coordinate &Tx) noexcept
             {
                 if constexpr (coeff == -1)
                 {
@@ -236,7 +236,7 @@ namespace LBM
                     }
                     else
                     {
-                        return (Tx.value<alpha>() == 0 && t != 0);
+                        return (Tx.value<alpha>() == 0 && alpha_v != 0);
                     }
                 }
 
@@ -248,7 +248,7 @@ namespace LBM
                     }
                     else
                     {
-                        return (Tx.value<alpha>() == (block::n<alpha>() - 1) && t != (device::n<alpha>() - 1));
+                        return (Tx.value<alpha>() == (block::n<alpha>() - 1) && alpha_v != (device::n<alpha>() - 1));
                     }
                 }
             }
@@ -348,20 +348,17 @@ namespace LBM
                         // Then we should select the true block based on the thread
                         const label_t b_x = block_stencil<axis::X, -VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::X>(),
-                            thread_stencil<-VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(
-                                dBx, Bx.value<axis::X>()),
+                            thread_stencil<-VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(dBx, Bx.value<axis::X>()),
                             Bx.value<axis::X>());
 
                         const label_t b_y = block_stencil<axis::Y, -VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::Y>(),
-                            thread_stencil<-VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(
-                                dBy, Bx.value<axis::Y>()),
+                            thread_stencil<-VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(dBy, Bx.value<axis::Y>()),
                             Bx.value<axis::Y>());
 
                         const label_t b_z = block_stencil<axis::Z, -VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::Z>(),
-                            thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(
-                                dBz, Bx.value<axis::Z>()),
+                            thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(dBz, Bx.value<axis::Z>()),
                             Bx.value<axis::Z>());
 
                         pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&fGhost.ptr<PtrIndex>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]);
@@ -422,7 +419,10 @@ namespace LBM
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        gGhost.ptr<PtrIndex>()[idxPop<alpha, i, VelocitySet::QF()>(Tx.value<axis::orthogonal<alpha, 0>()>(), Tx.value<axis::orthogonal<alpha, 1>()>(), Bx)] = pop[q_i<streaming_index<alpha, coeff>(i)>()];
+                        gGhost.ptr<PtrIndex>()[idxPop<alpha, i, VelocitySet::QF()>(
+                            Tx.value<axis::orthogonal<alpha, 0>()>(),
+                            Tx.value<axis::orthogonal<alpha, 1>()>(),
+                            Bx)] = pop[q_i<streaming_index<alpha, coeff>(i)>()];
                     });
             }
 

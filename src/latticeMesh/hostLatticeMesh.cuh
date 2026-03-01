@@ -395,10 +395,12 @@ namespace LBM
                 const blockLabel_t &nBlocks,
                 const blockLabel_t &nDevices)
             {
-                LBM::GPU::forAll(
+                GPU::forAll(
                     nDevices,
                     [&](const label_t dx, const label_t dy, const label_t dz)
                     {
+                        static_assert(MULTI_GPU_ASSERTION(), "host::latticeMesh::set_constants must set the block halo offset indices based on the mesh decomposition");
+
                         const label_t virtualDeviceIndex = GPU::idx(dx, dy, dz, nDevices.value<axis::X>(), nDevices.value<axis::Y>());
 
                         errorHandler::check(cudaSetDevice(programCtrl.deviceList()[virtualDeviceIndex]));

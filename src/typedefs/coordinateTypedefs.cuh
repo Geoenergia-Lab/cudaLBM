@@ -219,8 +219,8 @@ namespace LBM
         public:
             /**
              * @brief Constructs from thread and block coordinates
-             * @param[in] Tx The thread coordinates
-             * @param[in] Bx The block coordinates
+             * @param[in] Tx Three-dimensional thread coordinates
+             * @param[in] Bx Three-dimensional block coordinates
              **/
             __device__ [[nodiscard]] inline explicit pointCoordinate(
                 const thread::coordinate &Tx,

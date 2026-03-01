@@ -67,10 +67,9 @@ namespace LBM
          *
          * @tparam T Fundamental type of the array.
          * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
-         * @tparam TimeType Type of time stepping (instantaneous or timeAverage)
          **/
-        template <typename T, class VelocitySet, const time::type TimeType>
-        class array<field::SKELETON, T, VelocitySet, TimeType> : public arrayBase<T>
+        template <typename T, class VelocitySet>
+        class array<field::SKELETON, T, VelocitySet, time::instantaneous> : public arrayBase<T>
         {
         private:
             /**
@@ -82,7 +81,7 @@ namespace LBM
             /**
              * @brief Alias for the current specialization
              **/
-            using This = array<field::SKELETON, T, VelocitySet, TimeType>;
+            using This = array<field::SKELETON, T, VelocitySet, time::instantaneous>;
 
         public:
             /**
@@ -141,6 +140,52 @@ namespace LBM
             }
 
         private:
+            __host__ [[nodiscard]] static T *allocate_halo_segment(
+                [[maybe_unused]] const host::latticeMesh &mesh,
+                [[maybe_unused]] const T *hostArrayGlobal,
+                [[maybe_unused]] const label_t GPU_x,
+                [[maybe_unused]] const label_t GPU_y,
+                [[maybe_unused]] const label_t GPU_z,
+                [[maybe_unused]] const programControl &programCtrl,
+                [[maybe_unused]] const label_t allocationSize)
+            {
+                const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                const label_t startIndex = virtualDeviceIndex * allocationSize;
+
+                T *devPtr = device::allocate<T>(allocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
+
+                device::copy(devPtr, &(hostArrayGlobal[startIndex]), allocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
+
+                return devPtr;
+            }
+
+            __host__ [[nodiscard]] static T **allocate_halo_on_devices(
+                [[maybe_unused]] const host::latticeMesh &mesh,
+                [[maybe_unused]] const T *hostArrayGlobal,
+                [[maybe_unused]] const programControl &programCtrl,
+                [[maybe_unused]] const label_t allocationSize)
+            {
+                T **hostPtrsToDevice = host::allocate<T *>(mesh.nDevices().size(), nullptr);
+
+                GPU::forAll(
+                    mesh.nDevices(),
+                    [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                    {
+                        std::cout << "deviceID {" << GPU_x << " " << GPU_y << " " << GPU_z << "}:" << std::endl;
+                        std::cout << "East boundary: " << (GPU_x < mesh.nDevices<axis::X>() - 1) << std::endl;
+                        std::cout << "West boundary: " << (GPU_x > 0) << std::endl;
+                        std::cout << "North boundary: " << (GPU_y < mesh.nDevices<axis::Y>() - 1) << std::endl;
+                        std::cout << "South boundary: " << (GPU_y > 0) << std::endl;
+                        std::cout << "Back boundary: " << (GPU_z < mesh.nDevices<axis::Z>() - 1) << std::endl;
+                        std::cout << "Front boundary: " << (GPU_z > 0) << std::endl;
+
+                        // const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                        // hostPtrsToDevice[virtualDeviceIndex] = allocate_halo_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl, allocationSize);
+                    });
+
+                return hostPtrsToDevice;
+            }
+
             /**
              * @brief Allocate all GPU segments for a skeleton array from a std::vector.
              * @tparam alpha Axis direction.
@@ -155,7 +200,14 @@ namespace LBM
                 const std::vector<T> &hostArrayGlobal,
                 const programControl &programCtrl)
             {
-                return arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
+                if constexpr (false)
+                {
+                    return allocate_halo_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
+                }
+                else
+                {
+                    return arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
+                }
             }
         };
     }

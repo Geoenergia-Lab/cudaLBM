@@ -224,7 +224,6 @@ namespace LBM
                 }
                 std::cout << "    writeStatus: success" << ";" << std::endl;
                 std::cout << "};" << std::endl;
-                std::cout << std::endl;
             }
         }
     }

@@ -107,6 +107,13 @@ namespace LBM
         __device__ __constant__ label_t BLOCK_OFFSET_Y;
         __device__ __constant__ label_t BLOCK_OFFSET_Z;
 
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_WEST = 0;
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_EAST = 0;
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_NORTH = 0;
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_SOUTH = 0;
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_BACK = 0;
+        __device__ __constant__ constexpr const label_t STREAMING_OFFSET_FRONT = 0;
+
         /**
          * @brief Allocates a symbol of type T to the device
          * @param[in] symbol The symbol to which the value is to be copied

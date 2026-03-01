@@ -291,13 +291,12 @@ namespace LBM
 
                 constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, coeff>();
 
+                const blockLabel_t Tx(tx, ty, tz);
+                const blockLabel_t Bx(bx, by, bz);
+
                 for (label_t i = 0; i < VelocitySet::QF(); i++)
                 {
-                    face[host::idxPop<alpha, VelocitySet::QF()>(
-                        i,
-                        tx, ty, tz,
-                        bx, by, bz,
-                        mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>())] = pop[indices[i]];
+                    face[host::idxPop<alpha, VelocitySet::QF()>(i, Tx, Bx, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>())] = pop[indices[i]];
                 }
             }
         };

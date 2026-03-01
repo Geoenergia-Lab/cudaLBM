@@ -149,7 +149,12 @@ namespace LBM
         /**
          * @brief Destructor for the programControl class
          **/
-        ~programControl() noexcept {}
+        ~programControl() noexcept
+        {
+            std::cout << std::endl;
+            std::cout << "End" << std::endl;
+            std::cout << std::endl;
+        }
 
         /**
          * @brief Returns the name of the case

@@ -76,8 +76,8 @@ namespace LBM
         /**
          * @brief Constructs a normalVector from current thread indices
          * @return normalVector for the current thread's position
-         * @param[in] Tx Thread coordinates
-         * @param[in] Bx Block coordinates
+         * @param[in] Tx Three-dimensional thread coordinates
+         * @param[in] Bx Three-dimensional block coordinates
          **/
         __device__ [[nodiscard]] inline constexpr normalVector(const device::pointCoordinate &point) noexcept
             : bitmask_(computeBitmask(point)) {}

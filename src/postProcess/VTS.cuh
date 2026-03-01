@@ -205,7 +205,6 @@ namespace LBM
                 VTSWriter(solutionVars, outFile, mesh, solutionVarNames);
                 std::cout << "    writeStatus: success" << ";" << std::endl;
                 std::cout << "};" << std::endl;
-                std::cout << std::endl;
             }
         }
     }

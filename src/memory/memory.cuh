@@ -201,6 +201,30 @@ namespace LBM
             return allocate<T>(nPoints);
         }
 
+        template <typename T>
+        __host__ void free(const T *ptr, const deviceIndex_t deviceID)
+        {
+            errorHandler::check(cudaDeviceSynchronize());
+
+            errorHandler::check(cudaSetDevice(deviceID));
+
+            errorHandler::check(cudaDeviceSynchronize());
+
+            errorHandler::check(cudaFree(const_cast<T *>(ptr)));
+        }
+
+        template <typename T>
+        __host__ void free(T *ptr, const deviceIndex_t deviceID)
+        {
+            errorHandler::check(cudaDeviceSynchronize());
+
+            errorHandler::check(cudaSetDevice(deviceID));
+
+            errorHandler::check(cudaDeviceSynchronize());
+
+            errorHandler::check(cudaFree(ptr));
+        }
+
         /**
          * @brief Copies data from host to device memory
          * @tparam T Data type of the elements
