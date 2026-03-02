@@ -364,7 +364,7 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const name_t processName(const programControl programCtrl, const name_t &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
+    __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
     {
         // Get the file name at the present time step
         if (cutPlane)
