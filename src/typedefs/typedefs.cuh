@@ -203,4 +203,29 @@ namespace LBM
 #include "var3.cuh"
 #include "coordinateTypedefs.cuh"
 
+namespace LBM
+{
+    namespace axis
+    {
+        template <const axis::type alpha, const int coeff>
+        __host__ [[nodiscard]] static inline constexpr blockLabel_t to_3d(const label_t ta, const label_t tb) noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                return {thread::boundary<alpha, coeff>(), ta, tb};
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                return {ta, thread::boundary<alpha, coeff>(), tb};
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                return {ta, tb, thread::boundary<alpha, coeff>()};
+            }
+        }
+    }
+}
+
 #endif

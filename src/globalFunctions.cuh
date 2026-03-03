@@ -266,6 +266,12 @@ namespace LBM
         {
             return (tx + block::nx<T>() * (ty + block::ny<T>() * (tz + block::nz<T>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
         }
+
+        template <typename T = label_t>
+        __host__ [[nodiscard]] inline constexpr T idx(const blockLabel_t &Tx, const blockLabel_t &Bx, const T nxBlocks, const T nyBlocks) noexcept
+        {
+            return idx<T>(Tx.x, Tx.y, Tx.z, Bx.x, Bx.y, Bx.z, nxBlocks, nyBlocks);
+        }
     }
 
     namespace global

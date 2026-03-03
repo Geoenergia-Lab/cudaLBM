@@ -95,9 +95,7 @@ namespace LBM
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-            return ta + block::n<axis::orthogonal<alpha, 0>()>() *
-                            (tb + block::n<axis::orthogonal<alpha, 1>()>() *
-                                      (pop + QF * (bx + device::NUM_BLOCK_X * (by + device::NUM_BLOCK_Y * bz))));
+            return ta + block::n<axis::orthogonal<alpha, 0>()>() * (tb + block::n<axis::orthogonal<alpha, 1>()>() * (pop + QF * (bx + device::NUM_BLOCK_X * (by + device::NUM_BLOCK_Y * bz))));
         }
 
         /**

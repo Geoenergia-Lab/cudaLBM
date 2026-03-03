@@ -92,14 +92,15 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @param[in] alpha Integral constant indicating the axis.
              **/
-            template <const axis::type Alpha>
+            template <const axis::type Alpha, const int Coeff>
             __host__ [[nodiscard]] array(
                 const std::vector<T> &hostArray,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl,
-                const integralConstant<axis::type, Alpha> &alpha)
+                const integralConstant<axis::type, Alpha> &alpha,
+                const integralConstant<int, Coeff> &coeff)
                 : arrayBase<T>(
-                      This::template allocate_on_devices<alpha.value>(
+                      This::template allocate_on_devices<alpha.value, coeff.value>(
                           mesh,
                           hostArray,
                           programCtrl),
@@ -140,71 +141,166 @@ namespace LBM
             }
 
         private:
-            __host__ [[nodiscard]] static T *allocate_halo_segment(
-                [[maybe_unused]] const host::latticeMesh &mesh,
-                [[maybe_unused]] const T *hostArrayGlobal,
-                [[maybe_unused]] const label_t GPU_x,
-                [[maybe_unused]] const label_t GPU_y,
-                [[maybe_unused]] const label_t GPU_z,
-                [[maybe_unused]] const programControl &programCtrl,
-                [[maybe_unused]] const label_t allocationSize)
+            template <const axis::type alpha, const label_t QF>
+            __host__ [[nodiscard]] static inline label_t idxPopTest(
+                const label_t pop,
+                const blockLabel_t &Tx,
+                const blockLabel_t &Bx,
+                const label_t nxBlocks,
+                const label_t nyBlocks) noexcept
             {
-                const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
-                const label_t startIndex = virtualDeviceIndex * allocationSize;
-
-                T *devPtr = device::allocate<T>(allocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
-
-                device::copy(devPtr, &(hostArrayGlobal[startIndex]), allocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
-
-                return devPtr;
+                return Tx.value<axis::orthogonal<alpha, 0>()>() + block::n<axis::orthogonal<alpha, 0>()>() * (Tx.value<axis::orthogonal<alpha, 1>()>() + block::n<axis::orthogonal<alpha, 1>()>() * (pop + QF * (Bx.x + nxBlocks * (Bx.y + nyBlocks * Bx.z))));
             }
 
+            template <const axis::type alpha>
+            __host__ [[nodiscard]] static inline constexpr std::size_t AllocationSize(
+                const label_t GPU_x,
+                const label_t GPU_y,
+                const label_t GPU_z,
+                const host::latticeMesh &mesh) noexcept
+            {
+                const std::size_t EastBoundary = static_cast<std::size_t>(GPU_x < mesh.nDevices<axis::X>() - 1);
+                const std::size_t WestBoundary = static_cast<std::size_t>(GPU_x > 0);
+                const std::size_t NorthBoundary = static_cast<std::size_t>(GPU_y < mesh.nDevices<axis::Y>() - 1);
+                const std::size_t SouthBoundary = static_cast<std::size_t>(GPU_y > 0);
+                const std::size_t FrontBoundary = static_cast<std::size_t>(GPU_z < mesh.nDevices<axis::Z>() - 1);
+                const std::size_t BackBoundary = static_cast<std::size_t>(GPU_z > 0);
+
+                if constexpr (alpha == axis::X)
+                {
+                    return mesh.nFacesPerDevice<alpha, VelocitySet::QF(), std::size_t>(EastBoundary, WestBoundary);
+                }
+
+                if constexpr (alpha == axis::Y)
+                {
+                    return mesh.nFacesPerDevice<alpha, VelocitySet::QF(), std::size_t>(NorthBoundary, SouthBoundary);
+                }
+
+                if constexpr (alpha == axis::Z)
+                {
+                    return mesh.nFacesPerDevice<alpha, VelocitySet::QF(), std::size_t>(BackBoundary, FrontBoundary);
+                }
+            }
+
+            template <const axis::type alpha, const int coeff>
             __host__ [[nodiscard]] static T **allocate_halo_on_devices(
-                [[maybe_unused]] const host::latticeMesh &mesh,
-                [[maybe_unused]] const T *hostArrayGlobal,
-                [[maybe_unused]] const programControl &programCtrl,
-                [[maybe_unused]] const label_t allocationSize)
+                const host::latticeMesh &mesh,
+                const T *hostArrayGlobal,
+                const programControl &programCtrl,
+                const std::size_t globalSize)
             {
                 T **hostPtrsToDevice = host::allocate<T *>(mesh.nDevices().size(), nullptr);
 
-                GPU::forAll(
-                    mesh.nDevices(),
-                    [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
-                    {
-                        const label_t EastBoundary = static_cast<label_t>(GPU_x < mesh.nDevices<axis::X>() - 1);
-                        const label_t WestBoundary = static_cast<label_t>(GPU_x > 0);
-                        const label_t NorthBoundary = static_cast<label_t>(GPU_y < mesh.nDevices<axis::Y>() - 1);
-                        const label_t SouthBoundary = static_cast<label_t>(GPU_y > 0);
-                        const label_t BackBoundary = static_cast<label_t>(GPU_z < mesh.nDevices<axis::Z>() - 1);
-                        const label_t FrontBoundary = static_cast<label_t>(GPU_z > 0);
-                        std::cout << "deviceID {" << GPU_x << " " << GPU_y << " " << GPU_z << "}:" << std::endl;
-                        std::cout << "East boundary: " << EastBoundary << std::endl;
-                        std::cout << "West boundary: " << WestBoundary << std::endl;
-                        std::cout << "North boundary: " << NorthBoundary << std::endl;
-                        std::cout << "South boundary: " << SouthBoundary << std::endl;
-                        std::cout << "Back boundary: " << BackBoundary << std::endl;
-                        std::cout << "Front boundary: " << FrontBoundary << std::endl;
+                // Special case if we have only 1 GPU since we do not need to decompose
+                if ((mesh.nDevices<axis::X>() == 1) && (mesh.nDevices<axis::Y>() == 1) && (mesh.nDevices<axis::Z>() == 1))
+                {
+                    // We can just go straight to the allocation and copy step
+                    const label_t virtualDeviceIndex = GPU::idx(static_cast<label_t>(0), static_cast<label_t>(0), static_cast<label_t>(0), mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                    hostPtrsToDevice[virtualDeviceIndex] = allocate_halo_segment(hostArrayGlobal, virtualDeviceIndex, programCtrl, globalSize);
+                }
+                else
+                {
+                    GPU::forAll(
+                        mesh.nDevices(),
+                        [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                        {
+                            const label_t EastBoundary = static_cast<label_t>(GPU_x < mesh.nDevices<axis::X>() - 1);
+                            const label_t WestBoundary = static_cast<label_t>(GPU_x > 0);
+                            const label_t NorthBoundary = static_cast<label_t>(GPU_y < mesh.nDevices<axis::Y>() - 1);
+                            const label_t SouthBoundary = static_cast<label_t>(GPU_y > 0);
+                            const label_t FrontBoundary = static_cast<label_t>(GPU_z < mesh.nDevices<axis::Z>() - 1);
+                            const label_t BackBoundary = static_cast<label_t>(GPU_z > 0);
+                            std::cout << "deviceID {" << GPU_x << " " << GPU_y << " " << GPU_z << "}:" << std::endl;
+                            std::cout << "West boundary: " << (WestBoundary ? "true" : "false") << std::endl;
+                            std::cout << "East boundary: " << (EastBoundary ? "true" : "false") << std::endl;
+                            std::cout << "South boundary: " << (SouthBoundary ? "true" : "false") << std::endl;
+                            std::cout << "North boundary: " << (NorthBoundary ? "true" : "false") << std::endl;
+                            std::cout << "Back boundary: " << (BackBoundary ? "true" : "false") << std::endl;
+                            std::cout << "Front boundary: " << (FrontBoundary ? "true" : "false") << std::endl;
+                            std::cout << std::endl;
 
-                        device::copyToSymbol(device::STREAMING_OFFSET_WEST, WestBoundary);
-                        device::copyToSymbol(device::STREAMING_OFFSET_EAST, EastBoundary);
-                        device::copyToSymbol(device::STREAMING_OFFSET_SOUTH, SouthBoundary);
-                        device::copyToSymbol(device::STREAMING_OFFSET_NORTH, NorthBoundary);
-                        device::copyToSymbol(device::STREAMING_OFFSET_BACK, BackBoundary);
-                        device::copyToSymbol(device::STREAMING_OFFSET_FRONT, FrontBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_WEST, WestBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_EAST, EastBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_SOUTH, SouthBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_NORTH, NorthBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_BACK, BackBoundary);
+                            device::copyToSymbol(device::STREAMING_OFFSET_FRONT, FrontBoundary);
 
-                        const label_t nxHaloBlocks = mesh.blocksPerDevice<axis::X>() + EastBoundary + WestBoundary;
-                        const label_t nyHaloBlocks = mesh.blocksPerDevice<axis::Y>() + NorthBoundary + SouthBoundary;
-                        const label_t nzHaloBlocks = mesh.blocksPerDevice<axis::Z>() + BackBoundary + FrontBoundary;
+                            // Now, we should create a std vector containing the halo for this device
+                            // The halo should begin at bx = (gpu_x * nxBlocksPerGPU) - WestBoundary, I think
+                            // Same for the other boundaries
+                            const std::size_t partitionAllocationSize = AllocationSize<alpha>(GPU_x, GPU_y, GPU_z, mesh);
 
-                        // std::vector<scalar_t>(nxHaloBlocks * nyHaloBlocks * nzHaloBlocks * block::nx()
+                            std::vector<scalar_t> haloAlloc(partitionAllocationSize, 0);
+                            const label_t nxBlocksPerDevice = mesh.blocksPerDevice<axis::X>() + WestBoundary + EastBoundary;
+                            const label_t nyBlocksPerDevice = mesh.blocksPerDevice<axis::Y>() + SouthBoundary + NorthBoundary;
+                            const label_t nzBlocksPerDevice = mesh.blocksPerDevice<axis::Z>() + BackBoundary + FrontBoundary;
 
-                        // Now, we should create a std vector containing the halo for this device
-                        // The halo should begin at bx = (gpu_x * nxBlocksPerGPU) - WestBoundary, I think
-                        // Same for the other boundaries
+                            // Calculate the first x,y,z block indices
+                            const label_t bx0 = (GPU_x * nxBlocksPerDevice) - WestBoundary;
+                            const label_t by0 = (GPU_y * nyBlocksPerDevice) - SouthBoundary;
+                            const label_t bz0 = (GPU_z * nzBlocksPerDevice) - BackBoundary;
 
-                        // const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
-                        // hostPtrsToDevice[virtualDeviceIndex] = allocate_halo_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl, allocationSize);
-                    });
+                            // This is the correct loop structure.
+                            // Loop over the blocks: make sure to add the offsets and make these per GPU
+                            for (label_t bz = 0; bz < nzBlocksPerDevice; bz++)
+                            {
+                                for (label_t by = 0; by < nyBlocksPerDevice; by++)
+                                {
+                                    for (label_t bx = 0; bx < nxBlocksPerDevice; bx++)
+                                    {
+                                        for (label_t i = 0; i < VelocitySet::QF(); i++)
+                                        {
+                                            // Loop over the threads that are perpendicular to alpha
+                                            // These inner nested loops are correct, I believe
+                                            // Second perpendicular axis
+                                            for (label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>()>(); tb++)
+                                            {
+                                                // First perpendicular axis
+                                                for (label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>()>(); ta++)
+                                                {
+                                                    // Get the 3d indices on the face
+                                                    const blockLabel_t Tx = axis::to_3d<alpha, coeff>(ta, tb);
+
+                                                    const blockLabel_t Bx(bx, by, bz);
+                                                    const blockLabel_t Bx_global(bx0 + bx, by0 + by, bz0 + bz);
+
+                                                    const label_t global_idx = (idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx_global, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>())) % (static_cast<label_t>(globalSize));
+
+                                                    // Local index in haloAlloc (same layout, but using local block dimensions)
+                                                    const label_t local_idx = (idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx, nxBlocksPerDevice, nyBlocksPerDevice)) % (static_cast<label_t>(partitionAllocationSize));
+
+                                                    if (static_cast<std::size_t>(global_idx) > globalSize)
+                                                    {
+                                                        std::cout << "Access error in hostArrayGlobal: " << global_idx << std::endl;
+                                                        std::cout << "local_idx: " << local_idx << std::endl;
+                                                        std::cout << "deviceID:" << std::endl;
+                                                        std::cout << GPU_x << ", " << GPU_y << ", " << GPU_z << std::endl;
+                                                        std::cout << nxBlocksPerDevice << " x blocks per device" << std::endl;
+                                                        std::cout << nyBlocksPerDevice << " y blocks per device" << std::endl;
+                                                        std::cout << nzBlocksPerDevice << " z blocks per device" << std::endl;
+                                                        Tx.print("Tx");
+                                                        Bx_global.print("BxGlobal");
+                                                        throw std::runtime_error("Access error in hostArrayGlobal");
+                                                    }
+
+                                                    if (local_idx > haloAlloc.size())
+                                                    {
+                                                        std::cout << "Access error in haloAlloc" << std::endl;
+                                                        throw std::runtime_error("Access error in haloAlloc");
+                                                    }
+
+                                                    haloAlloc[local_idx] = hostArrayGlobal[global_idx];
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                            hostPtrsToDevice[virtualDeviceIndex] = allocate_halo_segment(haloAlloc.data(), virtualDeviceIndex, programCtrl, partitionAllocationSize);
+                        });
+                }
 
                 return hostPtrsToDevice;
             }
@@ -217,20 +313,33 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @return Host array of device pointers.
              **/
-            template <const axis::type alpha>
+            template <const axis::type alpha, const int coeff>
             __host__ [[nodiscard]] static T **allocate_on_devices(
                 const host::latticeMesh &mesh,
                 const std::vector<T> &hostArrayGlobal,
                 const programControl &programCtrl)
             {
-                if constexpr (false)
+                if constexpr (true)
                 {
-                    return allocate_halo_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
+                    return allocate_halo_on_devices<alpha, coeff>(mesh, hostArrayGlobal.data(), programCtrl, hostArrayGlobal.size());
                 }
                 else
                 {
                     return arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal.data(), programCtrl, mesh.nFacesPerDevice<alpha, VelocitySet::QF()>());
                 }
+            }
+
+            __host__ [[nodiscard]] static T *allocate_halo_segment(
+                const T *hostArrayGlobal,
+                const label_t virtualDeviceIndex,
+                const programControl &programCtrl,
+                const std::size_t partitionAllocationSize)
+            {
+                T *devPtr = device::allocate<T>(partitionAllocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
+
+                device::copy(devPtr, hostArrayGlobal, partitionAllocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
+
+                return devPtr;
             }
         };
     }

@@ -244,6 +244,16 @@ namespace LBM
                 return nDevices_.value<alpha, ValueType>();
             }
 
+            template <const axis::type alpha, const label_t QF, typename ValueType = label_t>
+            __host__ [[nodiscard]] inline constexpr ValueType nFaces() const noexcept
+            {
+                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(host::latticeMesh::nFacesPerDevice, "Need to fix the calculation of the number of faces per GPU: it is no longer global"));
+
+                axis::assertions::validate<alpha, axis::NOT_NULL>();
+
+                return (dimensions_.size<ValueType>() * static_cast<ValueType>(QF)) / (block::n<alpha, ValueType>());
+            }
+
             /**
              * @brief Computes the allocation size along a block face for a given QF
              * @tparam alpha The axis (X, Y or Z)
@@ -267,17 +277,17 @@ namespace LBM
 
                 if constexpr (alpha == axis::X)
                 {
-                    return (block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * (nBlocks<axis::X, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Y, ValueType>() * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::X, ValueType>();
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * (nBlocks<axis::X, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Y, ValueType>() * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::X, ValueType>();
                 }
 
                 if constexpr (alpha == axis::Y)
                 {
-                    return (block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * (nBlocks<axis::Y, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::Y, ValueType>();
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * (nBlocks<axis::Y, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::Y, ValueType>();
                 }
 
                 if constexpr (alpha == axis::Z)
                 {
-                    return (block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * nBlocks<axis::Y, ValueType>() * (nBlocks<axis::Z, ValueType>() + negBoundary + posBoundary)) / nDevices_.value<axis::Z, ValueType>();
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * nBlocks<axis::Y, ValueType>() * (nBlocks<axis::Z, ValueType>() + negBoundary + posBoundary)) / nDevices_.value<axis::Z, ValueType>();
                 }
             }
 

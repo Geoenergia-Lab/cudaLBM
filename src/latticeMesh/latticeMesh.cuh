@@ -78,6 +78,14 @@ namespace LBM
         {
             return idx(tx, ty, tz, bx, by, bz, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
         }
+
+        __host__ [[nodiscard]] inline label_t idx(
+            const blockLabel_t &Tx,
+            const blockLabel_t &Bx,
+            const latticeMesh &mesh) noexcept
+        {
+            return idx(Tx.x, Tx.y, Tx.z, Bx.x, Bx.y, Bx.z, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+        }
     }
 }
 

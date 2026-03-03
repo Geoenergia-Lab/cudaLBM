@@ -111,6 +111,27 @@ namespace LBM
     namespace thread
     {
         /**
+         * @brief Returns the thread that lies on a particular boundary
+         * @tparam alpha The axis direction
+         * @tparam coeff The axis normal coefficient
+         * @tparam ValueType The return type (defualt label_t)
+         * @returns One of two thread coordinates that lie on the extremities of alpha within the block
+         **/
+        template <const axis::type alpha, const int coeff, typename ValueType = label_t>
+        __host__ [[nodiscard]] inline consteval ValueType boundary() noexcept
+        {
+            if constexpr (coeff == -1)
+            {
+                return 0;
+            }
+
+            if constexpr (coeff == 1)
+            {
+                return block::n<alpha, ValueType>() - 1;
+            }
+        }
+
+        /**
          * @brief Thread coordinate in a 3D grid.
          *
          * Stores the three thread indices (x, y, z) and provides access per axis
