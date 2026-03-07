@@ -157,11 +157,11 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::pull, "Potential issue with condition checking (e.g. West, East, etc)."));
 
-                pull_direction<axis::X, x_periodic, 1, 0>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::X, x_periodic>(pop, fGhost, Tx, Bx, point);
 
-                pull_direction<axis::Y, y_periodic, 3, 2>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::Y, y_periodic>(pop, fGhost, Tx, Bx, point);
 
-                pull_direction<axis::Z, z_periodic, 5, 4>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::Z, z_periodic>(pop, fGhost, Tx, Bx, point);
             }
 
             /**
@@ -184,11 +184,11 @@ namespace LBM
 
                 VelocitySet::reconstruct<false>(pop, moments);
 
-                save_direction<axis::X, x_periodic, 0, 1>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::X, x_periodic>(pop, gGhost, Tx, Bx, point);
 
-                save_direction<axis::Y, y_periodic, 2, 3>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::Y, y_periodic>(pop, gGhost, Tx, Bx, point);
 
-                save_direction<axis::Z, z_periodic, 4, 5>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::Z, z_periodic>(pop, gGhost, Tx, Bx, point);
             }
 
 #include "haloSharedMemoryOperations.cuh"
@@ -321,7 +321,7 @@ namespace LBM
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            template <const axis::type alpha, const int coeff, const label_t PtrIndex>
+            template <const axis::type alpha, const int coeff, const axis::pointerIndex_t PtrIndex>
             __device__ static inline constexpr void pull_face(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, const scalar_t> &fGhost,
@@ -361,7 +361,7 @@ namespace LBM
                             thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(dBz, Bx.value<axis::Z>()),
                             Bx.value<axis::Z>());
 
-                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&fGhost.ptr<PtrIndex>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]);
+                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&fGhost.ptr<static_cast<label_t>(PtrIndex)>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]);
                     });
             }
 
@@ -377,7 +377,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
              **/
-            template <const axis::type alpha, const bool isPeriodic, const label_t PtrIdx0, const label_t PtrIdx1>
+            template <const axis::type alpha, const bool isPeriodic>
             __device__ static inline constexpr void pull_direction(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, const scalar_t> &fGhost,
@@ -387,11 +387,11 @@ namespace LBM
             {
                 if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    pull_face<alpha, +1, PtrIdx0>(pop, fGhost, Tx, Bx);
+                    pull_face<alpha, +1, pointerIndex<alpha, +1>()>(pop, fGhost, Tx, Bx);
                 }
                 else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    pull_face<alpha, -1, PtrIdx1>(pop, fGhost, Tx, Bx);
+                    pull_face<alpha, -1, pointerIndex<alpha, -1>()>(pop, fGhost, Tx, Bx);
                 }
             }
 
@@ -405,7 +405,7 @@ namespace LBM
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            template <const axis::type alpha, const int coeff, const label_t PtrIndex>
+            template <const axis::type alpha, const int coeff, const axis::pointerIndex_t PtrIndex>
             __device__ static inline constexpr void save_face(
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, scalar_t> &gGhost,
@@ -419,7 +419,7 @@ namespace LBM
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        gGhost.ptr<PtrIndex>()[idxPop<alpha, i, VelocitySet::QF()>(
+                        gGhost.ptr<static_cast<label_t>(PtrIndex)>()[idxPop<alpha, i, VelocitySet::QF()>(
                             Tx.value<axis::orthogonal<alpha, 0>()>(),
                             Tx.value<axis::orthogonal<alpha, 1>()>(),
                             Bx)] = pop[q_i<streaming_index<alpha, coeff>(i)>()];
@@ -438,7 +438,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
              **/
-            template <const axis::type alpha, const bool isPeriodic, const label_t PtrIdx0, const label_t PtrIdx1>
+            template <const axis::type alpha, const bool isPeriodic>
             __device__ static inline constexpr void save_direction(
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, scalar_t> &gGhost,
@@ -448,11 +448,60 @@ namespace LBM
             {
                 if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    save_face<alpha, -1, PtrIdx0>(pop, gGhost, Tx, Bx);
+                    save_face<alpha, -1, pointerIndex<alpha, -1>()>(pop, gGhost, Tx, Bx);
                 }
                 else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    save_face<alpha, +1, PtrIdx1>(pop, gGhost, Tx, Bx);
+                    save_face<alpha, +1, pointerIndex<alpha, +1>()>(pop, gGhost, Tx, Bx);
+                }
+            }
+
+            /**
+             * @brief Returns the pointer index corresponding to the axis direction alpha and coefficient coeff (must be -1 or 1)
+             * @tparam alpha The axis direction
+             * @tparam coeff The coefficient indicating the direction along the axis (must be -1 or 1)
+             * @returns The pointer index corresponding to the axis direction alpha and coefficient coeff
+             **/
+            template <const axis::type alpha, const int coeff>
+            __device__ __host__ [[nodiscard]] static inline consteval axis::pointerIndex_t pointerIndex() noexcept
+            {
+                axis::assertions::validate<alpha, axis::null::NOT_NULL>();
+                velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
+
+                if constexpr (alpha == axis::X)
+                {
+                    if constexpr (coeff == -1)
+                    {
+                        return axis::pointerIndex_t::West;
+                    }
+                    if constexpr (coeff == 1)
+                    {
+                        return axis::pointerIndex_t::East;
+                    }
+                }
+
+                if constexpr (alpha == axis::Y)
+                {
+                    if constexpr (coeff == -1)
+                    {
+                        return axis::pointerIndex_t::South;
+                    }
+                    if constexpr (coeff == 1)
+                    {
+                        return axis::pointerIndex_t::North;
+                    }
+                }
+
+                if constexpr (alpha == axis::Z)
+                {
+                    if constexpr (coeff == -1)
+                    {
+                        return axis::pointerIndex_t::Back;
+                    }
+                    if constexpr (coeff == 1)
+                    {
+                        return axis::pointerIndex_t::Front;
+                    }
                 }
             }
         };
