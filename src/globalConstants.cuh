@@ -114,6 +114,98 @@ namespace LBM
         __device__ __constant__ constexpr const label_t STREAMING_OFFSET_BACK = 0;
         __device__ __constant__ label_t STREAMING_OFFSET_FRONT; // This is 1 in the case that we have a GPU boundary on the back of the subdomain, otherwise 0
 
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_WEST;
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_EAST;
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_SOUTH;
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_NORTH;
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_BACK;
+        __device__ __constant__ label_t HAS_DEVICE_BOUNDARY_FRONT;
+
+        __device__ static int alreadyPrinted0 = 0;
+        __device__ static int alreadyPrinted1 = 0;
+        __device__ static int alreadyPrinted2 = 0;
+        __device__ static int alreadyPrinted3 = 0;
+
+        template <const axis::type alpha, const int coeff>
+        __device__ [[nodiscard]] inline constexpr label_t STREAMING_OFFSET() noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return STREAMING_OFFSET_WEST;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return STREAMING_OFFSET_EAST;
+                }
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return STREAMING_OFFSET_SOUTH;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return STREAMING_OFFSET_NORTH;
+                }
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return STREAMING_OFFSET_BACK;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return STREAMING_OFFSET_FRONT;
+                }
+            }
+        }
+
+        template <const axis::type alpha, const int coeff>
+        __device__ [[nodiscard]] inline constexpr label_t HAS_DEVICE_BOUNDARY() noexcept
+        {
+            if constexpr (alpha == axis::X)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return HAS_DEVICE_BOUNDARY_WEST;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return HAS_DEVICE_BOUNDARY_EAST;
+                }
+            }
+
+            if constexpr (alpha == axis::Y)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return HAS_DEVICE_BOUNDARY_SOUTH;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return HAS_DEVICE_BOUNDARY_NORTH;
+                }
+            }
+
+            if constexpr (alpha == axis::Z)
+            {
+                if constexpr (coeff == -1)
+                {
+                    return HAS_DEVICE_BOUNDARY_BACK;
+                }
+                if constexpr (coeff == +1)
+                {
+                    return HAS_DEVICE_BOUNDARY_FRONT;
+                }
+            }
+        }
+
         /**
          * @brief Allocates a symbol of type T to the device
          * @param[in] symbol The symbol to which the value is to be copied

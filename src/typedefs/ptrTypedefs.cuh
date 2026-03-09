@@ -57,7 +57,7 @@ namespace LBM
         /**
          * @brief Class holding N device pointers of type T
          **/
-        template <label_t N, typename T>
+        template <const label_t N, typename T>
         class ptrCollection
         {
         public:

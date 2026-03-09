@@ -80,8 +80,8 @@ namespace LBM
      **/
     launchBoundsD3Q27 __global__ void momentBasedD3Q27(
         const device::ptrCollection<10, scalar_t> devPtrs,
-        const device::ptrCollection<6, const scalar_t> fGhost,
-        const device::ptrCollection<6, scalar_t> gGhost)
+        const device::ptrCollection<6, const scalar_t> readBuffer,
+        const device::ptrCollection<6, scalar_t> writeBuffer)
     {
         const thread::coordinate Tx;
 
@@ -149,7 +149,9 @@ namespace LBM
             streaming::pull<VelocitySet>(pop, shared_buffer, Tx);
 
             // Pull pop from global memory in cover nodes
-            BlockHalo::pull(pop, fGhost, Tx, Bx, point);
+            BlockHalo::pull(pop, readBuffer, Tx, Bx, point);
+
+            __syncthreads();
         }
 
         if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
@@ -217,8 +219,8 @@ namespace LBM
             });
 
         // Save the populations to the block halo
-        // BlockHalo::save_from_shared(shared_buffer, gGhost);
-        BlockHalo::save(pop, moments, gGhost, Tx, Bx, point);
+        // BlockHalo::save_from_shared(shared_buffer, writeBuffer);
+        BlockHalo::save(pop, moments, writeBuffer, Tx, Bx, point);
     }
 }
 

@@ -132,6 +132,11 @@ namespace LBM
             errorHandler::check(cudaStreamSynchronize(streams_[stream()]));
         }
 
+        inline void synchronize(const label_t i) const noexcept
+        {
+            errorHandler::check(cudaStreamSynchronize(streams_[i]));
+        }
+
         /**
          * @brief Stream access operator
          * @tparam stream_ Index of the stream to access (must be < N)
@@ -168,6 +173,7 @@ namespace LBM
 
             for (label_t stream = 0; stream < streams.size(); stream++)
             {
+                errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaSetDevice(programCtrl.deviceList()[stream]));
                 errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaStreamCreate(&streams[stream]));

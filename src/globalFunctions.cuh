@@ -157,15 +157,15 @@ namespace LBM
          * });
          * @endcode
          **/
-        template <typename F>
+        template <typename T = label_t, typename F>
         __host__ void forAll(const blockLabel_t &nGPUs, const F &&f) noexcept
         {
             // Loops for block indices
-            for (label_t GPU_z = 0; GPU_z < nGPUs.z; GPU_z++)
+            for (T GPU_z = 0; GPU_z < nGPUs.value<axis::Z, T>(); GPU_z++)
             {
-                for (label_t GPU_y = 0; GPU_y < nGPUs.y; GPU_y++)
+                for (T GPU_y = 0; GPU_y < nGPUs.value<axis::Y, T>(); GPU_y++)
                 {
-                    for (label_t GPU_x = 0; GPU_x < nGPUs.x; GPU_x++)
+                    for (T GPU_x = 0; GPU_x < nGPUs.value<axis::X, T>(); GPU_x++)
                     {
                         // Execute the arbitrary loop body
                         f(GPU_x, GPU_y, GPU_z);
@@ -189,22 +189,22 @@ namespace LBM
          * });
          * @endcode
          **/
-        template <typename F>
+        template <typename T = label_t, typename F>
         __host__ void forAll(const blockLabel_t &nBlocks, const F &&f) noexcept
         {
             // Loops for block indices
-            for (label_t bz = 0; bz < nBlocks.z; bz++)
+            for (T bz = 0; bz < nBlocks.value<axis::Z, T>(); bz++)
             {
-                for (label_t by = 0; by < nBlocks.y; by++)
+                for (T by = 0; by < nBlocks.value<axis::Y, T>(); by++)
                 {
-                    for (label_t bx = 0; bx < nBlocks.x; bx++)
+                    for (T bx = 0; bx < nBlocks.value<axis::X, T>(); bx++)
                     {
                         // Loops for thread indices
-                        for (label_t tz = 0; tz < block::nz<label_t>(); tz++)
+                        for (T tz = 0; tz < block::nz<T>(); tz++)
                         {
-                            for (label_t ty = 0; ty < block::ny<label_t>(); ty++)
+                            for (T ty = 0; ty < block::ny<T>(); ty++)
                             {
-                                for (label_t tx = 0; tx < block::nx<label_t>(); tx++)
+                                for (T tx = 0; tx < block::nx<T>(); tx++)
                                 {
                                     // Execute the arbitrary loop body
                                     f(bx, by, bz, tx, ty, tz);
@@ -397,11 +397,19 @@ namespace LBM
          * @tparam T The function type (e.g., a lambda or a function pointer)
          * @param[in] func The kernel function to configure
          **/
-        template <const label_t smem_alloc_size, class T>
-        __host__ void configure(T *func)
+        template <const label_t smem_alloc_size, class T, class ProgramControl>
+        __host__ void configure(T *func, const ProgramControl &programCtrl)
         {
-            errorHandler::check(cudaFuncSetCacheConfig(func, cudaFuncCachePreferShared));
-            errorHandler::check(cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_alloc_size));
+            for (std::size_t VirtualDeviceIndex = 0; VirtualDeviceIndex < programCtrl.deviceList().size(); VirtualDeviceIndex++)
+            {
+                errorHandler::checkInline(cudaDeviceSynchronize());
+                errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+                errorHandler::checkInline(cudaDeviceSynchronize());
+                errorHandler::check(cudaFuncSetCacheConfig(func, cudaFuncCachePreferShared));
+                errorHandler::checkInline(cudaDeviceSynchronize());
+                errorHandler::check(cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_alloc_size));
+                errorHandler::checkInline(cudaDeviceSynchronize());
+            }
         }
     }
 }

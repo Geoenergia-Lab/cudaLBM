@@ -369,7 +369,7 @@ namespace LBM
                     const std::size_t virtualDeviceIndex = GPU::idx<std::size_t>(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
                     host::forAll(
-                        mesh.nBlocks(),
+                        mesh.blocksPerDevice(),
                         [&](const std::size_t bx, const std::size_t by, const std::size_t bz,
                             const std::size_t tx, const std::size_t ty, const std::size_t tz)
                         {

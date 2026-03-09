@@ -176,9 +176,9 @@ namespace LBM
              * @brief Get grid dimensions for CUDA kernel launches
              * @return dim3 structure with grid dimensions
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr dim3 gridBlock() const noexcept
+            __host__ [[nodiscard]] inline constexpr dim3 gridBlock() const noexcept
             {
-                return {nBlocks<axis::X, uint32_t>(), nBlocks<axis::Y, uint32_t>(), nBlocks<axis::Z, uint32_t>()};
+                return {blocksPerDevice<axis::X, uint32_t>(), blocksPerDevice<axis::Y, uint32_t>(), blocksPerDevice<axis::Z, uint32_t>()};
             }
 
             /**
@@ -269,25 +269,39 @@ namespace LBM
                 return (dimensions_.size<ValueType>() * static_cast<ValueType>(QF)) / (block::n<alpha, ValueType>() * nDevices<alpha, ValueType>());
             }
             template <const axis::type alpha, const label_t QF, typename ValueType = label_t>
-            __host__ [[nodiscard]] inline constexpr ValueType nFacesPerDevice(const ValueType negBoundary, const ValueType posBoundary) const noexcept
+            __host__ [[nodiscard]] ValueType nFacesPerDevice(const ValueType extraFace) const noexcept
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(host::latticeMesh::nFacesPerDevice, "Need to fix the calculation of the number of faces per GPU: it is no longer global"));
 
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
 
+                std::cout << "extraFace: " << extraFace << std::endl;
+
                 if constexpr (alpha == axis::X)
                 {
-                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * (nBlocks<axis::X, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Y, ValueType>() * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::X, ValueType>();
+                    std::cout << "Returning (QF * block::ny() * block::nz()" << " * " << (nBlocks<axis::X, ValueType>() + extraFace) << " * " << nBlocks<axis::Y, ValueType>() << " * " << nBlocks<axis::Z, ValueType>() << ") / " << nDevices_.value<axis::X, ValueType>() << std::endl;
+
+                    std::cout << "Numerator: " << (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * (nBlocks<axis::X, ValueType>() + extraFace) * nBlocks<axis::Y, ValueType>() * nBlocks<axis::Z, ValueType>()) << std::endl;
+
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * (nBlocks<axis::X, ValueType>() + extraFace) * nBlocks<axis::Y, ValueType>() * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::X, ValueType>();
                 }
 
                 if constexpr (alpha == axis::Y)
                 {
-                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * (nBlocks<axis::Y, ValueType>() + negBoundary + posBoundary) * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::Y, ValueType>();
+                    std::cout << "Returning (QF * block::nx() * block::nz() * " << nBlocks<axis::X, ValueType>() << " * " << (nBlocks<axis::Y, ValueType>() + extraFace) << " * " << nBlocks<axis::Z, ValueType>() << ") / " << nDevices_.value<axis::Y, ValueType>() << std::endl;
+
+                    std::cout << "Numerator: " << (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * (nBlocks<axis::Y, ValueType>() + extraFace) * nBlocks<axis::Z, ValueType>()) << std::endl;
+
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * (nBlocks<axis::Y, ValueType>() + extraFace) * nBlocks<axis::Z, ValueType>()) / nDevices_.value<axis::Y, ValueType>();
                 }
 
                 if constexpr (alpha == axis::Z)
                 {
-                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * nBlocks<axis::Y, ValueType>() * (nBlocks<axis::Z, ValueType>() + negBoundary + posBoundary)) / nDevices_.value<axis::Z, ValueType>();
+                    std::cout << "Returning (QF * block::nx() * block::ny() * " << nBlocks<axis::X, ValueType>() << " * " << nBlocks<axis::Y, ValueType>() << " * " << (nBlocks<axis::Z, ValueType>() + extraFace) << ") / " << nDevices_.value<axis::Z, ValueType>() << std::endl;
+
+                    std::cout << "Numerator: " << (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * nBlocks<axis::Y, ValueType>() * (nBlocks<axis::Z, ValueType>() + extraFace)) << std::endl;
+
+                    return (QF * block::n<axis::orthogonal<alpha, 0>()>() * block::n<axis::orthogonal<alpha, 1>()>() * nBlocks<axis::X, ValueType>() * nBlocks<axis::Y, ValueType>() * (nBlocks<axis::Z, ValueType>() + extraFace)) / nDevices_.value<axis::Z, ValueType>();
                 }
             }
 

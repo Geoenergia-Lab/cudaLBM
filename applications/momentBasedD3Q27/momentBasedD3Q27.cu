@@ -102,7 +102,7 @@ int main(const int argc, const char *const argv[])
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    kernel::configure<smem_alloc_size()>(momentBasedD3Q27);
+    kernel::configure<smem_alloc_size()>(momentBasedD3Q27, programCtrl);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -152,8 +152,8 @@ int main(const int argc, const char *const argv[])
             {
                 momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
                     devPtrs,
-                    blockHalo.fGhost(VirtualDeviceIndex),
-                    blockHalo.gGhost(VirtualDeviceIndex));
+                    blockHalo.readBuffer(VirtualDeviceIndex),
+                    blockHalo.writeBuffer(VirtualDeviceIndex));
             });
 
         // Calculate S kernel

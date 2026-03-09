@@ -74,7 +74,7 @@ namespace LBM
              * @param[in] programCtrl The program control object
              **/
             __host__ [[nodiscard]] halo(const host::latticeMesh &mesh, const programControl &programCtrl) noexcept
-                : fGhost_(haloFace<VelocitySet>(
+                : readBuffer_(haloFace<VelocitySet>(
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("u", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("v", mesh, programCtrl),
@@ -87,7 +87,7 @@ namespace LBM
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_zz", mesh, programCtrl),
                       mesh,
                       programCtrl)),
-                  gGhost_(haloFace<VelocitySet>(
+                  writeBuffer_(haloFace<VelocitySet>(
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("u", mesh, programCtrl),
                       host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("v", mesh, programCtrl),
@@ -115,59 +115,59 @@ namespace LBM
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::swap, "Must set the device prior to calling."));
 
                 errorHandler::checkInline(cudaDeviceSynchronize());
-                std::swap(fGhost_.x0Ref(i), gGhost_.x0Ref(i));
-                std::swap(fGhost_.x1Ref(i), gGhost_.x1Ref(i));
-                std::swap(fGhost_.y0Ref(i), gGhost_.y0Ref(i));
-                std::swap(fGhost_.y1Ref(i), gGhost_.y1Ref(i));
-                std::swap(fGhost_.z0Ref(i), gGhost_.z0Ref(i));
-                std::swap(fGhost_.z1Ref(i), gGhost_.z1Ref(i));
+                std::swap(readBuffer_.x0Ref(i), writeBuffer_.x0Ref(i));
+                std::swap(readBuffer_.x1Ref(i), writeBuffer_.x1Ref(i));
+                std::swap(readBuffer_.y0Ref(i), writeBuffer_.y0Ref(i));
+                std::swap(readBuffer_.y1Ref(i), writeBuffer_.y1Ref(i));
+                std::swap(readBuffer_.z0Ref(i), writeBuffer_.z0Ref(i));
+                std::swap(readBuffer_.z1Ref(i), writeBuffer_.z1Ref(i));
             }
 
             /**
              * @brief Provides read-only access to the current read halo
              * @return Collection of const pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> fGhost(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const label_t i) const noexcept
             {
-                return {fGhost_.x0Const(i), fGhost_.x1Const(i), fGhost_.y0Const(i), fGhost_.y1Const(i), fGhost_.z0Const(i), fGhost_.z1Const(i)};
+                return {readBuffer_.x0Const(i), readBuffer_.x1Const(i), readBuffer_.y0Const(i), readBuffer_.y1Const(i), readBuffer_.z0Const(i), readBuffer_.z1Const(i)};
             }
 
             /**
              * @brief Provides mutable access to the current write halo
              * @return Collection of mutable pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> gGhost(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const label_t i) noexcept
             {
-                return {gGhost_.x0(i), gGhost_.x1(i), gGhost_.y0(i), gGhost_.y1(i), gGhost_.z0(i), gGhost_.z1(i)};
+                return {writeBuffer_.x0(i), writeBuffer_.x1(i), writeBuffer_.y0(i), writeBuffer_.y1(i), writeBuffer_.z0(i), writeBuffer_.z1(i)};
             }
 
             /**
              * @brief Loads halo population data from neighboring blocks
              * @param[out] pop Array to store loaded population values
-             * @param[in] fGhost Collection of pointers to the halo faces
+             * @param[in] readBuffer Collection of pointers to the halo faces
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
             __device__ static inline constexpr void pull(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, const scalar_t> &fGhost,
+                const device::ptrCollection<6, const scalar_t> &readBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::pull, "Potential issue with condition checking (e.g. West, East, etc)."));
 
-                pull_direction<axis::X, x_periodic>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::X, x_periodic>(pop, readBuffer, Tx, Bx, point);
 
-                pull_direction<axis::Y, y_periodic>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::Y, y_periodic>(pop, readBuffer, Tx, Bx, point);
 
-                pull_direction<axis::Z, z_periodic>(pop, fGhost, Tx, Bx, point);
+                pull_direction<axis::Z, z_periodic>(pop, readBuffer, Tx, Bx, point);
             }
 
             /**
              * @brief Saves population data to halo regions for neighboring blocks
              * @param[in] pop Array containing population values to save
-             * @param[out] gGhost Collection of pointers to the halo faces
+             * @param[out] writeBuffer Collection of pointers to the halo faces
              *
              * This device function saves population values to halo regions for
              * neighboring blocks to read.
@@ -175,7 +175,7 @@ namespace LBM
             __device__ static inline constexpr void save(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const thread::array<scalar_t, 10> &moments,
-                const device::ptrCollection<6, scalar_t> &gGhost,
+                const device::ptrCollection<6, scalar_t> &writeBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
@@ -184,11 +184,11 @@ namespace LBM
 
                 VelocitySet::reconstruct<false>(pop, moments);
 
-                save_direction<axis::X, x_periodic>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::X, x_periodic>(pop, writeBuffer, Tx, Bx, point);
 
-                save_direction<axis::Y, y_periodic>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::Y, y_periodic>(pop, writeBuffer, Tx, Bx, point);
 
-                save_direction<axis::Z, z_periodic>(pop, gGhost, Tx, Bx, point);
+                save_direction<axis::Z, z_periodic>(pop, writeBuffer, Tx, Bx, point);
             }
 
 #include "haloSharedMemoryOperations.cuh"
@@ -197,8 +197,8 @@ namespace LBM
             /**
              * @brief The individual halo objects
              **/
-            haloFace<VelocitySet> fGhost_;
-            haloFace<VelocitySet> gGhost_;
+            haloFace<VelocitySet> readBuffer_;
+            haloFace<VelocitySet> writeBuffer_;
 
             /**
              * @brief Returns the streaming index for a given axis and velocity
@@ -317,14 +317,14 @@ namespace LBM
              * @tparam PtrIndex The index of the pointer corresponding to the halo face
              * @tparam coeff The normal direction; -1 or +1
              * @param[out] pop Array to store loaded population values
-             * @param[in] fGhost Collection of pointers to the halo faces
+             * @param[in] readBuffer Collection of pointers to the halo faces
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            template <const axis::type alpha, const int coeff, const axis::pointerIndex_t PtrIndex>
+            template <const axis::type alpha, const int coeff>
             __device__ static inline constexpr void pull_face(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, const scalar_t> &fGhost,
+                const device::ptrCollection<6, const scalar_t> &readBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx) noexcept
             {
@@ -361,7 +361,7 @@ namespace LBM
                             thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(dBz, Bx.value<axis::Z>()),
                             Bx.value<axis::Z>());
 
-                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&fGhost.ptr<static_cast<label_t>(PtrIndex)>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]);
+                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&readBuffer.ptr<static_cast<label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]);
                     });
             }
 
@@ -372,7 +372,7 @@ namespace LBM
              * @tparam PtrIdx0 The index of the pointer for the negative face halo
              * @tparam PtrIdx1 The index of the pointer for the positive face halo
              * @param[out] pop Array to store loaded population values
-             * @param[in] fGhost Collection of pointers to the halo faces
+             * @param[in] readBuffer Collection of pointers to the halo faces
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
@@ -380,18 +380,18 @@ namespace LBM
             template <const axis::type alpha, const bool isPeriodic>
             __device__ static inline constexpr void pull_direction(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, const scalar_t> &fGhost,
+                const device::ptrCollection<6, const scalar_t> &readBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
                 if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    pull_face<alpha, +1, pointerIndex<alpha, +1>()>(pop, fGhost, Tx, Bx);
+                    pull_face<alpha, +1>(pop, readBuffer, Tx, Bx);
                 }
                 else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    pull_face<alpha, -1, pointerIndex<alpha, -1>()>(pop, fGhost, Tx, Bx);
+                    pull_face<alpha, -1>(pop, readBuffer, Tx, Bx);
                 }
             }
 
@@ -401,14 +401,14 @@ namespace LBM
              * @tparam PtrIndex The index of the pointer corresponding to the halo face
              * @tparam coeff The normal direction; -1 or +1
              * @param[out] pop Array to store loaded population values
-             * @param[in] fGhost Collection of pointers to the halo faces
+             * @param[in] readBuffer Collection of pointers to the halo faces
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              **/
-            template <const axis::type alpha, const int coeff, const axis::pointerIndex_t PtrIndex>
+            template <const axis::type alpha, const int coeff>
             __device__ static inline constexpr void save_face(
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, scalar_t> &gGhost,
+                const device::ptrCollection<6, scalar_t> &writeBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx) noexcept
             {
@@ -419,7 +419,7 @@ namespace LBM
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        gGhost.ptr<static_cast<label_t>(PtrIndex)>()[idxPop<alpha, i, VelocitySet::QF()>(
+                        writeBuffer.ptr<static_cast<label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(
                             Tx.value<axis::orthogonal<alpha, 0>()>(),
                             Tx.value<axis::orthogonal<alpha, 1>()>(),
                             Bx)] = pop[q_i<streaming_index<alpha, coeff>(i)>()];
@@ -433,7 +433,7 @@ namespace LBM
              * @tparam PtrIdx0 The index of the pointer for the negative face halo
              * @tparam PtrIdx1 The index of the pointer for the positive face halo
              * @param[in] pop Array containing population values to save
-             * @param[out] gGhost Collection of pointers to the halo faces
+             * @param[out] writeBuffer Collection of pointers to the halo faces
              * @param[in] Tx Three-dimensional thread coordinates
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
@@ -441,18 +441,18 @@ namespace LBM
             template <const axis::type alpha, const bool isPeriodic>
             __device__ static inline constexpr void save_direction(
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const device::ptrCollection<6, scalar_t> &gGhost,
+                const device::ptrCollection<6, scalar_t> &writeBuffer,
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
                 if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    save_face<alpha, -1, pointerIndex<alpha, -1>()>(pop, gGhost, Tx, Bx);
+                    save_face<alpha, -1>(pop, writeBuffer, Tx, Bx);
                 }
                 else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
                 {
-                    save_face<alpha, +1, pointerIndex<alpha, +1>()>(pop, gGhost, Tx, Bx);
+                    save_face<alpha, +1>(pop, writeBuffer, Tx, Bx);
                 }
             }
 

@@ -207,9 +207,9 @@ namespace LBM
 
                 GPU::forAll(
                     mesh_.nDevices(),
-                    [&](label_t GPU_x, label_t GPU_y, label_t GPU_z)
+                    [&](std::size_t GPU_x, std::size_t GPU_y, std::size_t GPU_z)
                     {
-                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh_.nDevices<axis::X>(), mesh_.nDevices<axis::Y>());
+                        const std::size_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh_.nDevices<axis::X, std::size_t>(), mesh_.nDevices<axis::Y, std::size_t>());
                         if (ptr_[virtualDeviceIndex] != nullptr)
                         {
                             errorHandler::check(cudaDeviceSynchronize());

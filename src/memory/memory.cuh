@@ -257,6 +257,8 @@ namespace LBM
         template <typename T>
         __host__ void copy(T *const devicePtr, const T *const ptrRestrict hostPtr, const std::size_t nPoints, const deviceIndex_t deviceID) noexcept
         {
+            errorHandler::check(cudaDeviceSynchronize());
+
             errorHandler::check(cudaSetDevice(deviceID));
 
             errorHandler::check(cudaDeviceSynchronize());

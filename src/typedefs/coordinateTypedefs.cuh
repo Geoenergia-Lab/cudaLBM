@@ -211,7 +211,7 @@ namespace LBM
 
                 if constexpr (coeff == -1)
                 {
-                    return (value<alpha>() - 1 + device::NUM_BLOCK<alpha>()) % device::NUM_BLOCK<alpha>();
+                    return (value<alpha>() - 1 + device::NUM_BLOCK<alpha>()) % (device::NUM_BLOCK<alpha>());
                 }
 
                 if constexpr (coeff == 0)
@@ -221,7 +221,7 @@ namespace LBM
 
                 if constexpr (coeff == 1)
                 {
-                    return (value<alpha>() + 1 + device::NUM_BLOCK<alpha>()) % device::NUM_BLOCK<alpha>();
+                    return (value<alpha>() + 1 + device::NUM_BLOCK<alpha>()) % (device::NUM_BLOCK<alpha>());
                 }
             }
         };

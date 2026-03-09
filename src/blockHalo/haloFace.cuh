@@ -87,12 +87,12 @@ namespace LBM
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl) noexcept
-                : x0_(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, -1>()),
-                  x1_(initialise_pop<axis::X, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, +1>()),
-                  y0_(initialise_pop<axis::Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, -1>()),
-                  y1_(initialise_pop<axis::Y, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, +1>()),
-                  z0_(initialise_pop<axis::Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, -1>()),
-                  z1_(initialise_pop<axis::Z, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, +1>()) {}
+                : West_(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, -1>()),
+                  East_(initialise_pop<axis::X, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, +1>()),
+                  South_(initialise_pop<axis::Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, -1>()),
+                  North_(initialise_pop<axis::Y, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, +1>()),
+                  Back_(initialise_pop<axis::Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, -1>()),
+                  Front_(initialise_pop<axis::Z, +1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, +1>()) {}
 
             /**
              * @brief Destructor - releases all allocated device memory
@@ -106,27 +106,27 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x0Const(const label_t i) const noexcept
             {
-                return x0_.constPtr(i);
+                return West_.constPtr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x1Const(const label_t i) const noexcept
             {
-                return x1_.constPtr(i);
+                return East_.constPtr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y0Const(const label_t i) const noexcept
             {
-                return y0_.constPtr(i);
+                return South_.constPtr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y1Const(const label_t i) const noexcept
             {
-                return y1_.constPtr(i);
+                return North_.constPtr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z0Const(const label_t i) const noexcept
             {
-                return z0_.constPtr(i);
+                return Back_.constPtr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z1Const(const label_t i) const noexcept
             {
-                return z1_.constPtr(i);
+                return Front_.constPtr(i);
             }
 
             /**
@@ -136,27 +136,27 @@ namespace LBM
              **/
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x0(const label_t i) noexcept
             {
-                return x0_.ptr(i);
+                return West_.ptr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x1(const label_t i) noexcept
             {
-                return x1_.ptr(i);
+                return East_.ptr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y0(const label_t i) noexcept
             {
-                return y0_.ptr(i);
+                return South_.ptr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y1(const label_t i) noexcept
             {
-                return y1_.ptr(i);
+                return North_.ptr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z0(const label_t i) noexcept
             {
-                return z0_.ptr(i);
+                return Back_.ptr(i);
             }
             __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z1(const label_t i) noexcept
             {
-                return z1_.ptr(i);
+                return Front_.ptr(i);
             }
 
             /**
@@ -167,39 +167,39 @@ namespace LBM
              **/
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x0Ref(const label_t i) noexcept
             {
-                return x0_.ptrRef(i);
+                return West_.ptrRef(i);
             }
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x1Ref(const label_t i) noexcept
             {
-                return x1_.ptrRef(i);
+                return East_.ptrRef(i);
             }
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y0Ref(const label_t i) noexcept
             {
-                return y0_.ptrRef(i);
+                return South_.ptrRef(i);
             }
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y1Ref(const label_t i) noexcept
             {
-                return y1_.ptrRef(i);
+                return North_.ptrRef(i);
             }
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z0Ref(const label_t i) noexcept
             {
-                return z0_.ptrRef(i);
+                return Back_.ptrRef(i);
             }
             __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z1Ref(const label_t i) noexcept
             {
-                return z1_.ptrRef(i);
+                return Front_.ptrRef(i);
             }
 
         private:
             /**
              * @brief Halo face arrays
              **/
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> x0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> x1_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> y0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> y1_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> z0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> z1_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> West_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> East_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> South_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> North_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> Back_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> Front_;
 
             /**
              * @brief Initialize population data for a specific halo face
