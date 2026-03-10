@@ -120,22 +120,27 @@ namespace LBM
             // Check that the eviction policy is valid
             static_assert((policy == Policy::evict_first) | (policy == Policy::evict_last), "Cache eviction policy must be evict_first or evict_last");
 
+            // enforce 128B alignment
+            uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+            addr &= ~uintptr_t(127);
+            const void *aligned = reinterpret_cast<const void *>(addr);
+
             if constexpr (level == Level::L1)
             {
                 if constexpr (policy == Policy::evict_first)
                 {
 #if (__CUDA_ARCH__ >= 800)
-                    asm volatile("prefetch.global.L1::evict_first [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1::evict_first [%0];" ::"l"(aligned));
 #else
-                    asm volatile("prefetch.global.L1 [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1 [%0];" ::"l"(aligned));
 #endif
                 }
                 else if constexpr (policy == Policy::evict_last)
                 {
 #if (__CUDA_ARCH__ >= 800)
-                    asm volatile("prefetch.global.L1::evict_last [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1::evict_last [%0];" ::"l"(aligned));
 #else
-                    asm volatile("prefetch.global.L1 [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1 [%0];" ::"l"(aligned));
 #endif
                 }
             }
@@ -144,17 +149,17 @@ namespace LBM
                 if constexpr (policy == Policy::evict_first)
                 {
 #if (__CUDA_ARCH__ >= 800)
-                    asm volatile("prefetch.global.L2::evict_first [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L2::evict_first [%0];" ::"l"(aligned));
 #else
-                    asm volatile("prefetch.global.L2 [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1 [%0];" ::"l"(aligned));
 #endif
                 }
                 else if constexpr (policy == Policy::evict_last)
                 {
 #if (__CUDA_ARCH__ >= 800)
-                    asm volatile("prefetch.global.L2::evict_last [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L2::evict_last [%0];" ::"l"(aligned));
 #else
-                    asm volatile("prefetch.global.L1 [%0];" ::"l"(ptr));
+                    asm volatile("prefetch.global.L1 [%0];" ::"l"(aligned));
 #endif
                 }
             }
