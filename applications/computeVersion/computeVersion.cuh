@@ -114,12 +114,12 @@ namespace LBM
      * @return Numerical index of the month (0 for January, 11 for December).
      * @throws std::runtime_error If the input string does not match any month abbreviation.
      **/
-    __host__ [[nodiscard]] std::size_t monthIndex(const name_t &monthStr)
+    __host__ [[nodiscard]] host::label_t monthIndex(const name_t &monthStr)
     {
         // Map month abbreviations to numbers
         const words_t months{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-        for (std::size_t i = 0; i < 12; i++)
+        for (host::label_t i = 0; i < 12; i++)
         {
             if (monthStr == months[i])
             {
@@ -145,7 +145,7 @@ namespace LBM
         const name_t yearStr = date.substr(7, 4);
 
         // Find month number
-        const std::size_t month = monthIndex(monthStr);
+        const host::label_t month = monthIndex(monthStr);
 
         // Format as ISO 8601 (YYYY-MM-DD HH:MM:SS)
         std::stringstream ss;

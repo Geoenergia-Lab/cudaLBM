@@ -68,7 +68,7 @@ namespace LBM
         {
             words_t S_new(S.size(), "");
 
-            for (std::size_t i = 0; i < S_new.size(); i++)
+            for (host::label_t i = 0; i < S_new.size(); i++)
             {
                 S_new[i] = s + S_new[i];
             }
@@ -87,7 +87,7 @@ namespace LBM
         {
             words_t S_new(S.size(), "");
 
-            for (std::size_t i = 0; i < S_new.size(); i++)
+            for (host::label_t i = 0; i < S_new.size(); i++)
             {
                 S_new[i] = S[i] + s;
             }
@@ -113,7 +113,7 @@ namespace LBM
          * @param[in] c The character to search for
          * @return The position of c within str
          **/
-        __host__ [[nodiscard]] inline constexpr std::size_t findCharPosition(const name_t &str, const char (&c)[2])
+        __host__ [[nodiscard]] inline constexpr host::label_t findCharPosition(const name_t &str, const char (&c)[2])
         {
             return str.find(c[0]);
         }
@@ -127,7 +127,7 @@ namespace LBM
         __host__ [[nodiscard]] const name_t catenate(const words_t &S) noexcept
         {
             name_t s;
-            for (std::size_t line = 0; line < S.size(); line++)
+            for (host::label_t line = 0; line < S.size(); line++)
             {
                 s = s + S[line] + "\n";
             }
@@ -164,7 +164,7 @@ namespace LBM
             // Create new vector without the braces
             words_t newLines(lines.size() - 2);
 
-            for (std::size_t line = 1; line < lines.size() - 1; line++)
+            for (host::label_t line = 1; line < lines.size() - 1; line++)
             {
                 newLines[line - 1] = lines[line];
             }
@@ -194,7 +194,7 @@ namespace LBM
         template <const bool trimSemicolon>
         __host__ [[nodiscard]] const name_t trim(const name_t &str)
         {
-            const std::size_t start = str.find_first_not_of(" \t\n\r\f\v");
+            const host::label_t start = str.find_first_not_of(" \t\n\r\f\v");
 
             if (start == name_t::npos)
             {
@@ -221,7 +221,7 @@ namespace LBM
         {
             words_t strTrimmed(str.size(), "");
 
-            for (std::size_t s = 0; s < str.size(); s++)
+            for (host::label_t s = 0; s < str.size(); s++)
             {
                 strTrimmed[s] = trim<trimSemicolon>(str[s]);
             }
@@ -237,7 +237,7 @@ namespace LBM
          **/
         __host__ [[nodiscard]] const name_t removeComments(const name_t &str)
         {
-            const std::size_t commentPos = str.find("//");
+            const host::label_t commentPos = str.find("//");
             if (commentPos != name_t::npos)
             {
                 return str.substr(0, commentPos);
@@ -272,9 +272,9 @@ namespace LBM
          * @throws std::runtime_error if block is not found.
          * @note Handles various declaration styles including braces and semicolons.
          **/
-        __host__ [[nodiscard]] std::size_t findBlockLine(const words_t &lines, const name_t &blockName, const std::size_t startLine = 0)
+        __host__ [[nodiscard]] host::label_t findBlockLine(const words_t &lines, const name_t &blockName, const host::label_t startLine = 0)
         {
-            for (std::size_t i = startLine; i < lines.size(); ++i)
+            for (host::label_t i = startLine; i < lines.size(); ++i)
             {
                 const name_t processedLine = removeComments(lines[i]);
                 const name_t trimmedLine = trim<false>(processedLine);
@@ -321,21 +321,21 @@ namespace LBM
          * @throws std::runtime_error for malformed blocks or unbalanced braces.
          * @note Preserves original formatting including comments in the returned block.
          **/
-        __host__ [[nodiscard]] const words_t extractBlock(const words_t &lines, const name_t &blockName, const std::size_t startLine = 0)
+        __host__ [[nodiscard]] const words_t extractBlock(const words_t &lines, const name_t &blockName, const host::label_t startLine = 0)
         {
             words_t result;
 
             // Find the block line using the helper function
-            const std::size_t blockLine = findBlockLine(lines, blockName, startLine);
+            const host::label_t blockLine = findBlockLine(lines, blockName, startLine);
 
             // Check for non-whitespace content between block declaration and opening brace
             bool foundOpeningBrace = false;
             int braceCount = 0;
-            std::size_t openingBraceLine = 0;
+            host::label_t openingBraceLine = 0;
 
             // First, check if the opening brace is on the same line as the block declaration
             const name_t blockLineProcessed = removeComments(lines[blockLine]);
-            std::size_t openBracePos = blockLineProcessed.find('{');
+            host::label_t openBracePos = blockLineProcessed.find('{');
             if (openBracePos != name_t::npos)
             {
                 // Opening brace is on the same line as block declaration
@@ -347,7 +347,7 @@ namespace LBM
             else
             {
                 // Check subsequent lines for the opening brace
-                for (std::size_t i = blockLine + 1; i < lines.size(); ++i)
+                for (host::label_t i = blockLine + 1; i < lines.size(); ++i)
                 {
                     const name_t processedLine = removeComments(lines[i]);
                     const name_t trimmedLine = trim<false>(processedLine);
@@ -386,7 +386,7 @@ namespace LBM
             }
 
             // Continue processing from the line after the opening brace
-            for (std::size_t i = openingBraceLine + 1; i < lines.size(); ++i)
+            for (host::label_t i = openingBraceLine + 1; i < lines.size(); ++i)
             {
                 // Process each line to count braces, but keep the original line in the result
                 const name_t processedLineInner = removeComments(lines[i]);
@@ -445,7 +445,7 @@ namespace LBM
             name_t s;
 
             // Count the number of lines
-            label_t nLines = 0;
+            device::label_t nLines = 0;
 
             // Count the number of lines
             while (std::getline(caseInfo, s))
@@ -574,7 +574,7 @@ namespace LBM
         __host__ [[nodiscard]] const name_t extractParameterLine(const words_t &S, const name_t &name)
         {
             // Loop over S
-            for (label_t i = 0; i < S.size(); i++)
+            for (device::label_t i = 0; i < S.size(); i++)
             {
                 // Check if S[i] contains a substring of name
                 if (S[i].find(name) != name_t::npos)
@@ -711,7 +711,7 @@ namespace LBM
         __host__ [[nodiscard]] const name_t parseNameValuePair(const words_t &args, const name_t &name)
         {
             // Loop over the input arguments and search for name
-            for (label_t i = 0; i < args.size(); i++)
+            for (device::label_t i = 0; i < args.size(); i++)
             {
                 // The name argument exists, so handle it
                 if (args[i] == name)
@@ -746,9 +746,9 @@ namespace LBM
             const words_t s_v = string::split<","[0], true>(parseNameValuePair(args, name));
 
             std::vector<T> arr;
-            label_t arrLength = 0;
+            device::label_t arrLength = 0;
 
-            for (label_t i = 0; i < s_v.size(); i++)
+            for (device::label_t i = 0; i < s_v.size(); i++)
             {
                 // Should check here if the string converts to a negative number and exit
                 if constexpr (std::is_signed_v<T>)

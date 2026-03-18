@@ -101,7 +101,7 @@ namespace LBM
          **/
         __host__ [[nodiscard]] bool isArgPresent(const name_t &name) const noexcept
         {
-            for (label_t i = 0; i < commandLine_.size(); i++)
+            for (device::label_t i = 0; i < commandLine_.size(); i++)
             {
                 if (commandLine_[i] == name)
                 {
@@ -134,25 +134,25 @@ namespace LBM
         /**
          * @brief Number of arguments supplied at the command line
          **/
-        const label_t nArgs_;
+        const device::label_t nArgs_;
 
         /**
          * @brief Validates and returns the number of command line arguments
          * @param[in] argc First argument passed to main (argument count)
-         * @return label_t Validated number of arguments
+         * @return device::label_t Validated number of arguments
          * @throws std::runtime_error if argument count is negative
          **/
-        __host__ [[nodiscard]] label_t nArgsCheck(const int argc) const
+        __host__ [[nodiscard]] device::label_t nArgsCheck(const int argc) const
         {
             // Check for a bad number of supplied arguments
             if (argc < 0)
             {
                 throw std::runtime_error("Bad value of argc: cannot be negative");
-                return std::numeric_limits<label_t>::max();
+                return std::numeric_limits<device::label_t>::max();
             }
             else
             {
-                return static_cast<label_t>(argc);
+                return static_cast<device::label_t>(argc);
             }
         }
 
@@ -172,9 +172,9 @@ namespace LBM
             if (argc > 0)
             {
                 words_t arr;
-                label_t arrLength = 0;
+                device::label_t arrLength = 0;
 
-                for (label_t i = 0; i < static_cast<label_t>(argc); i++)
+                for (device::label_t i = 0; i < static_cast<device::label_t>(argc); i++)
                 {
                     arr.push_back(argv[i]);
                     arrLength = arrLength + 1;
@@ -209,7 +209,7 @@ namespace LBM
             {
                 const std::vector<deviceIndex_t> parsedList = string::parseValue<deviceIndex_t>(commandLine_, "-GPU");
 
-                if (parsedList.size() > static_cast<label_t>(nAvailableDevices()) || nAvailableDevices() < 1)
+                if (parsedList.size() > static_cast<device::label_t>(nAvailableDevices()) || nAvailableDevices() < 1)
                 {
                     throw std::runtime_error("Number of GPUs requested is greater than the number available");
                 }

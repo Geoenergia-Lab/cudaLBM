@@ -61,7 +61,7 @@ namespace LBM
         /**
          * @brief Threads per block in x-dimension (compile-time constant)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T nx() noexcept
         {
 #ifdef SCALAR_PRECISION
@@ -76,7 +76,7 @@ namespace LBM
         /**
          * @brief Threads per block in y-dimension (compile-time constant)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T ny() noexcept
         {
 #ifdef SCALAR_PRECISION
@@ -91,7 +91,7 @@ namespace LBM
         /**
          * @brief Threads per block in z-dimension (compile-time constant)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T nz() noexcept
         {
 #ifdef SCALAR_PRECISION
@@ -106,7 +106,7 @@ namespace LBM
         /**
          * @brief Threads per block in an arbitrary dimension (compile-time constant)
          **/
-        template <axis::type alpha, typename T = label_t>
+        template <axis::type alpha, typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T n() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -117,7 +117,7 @@ namespace LBM
         /**
          * @brief Total threads per block (nx * ny * nz)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T size() noexcept
         {
             return nx<T>() * ny<T>() * nz<T>();
@@ -126,7 +126,7 @@ namespace LBM
         /**
          * @brief Padding for the shared memory
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T padding() noexcept
         {
             return 33;
@@ -135,7 +135,7 @@ namespace LBM
         /**
          * @brief Stride for the shared memory
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T stride() noexcept
         {
             return size<T>() + padding<T>();
@@ -144,18 +144,18 @@ namespace LBM
         /**
          * @brief Total size of the shared memory
          **/
-        template <class VelocitySet, const std::size_t nVars>
-        __device__ __host__ [[nodiscard]] inline consteval std::size_t sharedMemoryBufferSize(const std::size_t variableSize = 1) noexcept
+        template <class VelocitySet, const host::label_t nVars>
+        __device__ __host__ [[nodiscard]] inline consteval host::label_t sharedMemoryBufferSize(const host::label_t variableSize = 1) noexcept
         {
-            constexpr const std::size_t A = (VelocitySet::template Q<std::size_t>() - 1) * block::stride<std::size_t>();
-            constexpr const std::size_t B = block::size<std::size_t>() * (nVars + 1);
+            constexpr const host::label_t A = (VelocitySet::template Q<host::label_t>() - 1) * block::stride<host::label_t>();
+            constexpr const host::label_t B = block::size<host::label_t>() * (nVars + 1);
             return (A > B ? A : B) * variableSize;
         }
 
         /**
          * @brief Size of the warp (32)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t warp_size() noexcept
+        __device__ __host__ [[nodiscard]] inline consteval device::label_t warp_size() noexcept
         {
             return 32;
         }
@@ -164,7 +164,7 @@ namespace LBM
          * @brief Launch bounds information
          * @note These variables are device specific - enable modification later
          **/
-        __host__ [[nodiscard]] inline consteval label_t maxThreads() noexcept
+        __host__ [[nodiscard]] inline consteval device::label_t maxThreads() noexcept
         {
             return block::nx() * block::ny() * block::nz();
         }

@@ -90,7 +90,7 @@ namespace LBM
              **/
             __host__ [[nodiscard]] systemInformation(const words_t &systemInfoLines)
                 : endianType_(read<endian::type>(systemInfoLines, "binaryType", "littleEndian")),
-                  scalarSize_(read<std::size_t>(systemInfoLines, "scalarSize")) {}
+                  scalarSize_(read<host::label_t>(systemInfoLines, "scalarSize")) {}
 
             /**
              * @brief Returns the endianness of the binary data
@@ -105,7 +105,7 @@ namespace LBM
              * @brief Returns the size of the scalar values in bytes (e.g., 4 for float, 8 for double)
              * @return The size of scalar values in bytes
              **/
-            __host__ [[nodiscard]] inline constexpr std::size_t scalarSize() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t scalarSize() const noexcept
             {
                 return scalarSize_;
             }
@@ -119,7 +119,7 @@ namespace LBM
             /**
              * @brief Size of the floating point type
              **/
-            const std::size_t scalarSize_;
+            const host::label_t scalarSize_;
         };
 
         class meshPrimitive
@@ -130,8 +130,8 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              **/
             __host__ [[nodiscard]] meshPrimitive(const words_t &meshLines)
-                : nPoints_({read<label_t>(meshLines, "nx"), read<label_t>(meshLines, "ny"), read<label_t>(meshLines, "nz")}),
-                  nDevices_({read<label_t>(meshLines, "nxGPUs"), read<label_t>(meshLines, "nyGPUs"), read<label_t>(meshLines, "nzGPUs")}) {}
+                : nPoints_({read<device::label_t>(meshLines, "nx"), read<device::label_t>(meshLines, "ny"), read<device::label_t>(meshLines, "nz")}),
+                  nDevices_({read<device::label_t>(meshLines, "nxGPUs"), read<device::label_t>(meshLines, "nyGPUs"), read<device::label_t>(meshLines, "nzGPUs")}) {}
 
             /**
              * @brief Returns the number of lattice points in each direction as a blockLabel struct.
@@ -171,17 +171,17 @@ namespace LBM
              * @param[in] fieldInfoLines The lines of the field information block to parse.
              **/
             __host__ [[nodiscard]] fieldInformation(const words_t &fieldInfoLines)
-                : timeStep_(read<std::size_t>(fieldInfoLines, "timeStep")),
+                : timeStep_(read<host::label_t>(fieldInfoLines, "timeStep")),
                   timeType_(read<time::type>(fieldInfoLines, "timeType", "instantaneous")),
                   meanCount_(initialiseMeanCount(fieldInfoLines, timeType_)),
-                  nFields_(read<std::size_t>(fieldInfoLines, "nFields")),
+                  nFields_(read<host::label_t>(fieldInfoLines, "nFields")),
                   fieldNames_(readFieldNames(fieldInfoLines, nFields_)) {}
 
             /**
              * @brief Returns the time step of the saved fields.
              * @return The time step as a size_t.
              **/
-            __host__ [[nodiscard]] inline constexpr std::size_t timeStep() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t timeStep() const noexcept
             {
                 return timeStep_;
             }
@@ -199,7 +199,7 @@ namespace LBM
              * @brief Returns the number of fields.
              * @return The number of fields as a size_t.
              **/
-            __host__ [[nodiscard]] inline constexpr std::size_t meanCount() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept
             {
                 return meanCount_;
             }
@@ -208,7 +208,7 @@ namespace LBM
              * @brief Returns the number of fields.
              * @return The number of fields as a size_t.
              **/
-            __host__ [[nodiscard]] inline constexpr std::size_t nFields() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t nFields() const noexcept
             {
                 return nFields_;
             }
@@ -226,7 +226,7 @@ namespace LBM
             /**
              * @brief The time step of the saved fields as a size_t.
              **/
-            const std::size_t timeStep_;
+            const host::label_t timeStep_;
 
             /**
              * @brief The time type of the saved fields (instantaneous or time average) as a value of the time::type enum.
@@ -236,12 +236,12 @@ namespace LBM
             /**
              * @brief The number of time steps used to calculate a time average
              **/
-            const std::size_t meanCount_;
+            const host::label_t meanCount_;
 
             /**
              * @brief The number of fields as a size_t.
              **/
-            const std::size_t nFields_;
+            const host::label_t nFields_;
 
             /**
              * @brief The field names as a vector of strings.
@@ -253,11 +253,11 @@ namespace LBM
              * @param[in] fieldInfoLines The lines of the field information block.
              * @return A vector containing the field names.
              **/
-            __host__ [[nodiscard]] static words_t readFieldNames(const words_t &fieldInfoLines, const std::size_t N)
+            __host__ [[nodiscard]] static words_t readFieldNames(const words_t &fieldInfoLines, const host::label_t N)
             {
                 words_t B = string::extractBlock(fieldInfoLines, "fieldNames[" + std::to_string(N) + "]", 0);
 
-                for (std::size_t i = 1; i < B.size() - 1; i++)
+                for (host::label_t i = 1; i < B.size() - 1; i++)
                 {
                     B[i] = string::trim<true>(B[i]);
                 }
@@ -272,7 +272,7 @@ namespace LBM
              * @return The mean count as a size_t (0 for instantaneous, read from lines for time average)
              * @throws std::runtime_error if meanCount is missing or invalid for time average fields
              **/
-            __host__ [[nodiscard]] static std::size_t initialiseMeanCount(const words_t &fieldInfoLines, const time::type TimeType)
+            __host__ [[nodiscard]] static host::label_t initialiseMeanCount(const words_t &fieldInfoLines, const time::type TimeType)
             {
                 if (TimeType == time::instantaneous)
                 {
@@ -280,7 +280,7 @@ namespace LBM
                 }
                 else
                 {
-                    return read<std::size_t>(fieldInfoLines, "meanCount");
+                    return read<host::label_t>(fieldInfoLines, "meanCount");
                 }
             }
         };
@@ -295,14 +295,14 @@ namespace LBM
          **/
         struct fieldFileHeader
         {
-            const bool isLittleEndian;      //!< Endianness of the binary data
-            const std::size_t scalarSize;   //!< Size of scalar values (4 or 8 bytes)
-            const std::size_t nx;           //!< Grid dimension in x-direction
-            const std::size_t ny;           //!< Grid dimension in y-direction
-            const std::size_t nz;           //!< Grid dimension in z-direction
-            const std::size_t nVars;        //!< Number of variables per grid point
-            const std::size_t dataStartPos; //!< File position where binary data begins
-            const words_t fieldNames;       //!< Names of all field variables
+            const bool isLittleEndian;        //!< Endianness of the binary data
+            const host::label_t scalarSize;   //!< Size of scalar values (4 or 8 bytes)
+            const host::label_t nx;           //!< Grid dimension in x-direction
+            const host::label_t ny;           //!< Grid dimension in y-direction
+            const host::label_t nz;           //!< Grid dimension in z-direction
+            const host::label_t nVars;        //!< Number of variables per grid point
+            const host::label_t dataStartPos; //!< File position where binary data begins
+            const words_t fieldNames;         //!< Names of all field variables
         };
 
         /**
@@ -343,7 +343,7 @@ namespace LBM
                 throw std::runtime_error("Invalid file size (negative)");
             }
 
-            const std::size_t fileSize = static_cast<std::size_t>(fileSizePos);
+            const host::label_t fileSize = static_cast<host::label_t>(fileSizePos);
             in.seekg(0, std::ios::beg);
 
             name_t line;
@@ -354,15 +354,15 @@ namespace LBM
             bool isLittleEndian = false;
 
             // Variables to store parsed data
-            std::size_t scalarSize = 0;
-            std::size_t nx = 0;
-            std::size_t ny = 0;
-            std::size_t nz = 0;
-            std::size_t nVars = 0;
-            std::size_t totalPoints = 0;
-            std::size_t dataStartPos = 0;
+            host::label_t scalarSize = 0;
+            host::label_t nx = 0;
+            host::label_t ny = 0;
+            host::label_t nz = 0;
+            host::label_t nVars = 0;
+            host::label_t totalPoints = 0;
+            host::label_t dataStartPos = 0;
             words_t fieldNamesVec;
-            std::size_t expectedFieldCount = 0;
+            host::label_t expectedFieldCount = 0;
             bool foundFieldData = false;
             bool foundSystemInfo = false;
             bool foundFieldInfo = false;
@@ -373,7 +373,7 @@ namespace LBM
             bool fieldInfoSeen = false;
 
             // Track line number for better error messages
-            std::size_t lineNumber = 0;
+            host::label_t lineNumber = 0;
 
             while (std::getline(in, line))
             {
@@ -456,12 +456,12 @@ namespace LBM
                     else if (line.find("field[") != name_t::npos)
                     {
                         // Extract dimensions from pattern: field[total][nx][ny][nz][nVars]
-                        std::vector<std::size_t> dims;
-                        std::size_t pos = 0;
+                        std::vector<host::label_t> dims;
+                        host::label_t pos = 0;
 
                         while ((pos = line.find('[', pos)) != name_t::npos)
                         {
-                            const std::size_t end = line.find(']', pos);
+                            const host::label_t end = line.find(']', pos);
                             if (end == name_t::npos)
                             {
                                 throw std::runtime_error("Unclosed bracket at line " + std::to_string(lineNumber));
@@ -472,13 +472,13 @@ namespace LBM
                                 const name_t dimStr = line.substr(pos + 1, end - pos - 1);
                                 const unsigned long long dimValue = std::stoull(dimStr);
 
-                                // Check for overflow before casting to std::size_t
-                                if (dimValue > std::numeric_limits<std::size_t>::max())
+                                // Check for overflow before casting to host::label_t
+                                if (dimValue > std::numeric_limits<host::label_t>::max())
                                 {
                                     throw std::runtime_error("Dimension value too large at line " + std::to_string(lineNumber));
                                 }
 
-                                dims.push_back(static_cast<std::size_t>(dimValue));
+                                dims.push_back(static_cast<host::label_t>(dimValue));
                             }
                             catch (const std::out_of_range &)
                             {
@@ -509,7 +509,7 @@ namespace LBM
                         }
 
                         // Check for potential overflow in multiplication
-                        if (nx > std::numeric_limits<std::size_t>::max() / ny / nz / nVars)
+                        if (nx > std::numeric_limits<host::label_t>::max() / ny / nz / nVars)
                         {
                             throw std::runtime_error("Dimension product would overflow at line " + std::to_string(lineNumber));
                         }
@@ -538,13 +538,13 @@ namespace LBM
                             throw std::runtime_error("Invalid file position (negative)");
                         }
 
-                        // Check for overflow before casting to std::size_t
-                        if (static_cast<unsigned long long>(dataPos) > std::numeric_limits<std::size_t>::max())
+                        // Check for overflow before casting to host::label_t
+                        if (static_cast<unsigned long long>(dataPos) > std::numeric_limits<host::label_t>::max())
                         {
-                            throw std::runtime_error("File position too large for std::size_t");
+                            throw std::runtime_error("File position too large for host::label_t");
                         }
 
-                        dataStartPos = static_cast<std::size_t>(dataPos);
+                        dataStartPos = static_cast<host::label_t>(dataPos);
 
                         // Check if data start position is within file bounds
                         if (dataStartPos > fileSize)
@@ -567,8 +567,8 @@ namespace LBM
                     else if (line.find("fieldNames[") != name_t::npos)
                     {
                         // Extract expected number of field names
-                        const std::size_t startBracket = line.find('[');
-                        const std::size_t endBracket = line.find(']');
+                        const host::label_t startBracket = line.find('[');
+                        const host::label_t endBracket = line.find(']');
                         if (startBracket == name_t::npos || endBracket == name_t::npos)
                         {
                             throw std::runtime_error("Invalid fieldNames format at line " + std::to_string(lineNumber));
@@ -578,13 +578,13 @@ namespace LBM
                             const unsigned long long count = std::stoull(
                                 line.substr(startBracket + 1, endBracket - startBracket - 1));
 
-                            // Check for overflow before casting to std::size_t
-                            if (count > std::numeric_limits<std::size_t>::max())
+                            // Check for overflow before casting to host::label_t
+                            if (count > std::numeric_limits<host::label_t>::max())
                             {
                                 throw std::runtime_error("Field names count too large at line " + std::to_string(lineNumber));
                             }
 
-                            expectedFieldCount = static_cast<std::size_t>(count);
+                            expectedFieldCount = static_cast<host::label_t>(count);
                             if (expectedFieldCount == 0)
                             {
                                 throw std::runtime_error("Field names count cannot be zero at line " + std::to_string(lineNumber));
@@ -693,12 +693,12 @@ namespace LBM
 
             // Check if binary data size matches expectations
             // Check for potential overflow in multiplication
-            if (totalPoints > std::numeric_limits<std::size_t>::max() / scalarSize)
+            if (totalPoints > std::numeric_limits<host::label_t>::max() / scalarSize)
             {
                 throw std::runtime_error("Data size calculation would overflow");
             }
 
-            const std::size_t expectedDataSize = totalPoints * scalarSize;
+            const host::label_t expectedDataSize = totalPoints * scalarSize;
             if (fileSize - dataStartPos < expectedDataSize)
             {
                 throw std::runtime_error("Insufficient data in file. Expected " + std::to_string(expectedDataSize) + " bytes, but only " + std::to_string(fileSize - dataStartPos) + " bytes available");

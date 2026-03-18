@@ -52,24 +52,36 @@ SourceFiles
 
 namespace LBM
 {
-    /**
-     * @brief Unsigned integral type used for label types
-     * @note Types are either 32 bit or 64 bit unsigned integers
-     * @note These types are supplied via command line defines during compilation
-     **/
+    namespace device
+    {
+        /**
+         * @brief Unsigned integral type used for label types on the device
+         * @note Types are either 32 bit or 64 bit unsigned integers
+         * @note These types are supplied via command line defines during compilation
+         **/
 #ifdef LABEL_SIZE
 #if LABEL_SIZE == 32
-    typedef uint32_t label_t;
+        typedef uint32_t label_t;
 #elif LABEL_SIZE == 64
-    typedef uint64_t label_t;
+        typedef uint64_t label_t;
 #else
-    static_assert(false, "Unsupported LABEL_SIZE value (must be 32 or 64)");
-    typedef uint64_t label_t;
+        static_assert(false, "Unsupported LABEL_SIZE value (must be 32 or 64)");
+        typedef uint64_t label_t;
 #endif
 #else
-    static_assert(false, "LABEL_SIZE not defined");
-    typedef uint64_t label_t;
+        static_assert(false, "LABEL_SIZE not defined");
+        typedef uint64_t label_t;
 #endif
+    }
+
+    namespace host
+    {
+        /**
+         * @brief Unsigned integral type used for label types on the host
+         * @note Types are always 64 bit unsigned integers
+         **/
+        typedef uint64_t label_t;
+    }
 
     /**
      * @brief Label type used for GPU indices
@@ -101,14 +113,14 @@ namespace LBM
     /**
      * @brief Type used for compile-time indices
      **/
-    template <const label_t label>
-    using label_constant = const integralConstant<label_t, label>;
-    template <const std::size_t label>
-    using size_constant = const integralConstant<std::size_t, label>;
-    template <const label_t label>
-    using q_i = const integralConstant<label_t, label>;
-    template <const label_t label>
-    using m_i = const integralConstant<label_t, label>;
+    template <const device::label_t label>
+    using label_constant = const integralConstant<device::label_t, label>;
+    template <const host::label_t label>
+    using size_constant = const integralConstant<host::label_t, label>;
+    template <const device::label_t label>
+    using q_i = const integralConstant<device::label_t, label>;
+    template <const device::label_t label>
+    using m_i = const integralConstant<device::label_t, label>;
 }
 
 #endif

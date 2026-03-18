@@ -63,7 +63,7 @@ namespace LBM
         void swapEndian(T &value)
         {
             char *bytes = reinterpret_cast<char *>(&value);
-            for (std::size_t i = 0; i < sizeof(T) / 2; ++i)
+            for (host::label_t i = 0; i < sizeof(T) / 2; ++i)
             {
                 std::swap(bytes[i], bytes[sizeof(T) - 1 - i]);
             }
@@ -116,8 +116,8 @@ namespace LBM
             }
 
             // Calculate expected data size
-            const std::size_t totalPoints = header.nx * header.ny * header.nz;
-            const std::size_t totalDataCount = totalPoints * header.nVars;
+            const host::label_t totalPoints = header.nx * header.ny * header.nz;
+            const host::label_t totalDataCount = totalPoints * header.nVars;
 
             // Open file and jump to binary data
             std::ifstream in(fileName, std::ios::binary);
@@ -127,7 +127,7 @@ namespace LBM
             }
 
             // Safe conversion for seekg
-            if (header.dataStartPos > static_cast<std::size_t>(std::numeric_limits<std::streamoff>::max()))
+            if (header.dataStartPos > static_cast<host::label_t>(std::numeric_limits<std::streamoff>::max()))
             {
                 throw std::runtime_error("File position overflow");
             }
@@ -135,10 +135,10 @@ namespace LBM
 
             // Read binary data
             std::vector<T> data(totalDataCount);
-            const std::size_t byteCount = totalDataCount * sizeof(T);
+            const host::label_t byteCount = totalDataCount * sizeof(T);
 
             // Check for streamsize overflow
-            if (byteCount > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteCount > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Data size exceeds maximum stream size");
             }
@@ -189,7 +189,7 @@ namespace LBM
             {
                 throw std::runtime_error("Cannot open file for size check: " + fileName);
             }
-            const std::size_t fileSize = static_cast<std::size_t>(sizeCheck.tellg());
+            const host::label_t fileSize = static_cast<host::label_t>(sizeCheck.tellg());
             sizeCheck.close();
 
             // Parse header to get file structure and field names
@@ -225,8 +225,8 @@ namespace LBM
                 throw std::runtime_error("Internal error: Negative field index");
             }
 
-            const std::size_t fieldIndex = static_cast<std::size_t>(signedFieldIndex);
-            const std::size_t pointsPerField = header.nx * header.ny * header.nz;
+            const host::label_t fieldIndex = static_cast<host::label_t>(signedFieldIndex);
+            const host::label_t pointsPerField = header.nx * header.ny * header.nz;
 
             // Check for potential overflow in calculations
             if (pointsPerField == 0)
@@ -241,20 +241,20 @@ namespace LBM
             }
 
             // Check for overflow in fieldOffset calculation
-            if (fieldIndex > (std::numeric_limits<std::size_t>::max() / pointsPerField / sizeof(T)))
+            if (fieldIndex > (std::numeric_limits<host::label_t>::max() / pointsPerField / sizeof(T)))
             {
                 throw std::runtime_error("Field offset calculation would overflow");
             }
 
-            const std::size_t fieldOffset = fieldIndex * pointsPerField * sizeof(T);
+            const host::label_t fieldOffset = fieldIndex * pointsPerField * sizeof(T);
 
             // Check if fieldOffset would exceed file bounds
-            if (fieldOffset > (std::numeric_limits<std::size_t>::max() - header.dataStartPos))
+            if (fieldOffset > (std::numeric_limits<host::label_t>::max() - header.dataStartPos))
             {
                 throw std::runtime_error("Field start position calculation would overflow");
             }
 
-            const std::size_t fieldStartPos = header.dataStartPos + fieldOffset;
+            const host::label_t fieldStartPos = header.dataStartPos + fieldOffset;
 
             // Check if field data would extend beyond file end
             if (fieldStartPos > fileSize)
@@ -262,10 +262,10 @@ namespace LBM
                 throw std::runtime_error("Field start position is beyond file end");
             }
 
-            const std::size_t fieldByteSize = pointsPerField * sizeof(T);
+            const host::label_t fieldByteSize = pointsPerField * sizeof(T);
 
             // Check if field data would extend beyond file end
-            if (fieldStartPos > (std::numeric_limits<std::size_t>::max() - fieldByteSize))
+            if (fieldStartPos > (std::numeric_limits<host::label_t>::max() - fieldByteSize))
             {
                 throw std::runtime_error("Field end position calculation would overflow");
             }
@@ -283,7 +283,7 @@ namespace LBM
             }
 
             // Check for position overflow
-            if (fieldStartPos > static_cast<std::size_t>(std::numeric_limits<std::streamoff>::max()))
+            if (fieldStartPos > static_cast<host::label_t>(std::numeric_limits<std::streamoff>::max()))
             {
                 throw std::runtime_error("Field position overflow");
             }
@@ -296,10 +296,10 @@ namespace LBM
 
             // Read field data
             std::vector<T> fieldData(pointsPerField);
-            const std::size_t byteCount = fieldByteSize;
+            const host::label_t byteCount = fieldByteSize;
 
             // Check for streamsize overflow
-            if (byteCount > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteCount > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Field data size exceeds maximum stream size");
             }
@@ -342,52 +342,52 @@ namespace LBM
         template <typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const std::vector<T> &fMom, const LatticeMesh &mesh)
         {
-            const std::size_t nNodes = mesh.template dimension<axis::X, std::size_t>() * mesh.template dimension<axis::Y, std::size_t>() * mesh.template dimension<axis::Z, std::size_t>();
+            const host::label_t nNodes = mesh.template dimension<axis::X, host::label_t>() * mesh.template dimension<axis::Y, host::label_t>() * mesh.template dimension<axis::Z, host::label_t>();
             if (fMom.size() % nNodes != 0)
             {
                 throw std::invalid_argument("fMom size (" + std::to_string(fMom.size()) + ") is not divisible by mesh points (" + std::to_string(nNodes) + ")");
             }
-            const std::size_t nFields = fMom.size() / nNodes;
+            const host::label_t nFields = fMom.size() / nNodes;
 
             std::vector<std::vector<T>> soa(nFields, std::vector<T>(nNodes, 0));
 
-            const std::size_t nxGPUs = mesh.template nDevices<axis::X, std::size_t>();
-            const std::size_t nyGPUs = mesh.template nDevices<axis::Y, std::size_t>();
-            const std::size_t nzGPUs = mesh.template nDevices<axis::Z, std::size_t>();
+            const host::label_t nxGPUs = mesh.template nDevices<axis::X, host::label_t>();
+            const host::label_t nyGPUs = mesh.template nDevices<axis::Y, host::label_t>();
+            const host::label_t nzGPUs = mesh.template nDevices<axis::Z, host::label_t>();
 
-            const std::size_t nxBlocksPerDevice = mesh.template nBlocks<axis::X, std::size_t>() / nxGPUs;
-            const std::size_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y, std::size_t>() / nyGPUs;
-            const std::size_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z, std::size_t>() / nzGPUs;
+            const host::label_t nxBlocksPerDevice = mesh.template nBlocks<axis::X, host::label_t>() / nxGPUs;
+            const host::label_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y, host::label_t>() / nyGPUs;
+            const host::label_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z, host::label_t>() / nzGPUs;
 
-            const std::size_t pointsPerBlock = block::size<std::size_t>();
-            const std::size_t nPointsPerDevice = nxBlocksPerDevice * nyBlocksPerDevice * nzBlocksPerDevice * pointsPerBlock;
+            const host::label_t pointsPerBlock = block::size<host::label_t>();
+            const host::label_t nPointsPerDevice = nxBlocksPerDevice * nyBlocksPerDevice * nzBlocksPerDevice * pointsPerBlock;
 
             GPU::forAll(
                 mesh.nDevices(),
-                [&](const std::size_t GPU_x, const std::size_t GPU_y, const std::size_t GPU_z)
+                [&](const host::label_t GPU_x, const host::label_t GPU_y, const host::label_t GPU_z)
                 {
-                    const std::size_t virtualDeviceIndex = GPU::idx<std::size_t>(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+                    const host::label_t virtualDeviceIndex = GPU::idx<host::label_t>(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
                     host::forAll(
                         mesh.blocksPerDevice(),
-                        [&](const std::size_t bx, const std::size_t by, const std::size_t bz,
-                            const std::size_t tx, const std::size_t ty, const std::size_t tz)
+                        [&](const host::label_t bx, const host::label_t by, const host::label_t bz,
+                            const host::label_t tx, const host::label_t ty, const host::label_t tz)
                         {
                             // Global coordinates (for output)
-                            const std::size_t x = (GPU_x * nxBlocksPerDevice + bx) * block::nx<std::size_t>() + tx;
-                            const std::size_t y = (GPU_y * nyBlocksPerDevice + by) * block::ny<std::size_t>() + ty;
-                            const std::size_t z = (GPU_z * nzBlocksPerDevice + bz) * block::nz<std::size_t>() + tz;
+                            const host::label_t x = (GPU_x * nxBlocksPerDevice + bx) * block::nx<host::label_t>() + tx;
+                            const host::label_t y = (GPU_y * nyBlocksPerDevice + by) * block::ny<host::label_t>() + ty;
+                            const host::label_t z = (GPU_z * nzBlocksPerDevice + bz) * block::nz<host::label_t>() + tz;
 
-                            const std::size_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X, std::size_t>(), mesh.template dimension<axis::Y, std::size_t>());
+                            const host::label_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X, host::label_t>(), mesh.template dimension<axis::Y, host::label_t>());
 
                             // Local index within this GPU's storage (block‑major order)
-                            const std::size_t blockLin = (bz * nyBlocksPerDevice + by) * nxBlocksPerDevice + bx;
-                            const std::size_t threadLin = (tz * block::ny<std::size_t>() + ty) * block::nx<std::size_t>() + tx;
-                            const std::size_t localIdx = blockLin * pointsPerBlock + threadLin;
+                            const host::label_t blockLin = (bz * nyBlocksPerDevice + by) * nxBlocksPerDevice + bx;
+                            const host::label_t threadLin = (tz * block::ny<host::label_t>() + ty) * block::nx<host::label_t>() + tx;
+                            const host::label_t localIdx = blockLin * pointsPerBlock + threadLin;
 
-                            for (std::size_t field = 0; field < nFields; field++)
+                            for (host::label_t field = 0; field < nFields; field++)
                             {
-                                const std::size_t srcIdx = field * nNodes + virtualDeviceIndex * nPointsPerDevice + localIdx;
+                                const host::label_t srcIdx = field * nNodes + virtualDeviceIndex * nPointsPerDevice + localIdx;
                                 soa[field][idxGlobal] = fMom[srcIdx];
                             }
                         });

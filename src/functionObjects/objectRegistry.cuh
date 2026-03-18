@@ -65,7 +65,7 @@ namespace LBM
      * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
      * @tparam N The number of streams (as a compile-time constant)
      **/
-    template <class VelocitySet, const label_t N>
+    template <class VelocitySet, const device::label_t N>
     class objectRegistry
     {
     public:
@@ -104,7 +104,7 @@ namespace LBM
          * @brief Executes all registered function object calculations for given time step
          * @param[in] timeStep The current simulation time step
          **/
-        inline void calculate(const label_t timeStep) noexcept
+        inline void calculate(const device::label_t timeStep) noexcept
         {
             // std::cout << "Length of functionVector_: " << functionVector_.size() << std::endl;
             for (const auto &func : functionVector_)
@@ -117,7 +117,7 @@ namespace LBM
          * @brief Executes all registered function object calculations for given time step
          * @param[in] timeStep The current simulation time step
          **/
-        inline void save(const label_t timeStep) noexcept
+        inline void save(const device::label_t timeStep) noexcept
         {
             for (const auto &save : saveVector_)
             {
@@ -151,19 +151,19 @@ namespace LBM
         /**
          * @brief Registry of function objects to invoke
          **/
-        const std::vector<std::function<void(const label_t)>> functionVector_;
+        const std::vector<std::function<void(const device::label_t)>> functionVector_;
 
         /**
          * @brief Initializes function calls based on strain rate tensor configuration
          * @param[in] S Reference to strain rate tensor object
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] const std::vector<std::function<void(const label_t)>> functionObjectCallInitialiser(
+        __host__ [[nodiscard]] const std::vector<std::function<void(const device::label_t)>> functionObjectCallInitialiser(
             functionObjects::moments::collection<VelocitySet> &moments,
             functionObjects::strainRate::tensor<VelocitySet> &S,
             functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
-            std::vector<std::function<void(const label_t)>> calls;
+            std::vector<std::function<void(const device::label_t)>> calls;
 
             addObjectCall(calls, moments);
             addObjectCall(calls, S);
@@ -173,7 +173,7 @@ namespace LBM
         }
 
         template <class C>
-        __host__ void addObjectCall(std::vector<std::function<void(const label_t)>> &calls, C &object) const noexcept
+        __host__ void addObjectCall(std::vector<std::function<void(const device::label_t)>> &calls, C &object) const noexcept
         {
             // If both instantaneous and mean calculations are enabled, calculate both in one call
             // Only do this for variables other than the 10 moments
@@ -182,7 +182,7 @@ namespace LBM
                 if ((object.calculate()) && (object.calculateMean()))
                 {
                     calls.push_back(
-                        [&object](const label_t label)
+                        [&object](const device::label_t label)
                         { object.calculateInstantaneousAndMean(label); });
                 }
             }
@@ -193,7 +193,7 @@ namespace LBM
                 if (object.calculate() && !(object.calculateMean()))
                 {
                     calls.push_back(
-                        [&object](const label_t label)
+                        [&object](const device::label_t label)
                         { object.calculateInstantaneous(label); });
                 }
             }
@@ -203,7 +203,7 @@ namespace LBM
             {
                 // std::cout << "Pushing back " << object.fieldName() << ".saveMean" << std::endl;
                 calls.push_back(
-                    [&object](const label_t label)
+                    [&object](const device::label_t label)
                     { object.calculateMean(label); });
             }
         }
@@ -211,19 +211,19 @@ namespace LBM
         /**
          * @brief Registry of function objects to save
          **/
-        const std::vector<std::function<void(const label_t)>> saveVector_;
+        const std::vector<std::function<void(const device::label_t)>> saveVector_;
 
         /**
          * @brief Initializes save calls based on strain rate tensor configuration
          * @param[in] S Reference to strain rate tensor object
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] const std::vector<std::function<void(const label_t)>> functionObjectSaveInitialiser(
+        __host__ [[nodiscard]] const std::vector<std::function<void(const device::label_t)>> functionObjectSaveInitialiser(
             functionObjects::moments::collection<VelocitySet> &moments,
             functionObjects::strainRate::tensor<VelocitySet> &S,
             functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
-            std::vector<std::function<void(const label_t)>> calls;
+            std::vector<std::function<void(const device::label_t)>> calls;
 
             addSaveCall(calls, moments);
             addSaveCall(calls, S);
@@ -233,7 +233,7 @@ namespace LBM
         }
 
         template <class C>
-        __host__ void addSaveCall(std::vector<std::function<void(const label_t)>> &calls, C &object) const noexcept
+        __host__ void addSaveCall(std::vector<std::function<void(const device::label_t)>> &calls, C &object) const noexcept
         {
             if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
@@ -241,7 +241,7 @@ namespace LBM
                 {
                     // std::cout << "Pushing back saveInstantaneous" << std::endl;
                     calls.push_back(
-                        [&object](const label_t label)
+                        [&object](const device::label_t label)
                         { object.saveInstantaneous(label); });
                 }
             }
@@ -249,7 +249,7 @@ namespace LBM
             {
                 // std::cout << "Pushing back " << object.fieldName() << ".calculateMean" << std::endl;
                 calls.push_back(
-                    [&object](const label_t label)
+                    [&object](const device::label_t label)
                     { object.saveMean(label); });
             }
         }

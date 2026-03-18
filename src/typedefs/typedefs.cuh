@@ -145,13 +145,19 @@ namespace LBM
             }
         }
     }
+}
 
+#include "integralTypedefs.cuh"
+#include "arithmeticTypedefs.cuh"
+
+namespace LBM
+{
     /**
      * @brief Enumerated variable indices
      **/
     namespace index
     {
-        typedef enum Enum : std::size_t
+        typedef enum Enum : host::label_t
         {
             rho = 0,
             u = 1,
@@ -165,13 +171,7 @@ namespace LBM
             zz = 9
         } type;
     }
-}
 
-#include "integralTypedefs.cuh"
-#include "arithmeticTypedefs.cuh"
-
-namespace LBM
-{
     namespace types
     {
         namespace assertions
@@ -190,7 +190,7 @@ namespace LBM
                 }
                 if constexpr (std::is_integral_v<T>)
                 {
-                    static_assert(((std::is_same_v<T, uint32_t>) || (std::is_same_v<T, uint64_t>)), "Unsupported LABEL_SIZE value (must be 32 or 64)");
+                    static_assert(((std::is_same_v<T, uint32_t>) || (std::is_same_v<T, host::label_t>)), "Unsupported LABEL_SIZE value (must be 32 or 64)");
                 }
             }
         }
@@ -208,7 +208,7 @@ namespace LBM
     namespace axis
     {
         template <const axis::type alpha, const int coeff>
-        __host__ [[nodiscard]] static inline constexpr blockLabel to_3d(const label_t ta, const label_t tb) noexcept
+        __host__ [[nodiscard]] static inline constexpr blockLabel to_3d(const device::label_t ta, const device::label_t tb) noexcept
         {
             if constexpr (alpha == axis::X)
             {

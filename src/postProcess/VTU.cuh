@@ -65,7 +65,7 @@ namespace LBM
 
             /**
              * @brief Auxiliary template function that performs the VTU file writing.
-             * @tparam indexType The data type for the mesh indices (uint32_t or uint64_t).
+             * @tparam indexType The data type for the mesh indices (uint32_t or host::label_t).
              **/
             template <typename indexType>
             __host__ void VTUWriter(
@@ -74,16 +74,16 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames) noexcept
             {
-                const label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
-                const label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
-                const std::size_t numVars = solutionVars.size();
+                const device::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const device::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
+                const host::label_t numVars = solutionVars.size();
 
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
                 const std::vector<indexType> connectivity = meshConnectivity<false, indexType>(mesh);
                 const std::vector<indexType> offsets = meshOffsets<indexType>(mesh);
 
                 std::stringstream xml;
-                uint64_t currentOffset = 0;
+                host::label_t currentOffset = 0;
 
                 xml << "<?xml version=\"1.0\"?>\n";
                 xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
@@ -91,25 +91,25 @@ namespace LBM
                 xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
 
                 xml << "      <PointData Scalars=\"" << (solutionVarNames.empty() ? "" : solutionVarNames[0]) << "\">\n";
-                for (std::size_t i = 0; i < numVars; ++i)
+                for (host::label_t i = 0; i < numVars; ++i)
                 {
                     xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << solutionVarNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(uint64_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
                 }
                 xml << "      </PointData>\n";
 
                 xml << "      <Points>\n";
                 xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
                 xml << "      </Points>\n";
-                currentOffset += sizeof(uint64_t) + points.size() * sizeof(scalar_t);
+                currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
 
                 xml << "      <Cells>\n";
                 // Usa o indexType para obter o nome do tipo VTK correto
                 xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(uint64_t) + connectivity.size() * sizeof(indexType);
+                currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(indexType);
 
                 xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(uint64_t) + offsets.size() * sizeof(indexType);
+                currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(indexType);
 
                 xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
                 xml << "      </Cells>\n";
@@ -148,15 +148,15 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames)
             {
-                const uint64_t numNodes = mesh.dimension<axis::X, uint64_t>() * mesh.dimension<axis::Y, uint64_t>() * mesh.dimension<axis::Z, uint64_t>();
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numNodes = mesh.dimension<axis::X, host::label_t>() * mesh.dimension<axis::Y, host::label_t>() * mesh.dimension<axis::Z, host::label_t>();
+                const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())
                 {
                     throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
                 }
 
-                for (std::size_t i = 0; i < numVars; i++)
+                for (host::label_t i = 0; i < numVars; i++)
                 {
                     if (solutionVars[i].size() != numNodes)
                     {
@@ -196,9 +196,9 @@ namespace LBM
                     solutionVars.size(),
                     fileName);
 
-                constexpr const uint64_t limit32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
+                constexpr const host::label_t limit32 = static_cast<host::label_t>(std::numeric_limits<uint32_t>::max());
 
-                std::cout << "    indexType: " << ((numNodes >= limit32) ? "uint64_t;" : "uint32_t;") << std::endl;
+                std::cout << "    indexType: uint" << ((numNodes >= limit32) ? "64_t;" : "32_t;") << std::endl;
 
                 const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 
@@ -216,7 +216,7 @@ namespace LBM
 
                 if (numNodes >= limit32)
                 {
-                    VTUWriter<uint64_t>(solutionVars, outFile, mesh, solutionVarNames);
+                    VTUWriter<host::label_t>(solutionVars, outFile, mesh, solutionVarNames);
                 }
                 else
                 {

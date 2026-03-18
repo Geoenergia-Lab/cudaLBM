@@ -122,7 +122,7 @@ namespace LBM
             std::cout << fieldName_ << " boundary values:" << std::endl;
 
             const words_t fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
-            for (std::size_t var = 0; var < fieldNames.size(); var++)
+            for (host::label_t var = 0; var < fieldNames.size(); var++)
             {
                 std::cout << fieldNames[var] << ": " << values_[var]() << std::endl;
             }

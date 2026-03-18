@@ -88,11 +88,11 @@ namespace LBM
             }
             else
             {
-                for (label_t stream = 0; stream < streams_.size(); stream++)
+                for (device::label_t stream = 0; stream < streams_.size(); stream++)
                 {
                     errorHandler::check(cudaStreamSynchronize(streams_[stream]));
                 }
-                for (label_t stream = 0; stream < streams_.size(); stream++)
+                for (device::label_t stream = 0; stream < streams_.size(); stream++)
                 {
                     errorHandler::check(cudaStreamDestroy(streams_[stream]));
                 }
@@ -113,7 +113,7 @@ namespace LBM
          **/
         inline void synchronizeAll() const noexcept
         {
-            for (label_t stream = 0; stream < streams_.size(); stream++)
+            for (device::label_t stream = 0; stream < streams_.size(); stream++)
             {
                 errorHandler::check(cudaStreamSynchronize(streams_[stream]));
             }
@@ -126,13 +126,13 @@ namespace LBM
          *
          * Blocks the host until all operations in the specified stream complete.
          **/
-        template <const label_t stream_>
-        inline void synchronize(const std::integral_constant<label_t, stream_> stream) const noexcept
+        template <const device::label_t stream_>
+        inline void synchronize(const std::integral_constant<device::label_t, stream_> stream) const noexcept
         {
             errorHandler::checkInline(cudaStreamSynchronize(streams_[stream()]));
         }
 
-        inline void synchronize(const label_t i) const noexcept
+        inline void synchronize(const device::label_t i) const noexcept
         {
             errorHandler::checkInline(cudaStreamSynchronize(streams_[i]));
         }
@@ -144,8 +144,8 @@ namespace LBM
          * @return Reference to the requested CUDA stream
          * @warning No bounds checking performed at runtime
          **/
-        template <const label_t stream_>
-        __device__ cudaStream_t &operator[](const std::integral_constant<label_t, stream_> stream) const noexcept
+        template <const device::label_t stream_>
+        __device__ cudaStream_t &operator[](const std::integral_constant<device::label_t, stream_> stream) const noexcept
         {
             return streams_[stream()];
         }
@@ -171,7 +171,7 @@ namespace LBM
         {
             std::vector<cudaStream_t> streams(programCtrl.deviceList().size());
 
-            for (label_t stream = 0; stream < streams.size(); stream++)
+            for (device::label_t stream = 0; stream < streams.size(); stream++)
             {
                 errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaSetDevice(programCtrl.deviceList()[stream]));

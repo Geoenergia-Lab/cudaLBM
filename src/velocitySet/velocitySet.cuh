@@ -172,11 +172,11 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop) noexcept
         {
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
-            constexpr const std::size_t N = number_non_zero(c_AB);
+            constexpr const host::label_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
-            constexpr const thread::array<std::size_t, N> indices = non_zero_indices<N>(c_AB);
+            constexpr const thread::array<host::label_t, N> indices = non_zero_indices<N>(c_AB);
 
-            return [&]<const std::size_t... Is>(std::index_sequence<Is...>)
+            return [&]<const host::label_t... Is>(std::index_sequence<Is...>)
             {
                 return (process_momentum_element<C[Is]>(pop[indices[Is]]) + ...);
             }(std::make_index_sequence<N>{});
@@ -196,11 +196,11 @@ namespace LBM
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t calculate_moment(const thread::array<scalar_t, VelocitySet::Q()> &pop, const BoundaryNormal &boundaryNormal) noexcept
         {
             constexpr const thread::array<int, VelocitySet::Q()> c_AB = c_AlphaBeta<VelocitySet, alpha, beta>();
-            constexpr const std::size_t N = number_non_zero(c_AB);
+            constexpr const host::label_t N = number_non_zero(c_AB);
             constexpr const thread::array<int, N> C = non_zero_values<N>(c_AB);
-            constexpr const thread::array<std::size_t, N> indices = non_zero_indices<N>(c_AB);
+            constexpr const thread::array<host::label_t, N> indices = non_zero_indices<N>(c_AB);
 
-            return [&]<const std::size_t... Is>(std::index_sequence<Is...>)
+            return [&]<const host::label_t... Is>(std::index_sequence<Is...>)
             {
                 return (process_momentum_element<C[Is], VelocitySet, indices[Is]>(pop[indices[Is]], boundaryNormal) + ...);
             }(std::make_index_sequence<N>{});
@@ -270,7 +270,7 @@ namespace LBM
          * @return Indices of the distribution on a specific face
          **/
         template <class VelocitySet, const axis::type alpha, const int coeff>
-        __device__ __host__ [[nodiscard]] static inline consteval thread::array<label_t, VelocitySet::QF()> indices_on_face() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval thread::array<device::label_t, VelocitySet::QF()> indices_on_face() noexcept
         {
             assertions::velocitySet::validate<VelocitySet>();
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -279,11 +279,11 @@ namespace LBM
 
             constexpr const thread::array<int, VelocitySet::Q()> vals = VelocitySet::template c<int, alpha>();
 
-            thread::array<label_t, VelocitySet::QF()> indices;
+            thread::array<device::label_t, VelocitySet::QF()> indices;
 
-            label_t j = 0;
+            device::label_t j = 0;
 
-            for (label_t i = 0; i < VelocitySet::Q(); i++)
+            for (device::label_t i = 0; i < VelocitySet::Q(); i++)
             {
                 if (vals[i] == coeff)
                 {
@@ -314,7 +314,7 @@ namespace LBM
          * - For Back boundary (normal.z < 0): checks positive z-velocity component
          * Returns 1 only if no incoming component is detected on any axis
          **/
-        template <typename T, class VelocitySet, class BoundaryNormal, const label_t q_>
+        template <typename T, class VelocitySet, class BoundaryNormal, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline constexpr T is_incoming(const q_i<q_> q, const BoundaryNormal &boundaryNormal) noexcept
         {
             // boundaryNormal.x > 0  => EAST boundary
@@ -380,7 +380,7 @@ namespace LBM
          * @param[in] boundaryNormal
          * @return Plus or minus pop_value depending on the value of coeff
          **/
-        template <const int coeff, class VelocitySet, const label_t I, class BoundaryNormal>
+        template <const int coeff, class VelocitySet, const device::label_t I, class BoundaryNormal>
         __device__ __host__ [[nodiscard]] static inline constexpr scalar_t process_momentum_element(
             const scalar_t pop_value,
             const BoundaryNormal &boundaryNormal) noexcept
@@ -405,7 +405,7 @@ namespace LBM
          * @param[in] q The lattice index
          * @return True if the lattice coefficient is negative, false otherwise
          **/
-        template <class VelocitySet, const axis::type alpha, const label_t q_>
+        template <class VelocitySet, const axis::type alpha, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval bool is_negative(const q_i<q_> q) noexcept
         {
             assertions::velocitySet::validate<VelocitySet>();
@@ -421,7 +421,7 @@ namespace LBM
          * @param[in] The lattice index
          * @return True if the lattice coefficient is positive, false otherwise
          **/
-        template <class VelocitySet, const axis::type alpha, const label_t q_>
+        template <class VelocitySet, const axis::type alpha, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval bool is_positive(const q_i<q_> q) noexcept
         {
             assertions::velocitySet::validate<VelocitySet>();

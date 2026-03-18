@@ -129,9 +129,9 @@ namespace LBM
     };
 
     /**
-     * @brief Block dimensions descriptor (specialisation for label_t)
+     * @brief Block dimensions descriptor (specialisation for device::label_t)
      */
-    struct blockLabel : var3<label_t>
+    struct blockLabel : var3<device::label_t>
     {
     public:
         /**

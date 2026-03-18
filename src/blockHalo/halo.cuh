@@ -110,7 +110,7 @@ namespace LBM
              * @brief Swaps read and write halo buffers
              * @note Synchronizes device before swapping to ensure all operations complete
              **/
-            __host__ inline void swap(const label_t i) noexcept
+            __host__ inline void swap(const device::label_t i) noexcept
             {
                 errorHandler::checkInline(cudaDeviceSynchronize());
                 std::swap(readBuffer_.x0Ref(i), writeBuffer_.x0Ref(i));
@@ -125,7 +125,7 @@ namespace LBM
              * @brief Provides read-only access to the current read halo
              * @return Collection of const pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const device::label_t i) const noexcept
             {
                 return {readBuffer_.x0Const(i), readBuffer_.x1Const(i), readBuffer_.y0Const(i), readBuffer_.y1Const(i), readBuffer_.z0Const(i), readBuffer_.z1Const(i)};
             }
@@ -134,7 +134,7 @@ namespace LBM
              * @brief Provides mutable access to the current write halo
              * @return Collection of mutable pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const device::label_t i) noexcept
             {
                 return {writeBuffer_.x0(i), writeBuffer_.x1(i), writeBuffer_.y0(i), writeBuffer_.y1(i), writeBuffer_.z0(i), writeBuffer_.z1(i)};
             }
@@ -205,7 +205,7 @@ namespace LBM
              * @param[i] i The index of the velocity
              **/
             template <const axis::type alpha, const int coeff>
-            __device__ [[nodiscard]] static inline consteval label_t streaming_index(const label_t i) noexcept
+            __device__ [[nodiscard]] static inline consteval device::label_t streaming_index(const device::label_t i) noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
 
@@ -224,7 +224,7 @@ namespace LBM
              * @return True if the thread is at the specified block boundary and not at the domain edge (if non-periodic)
              **/
             template <const axis::type alpha, const int coeff, const bool isPeriodic>
-            __device__ [[nodiscard]] static inline constexpr bool boundaryCheck(const label_t alpha_v, const thread::coordinate &Tx) noexcept
+            __device__ [[nodiscard]] static inline constexpr bool boundaryCheck(const device::label_t alpha_v, const thread::coordinate &Tx) noexcept
             {
                 if constexpr (coeff == -1)
                 {
@@ -258,7 +258,7 @@ namespace LBM
              * @param[in] t The thread coordinate
              **/
             template <const int coeff>
-            __device__ [[nodiscard]] static inline constexpr label_t thread_stencil(const thread::array<label_t, 2> &dt, const label_t t) noexcept
+            __device__ [[nodiscard]] static inline constexpr device::label_t thread_stencil(const thread::array<device::label_t, 2> &dt, const device::label_t t) noexcept
             {
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::CAN_BE_NULL>();
 
@@ -287,7 +287,7 @@ namespace LBM
              * @param[in] b The current block
              **/
             template <const axis::type alpha, const int coeff>
-            __device__ [[nodiscard]] static inline constexpr label_t block_stencil(const label_t t, const label_t b_shifted, const label_t b) noexcept
+            __device__ [[nodiscard]] static inline constexpr device::label_t block_stencil(const device::label_t t, const device::label_t b_shifted, const device::label_t b) noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
 
@@ -330,36 +330,36 @@ namespace LBM
 
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
-                const thread::array<label_t, 2> dBx{Bx.shifted_block<axis::X, -1>(), Bx.shifted_block<axis::X, +1>()};
-                const thread::array<label_t, 2> dBy{Bx.shifted_block<axis::Y, -1>(), Bx.shifted_block<axis::Y, +1>()};
-                const thread::array<label_t, 2> dBz{Bx.shifted_block<axis::Z, -1>(), Bx.shifted_block<axis::Z, +1>()};
+                const thread::array<device::label_t, 2> dBx{Bx.shifted_block<axis::X, -1>(), Bx.shifted_block<axis::X, +1>()};
+                const thread::array<device::label_t, 2> dBy{Bx.shifted_block<axis::Y, -1>(), Bx.shifted_block<axis::Y, +1>()};
+                const thread::array<device::label_t, 2> dBz{Bx.shifted_block<axis::Z, -1>(), Bx.shifted_block<axis::Z, +1>()};
 
-                const thread::array<label_t, 2> da{Tx.shifted_coordinate<axis::orthogonal<alpha, 0>(), -1>(), Tx.shifted_coordinate<axis::orthogonal<alpha, 0>(), +1>()};
-                const thread::array<label_t, 2> db{Tx.shifted_coordinate<axis::orthogonal<alpha, 1>(), -1>(), Tx.shifted_coordinate<axis::orthogonal<alpha, 1>(), +1>()};
+                const thread::array<device::label_t, 2> da{Tx.shifted_coordinate<axis::orthogonal<alpha, 0>(), -1>(), Tx.shifted_coordinate<axis::orthogonal<alpha, 0>(), +1>()};
+                const thread::array<device::label_t, 2> db{Tx.shifted_coordinate<axis::orthogonal<alpha, 1>(), -1>(), Tx.shifted_coordinate<axis::orthogonal<alpha, 1>(), +1>()};
 
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        const label_t t_a = thread_stencil<-VelocitySet::template c<int, axis::orthogonal<alpha, 0>()>()[streaming_index<alpha, coeff>(i)]>(da, Tx.value<axis::orthogonal<alpha, 0>()>());
-                        const label_t t_b = thread_stencil<-VelocitySet::template c<int, axis::orthogonal<alpha, 1>()>()[streaming_index<alpha, coeff>(i)]>(db, Tx.value<axis::orthogonal<alpha, 1>()>());
+                        const device::label_t t_a = thread_stencil<-VelocitySet::template c<int, axis::orthogonal<alpha, 0>()>()[streaming_index<alpha, coeff>(i)]>(da, Tx.value<axis::orthogonal<alpha, 0>()>());
+                        const device::label_t t_b = thread_stencil<-VelocitySet::template c<int, axis::orthogonal<alpha, 1>()>()[streaming_index<alpha, coeff>(i)]>(db, Tx.value<axis::orthogonal<alpha, 1>()>());
 
                         // Then we should select the true block based on the thread
-                        const label_t b_x = block_stencil<axis::X, -VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(
+                        const device::label_t b_x = block_stencil<axis::X, -VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::X>(),
                             thread_stencil<-VelocitySet::template c<int, axis::X>()[streaming_index<alpha, coeff>(i)]>(dBx, Bx.value<axis::X>()),
                             Bx.value<axis::X>());
 
-                        const label_t b_y = block_stencil<axis::Y, -VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(
+                        const device::label_t b_y = block_stencil<axis::Y, -VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::Y>(),
                             thread_stencil<-VelocitySet::template c<int, axis::Y>()[streaming_index<alpha, coeff>(i)]>(dBy, Bx.value<axis::Y>()),
                             Bx.value<axis::Y>());
 
-                        const label_t b_z = block_stencil<axis::Z, -VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(
+                        const device::label_t b_z = block_stencil<axis::Z, -VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(
                             Tx.value<axis::Z>(),
                             thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(dBz, Bx.value<axis::Z>()),
                             Bx.value<axis::Z>());
 
-                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&(readBuffer.ptr<static_cast<label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]));
+                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&(readBuffer.ptr<static_cast<device::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]));
                     });
             }
 
@@ -415,7 +415,7 @@ namespace LBM
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        writeBuffer.ptr<static_cast<label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(
+                        writeBuffer.ptr<static_cast<device::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(
                             Tx.value<axis::orthogonal<alpha, 0>()>(),
                             Tx.value<axis::orthogonal<alpha, 1>()>(),
                             Bx.value<axis::X>(),

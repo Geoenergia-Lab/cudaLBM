@@ -64,7 +64,7 @@ namespace LBM
              * @param[in] w The z component of the vector
              * @param[in] mesh The lattice mesh
              **/
-            template <const label_t SchemeOrder, typename T>
+            template <const device::label_t SchemeOrder, typename T>
             __host__ [[nodiscard]] const std::vector<std::vector<T>> curl(
                 const std::vector<T> &u,
                 const std::vector<T> &v,
@@ -85,7 +85,7 @@ namespace LBM
                 std::vector<T> curl_y(u.size(), 0);
                 std::vector<T> curl_z(u.size(), 0);
 
-                for (label_t i = 0; i < curl_x.size(); i++)
+                for (device::label_t i = 0; i < curl_x.size(); i++)
                 {
                     curl_x[i] = static_cast<T>(dwdy[i] - dvdz[i]);
                     curl_y[i] = static_cast<T>(dudz[i] - dwdx[i]);

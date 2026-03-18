@@ -156,13 +156,13 @@ namespace LBM
                 return 0;
             }
 
-            const uint64_t nPoints = mesh.dimension<axis::X, uint64_t>() * mesh.dimension<axis::Y, uint64_t>() * mesh.dimension<axis::Z, uint64_t>();
+            const host::label_t nPoints = mesh.dimension<axis::X, host::label_t>() * mesh.dimension<axis::Y, host::label_t>() * mesh.dimension<axis::Z, host::label_t>();
 
-            const uint64_t nTime = programCtrl.nt<uint64_t>() - programCtrl.latestTime<uint64_t>() - 1;
+            const host::label_t nTime = programCtrl.nt<host::label_t>() - programCtrl.latestTime<host::label_t>() - 1;
 
-            const uint64_t numerator = nPoints * nTime;
+            const host::label_t numerator = nPoints * nTime;
 
-            const uint64_t denominator = static_cast<uint64_t>(1000000) * static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
+            const host::label_t denominator = static_cast<host::label_t>(1000000) * static_cast<host::label_t>(std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
 
             return static_cast<T>(numerator) / static_cast<T>(denominator);
         }

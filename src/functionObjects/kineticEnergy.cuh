@@ -58,7 +58,7 @@ namespace LBM
         {
             namespace kernel
             {
-                __host__ [[nodiscard]] inline consteval label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+                __host__ [[nodiscard]] inline consteval device::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
 #define launchBounds __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
                 /**
@@ -96,7 +96,7 @@ namespace LBM
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(thread::coordinate(), block::coordinate());
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -128,7 +128,7 @@ namespace LBM
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(thread::coordinate(), block::coordinate());
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -157,7 +157,7 @@ namespace LBM
                     const device::ptrCollection<1, scalar_t> KPtrs)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(thread::coordinate(), block::coordinate());
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -237,9 +237,9 @@ namespace LBM
                  * @brief Calculate instantaneous total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneous([[maybe_unused]] const label_t timeStep) noexcept
+                __host__ void calculateInstantaneous([[maybe_unused]] const device::label_t timeStep) noexcept
                 {
-                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         kineticEnergy::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -251,11 +251,11 @@ namespace LBM
                  * @brief Calculate time-averaged total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean([[maybe_unused]] const label_t timeStep) noexcept
+                __host__ void calculateMean([[maybe_unused]] const device::label_t timeStep) noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
 
-                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         kineticEnergy::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -270,11 +270,11 @@ namespace LBM
                  * @brief Calculate both the instantaneous and time-averaged total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const label_t timeStep) noexcept
+                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const device::label_t timeStep) noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
 
-                    for (label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         kineticEnergy::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -290,9 +290,9 @@ namespace LBM
                  * @brief Saves the instantaneous total kinetic energy to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveInstantaneous(const label_t timeStep) noexcept
+                __host__ void saveInstantaneous(const device::label_t timeStep) noexcept
                 {
-                    for (label_t virtualDeviceIndex = 0; virtualDeviceIndex < k_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    for (device::label_t virtualDeviceIndex = 0; virtualDeviceIndex < k_.programCtrl().deviceList().size(); virtualDeviceIndex++)
                     {
                         hostWriteBuffer_.copy_from_device(
                             device::ptrCollection<1, scalar_t>(k_.ptr(virtualDeviceIndex)),
@@ -313,9 +313,9 @@ namespace LBM
                  * @brief Saves the mean total kinetic energy to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveMean(const label_t timeStep) noexcept
+                __host__ void saveMean(const device::label_t timeStep) noexcept
                 {
-                    for (label_t virtualDeviceIndex = 0; virtualDeviceIndex < kMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    for (device::label_t virtualDeviceIndex = 0; virtualDeviceIndex < kMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
                     {
                         hostWriteBuffer_.copy_from_device(
                             device::ptrCollection<1, scalar_t>(kMean_.ptr(virtualDeviceIndex)),

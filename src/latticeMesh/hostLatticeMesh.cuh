@@ -122,7 +122,7 @@ namespace LBM
              * @brief Total number of points in the mesh
              * @tparam T The size type
              **/
-            template <typename ValueType = label_t>
+            template <typename ValueType = device::label_t>
             __device__ __host__ [[nodiscard]] inline constexpr ValueType size() const noexcept
             {
                 return dimensions_.size<ValueType>();
@@ -133,7 +133,7 @@ namespace LBM
              * @tparam alpha The axis type (X, Y or Z)
              * @tparam T The size type
              **/
-            template <axis::type alpha, typename ValueType = label_t>
+            template <axis::type alpha, typename ValueType = device::label_t>
             __device__ __host__ [[nodiscard]] inline constexpr ValueType dimension() const noexcept
             {
                 return dimensions_.value<alpha, ValueType>();
@@ -153,7 +153,7 @@ namespace LBM
              * @tparam ValueType The size type
              * @return The number of blocks in the specified direction
              **/
-            template <const axis::type alpha, typename ValueType = label_t>
+            template <const axis::type alpha, typename ValueType = device::label_t>
             __device__ __host__ [[nodiscard]] inline constexpr ValueType nBlocks() const noexcept
             {
                 return dimensions_.value<alpha, ValueType>() / block::n<alpha, ValueType>();
@@ -200,27 +200,27 @@ namespace LBM
              * @param[in] x,y,z The coordinate of the point
              * @return True if the point is on the boundary, false otherwise
              **/
-            __host__ [[nodiscard]] inline constexpr bool West(const label_t x) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool West(const device::label_t x) const noexcept
             {
                 return (x == 0);
             }
-            __host__ [[nodiscard]] inline constexpr bool East(const label_t x) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool East(const device::label_t x) const noexcept
             {
                 return (x == dimensions_.x - 1);
             }
-            __host__ [[nodiscard]] inline constexpr bool South(const label_t y) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool South(const device::label_t y) const noexcept
             {
                 return (y == 0);
             }
-            __host__ [[nodiscard]] inline constexpr bool North(const label_t y) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool North(const device::label_t y) const noexcept
             {
                 return (y == dimensions_.y - 1);
             }
-            __host__ [[nodiscard]] inline constexpr bool Back(const label_t z) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool Back(const device::label_t z) const noexcept
             {
                 return (z == 0);
             }
-            __host__ [[nodiscard]] inline constexpr bool Front(const label_t z) const noexcept
+            __host__ [[nodiscard]] inline constexpr bool Front(const device::label_t z) const noexcept
             {
                 return (z == dimensions_.z - 1);
             }
@@ -234,13 +234,13 @@ namespace LBM
             {
                 return nDevices_;
             }
-            template <const axis::type alpha, typename ValueType = label_t>
+            template <const axis::type alpha, typename ValueType = device::label_t>
             __host__ [[nodiscard]] inline constexpr ValueType nDevices() const noexcept
             {
                 return nDevices_.value<alpha, ValueType>();
             }
 
-            template <const axis::type alpha, const label_t QF, typename ValueType = label_t>
+            template <const axis::type alpha, const device::label_t QF, typename ValueType = device::label_t>
             __host__ [[nodiscard]] inline constexpr ValueType nFaces() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -253,7 +253,7 @@ namespace LBM
              * @tparam alpha The axis (X, Y or Z)
              * @tparam T The return type
              **/
-            template <const axis::type alpha, const label_t QF, typename ValueType = label_t>
+            template <const axis::type alpha, const device::label_t QF, typename ValueType = device::label_t>
             __host__ [[nodiscard]] inline constexpr ValueType nFacesPerDevice() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -264,7 +264,7 @@ namespace LBM
             /**
              * @brief Computes the allocation size for the number of points per GPU
              **/
-            template <typename ValueType = label_t>
+            template <typename ValueType = device::label_t>
             __host__ [[nodiscard]] inline constexpr ValueType sizePerDevice() const noexcept
             {
                 const ValueType nxPointsPerDevice = dimensions_.value<axis::X, ValueType>() / nDevices<axis::X, ValueType>();
@@ -277,7 +277,7 @@ namespace LBM
             /**
              * @brief Computes the allocation size for the number of blocks per GPU
              **/
-            template <const axis::type alpha, typename ValueType = label_t>
+            template <const axis::type alpha, typename ValueType = device::label_t>
             __host__ [[nodiscard]] inline constexpr ValueType blocksPerDevice() const noexcept
             {
                 return nBlocks<alpha, ValueType>() / nDevices_.value<alpha, ValueType>();
@@ -311,9 +311,9 @@ namespace LBM
              **/
             __host__ static void validate_block_dimensions(const blockLabel &dimensions)
             {
-                const label_t nxBlocks = dimensions.x / block::nx();
-                const label_t nyBlocks = dimensions.y / block::ny();
-                const label_t nzBlocks = dimensions.z / block::nz();
+                const device::label_t nxBlocks = dimensions.x / block::nx();
+                const device::label_t nyBlocks = dimensions.y / block::ny();
+                const device::label_t nzBlocks = dimensions.z / block::nz();
 
                 if (!(block::nx() * nxBlocks == dimensions.x))
                 {
@@ -334,7 +334,7 @@ namespace LBM
             }
 
             /**
-             * @brief Validates that the mesh dimensions do not exceed the limits of label_t
+             * @brief Validates that the mesh dimensions do not exceed the limits of device::label_t
              * and that the per-GPU allocation size does not exceed available GPU memory
              *
              * @param[in] programCtrl The program control object containing device information
@@ -346,35 +346,35 @@ namespace LBM
                 const blockLabel &dimensions,
                 const blockLabel &nDevices)
             {
-                const uintmax_t nxTemp = static_cast<uintmax_t>(dimensions.value<axis::X>());
-                const uintmax_t nyTemp = static_cast<uintmax_t>(dimensions.value<axis::Y>());
-                const uintmax_t nzTemp = static_cast<uintmax_t>(dimensions.value<axis::Z>());
-                const uintmax_t nPointsTemp = nxTemp * nyTemp * nzTemp;
-                constexpr const uintmax_t typeLimit = static_cast<uintmax_t>(std::numeric_limits<label_t>::max());
+                const host::label_t nxTemp = static_cast<host::label_t>(dimensions.value<axis::X>());
+                const host::label_t nyTemp = static_cast<host::label_t>(dimensions.value<axis::Y>());
+                const host::label_t nzTemp = static_cast<host::label_t>(dimensions.value<axis::Z>());
+                const host::label_t nPointsTemp = nxTemp * nyTemp * nzTemp;
+                constexpr const host::label_t typeLimit = static_cast<host::label_t>(std::numeric_limits<device::label_t>::max());
 
-                // Check that the mesh dimensions won't overflow the type limit for label_t
+                // Check that the mesh dimensions won't overflow the type limit for device::label_t
                 if (nPointsTemp >= typeLimit)
                 {
                     throw std::runtime_error(
                         "\nMesh size exceeds maximum allowed value:\n"
                         "Number of mesh points: " +
                         std::to_string(nPointsTemp) +
-                        "\nLimit of label_t: " +
+                        "\nLimit of device::label_t: " +
                         std::to_string(typeLimit));
                 }
 
                 // Check that the mesh dimensions are not too large for GPU memory
-                for (std::size_t virtualDeviceIndex = 0; virtualDeviceIndex < programCtrl.deviceList().size(); virtualDeviceIndex++)
+                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < programCtrl.deviceList().size(); virtualDeviceIndex++)
                 {
                     // Calculate the per-GPU allocation size
-                    const label_t nxPointsPerDevice = dimensions.value<axis::X>() / nDevices.value<axis::X>();
-                    const label_t nyPointsPerDevice = dimensions.value<axis::Y>() / nDevices.value<axis::Y>();
-                    const label_t nzPointsPerDevice = dimensions.value<axis::Z>() / nDevices.value<axis::Z>();
-                    const label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
+                    const device::label_t nxPointsPerDevice = dimensions.value<axis::X>() / nDevices.value<axis::X>();
+                    const device::label_t nyPointsPerDevice = dimensions.value<axis::Y>() / nDevices.value<axis::Y>();
+                    const device::label_t nzPointsPerDevice = dimensions.value<axis::Z>() / nDevices.value<axis::Z>();
+                    const device::label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
 
                     const cudaDeviceProp props = GPU::properties(programCtrl.deviceList()[virtualDeviceIndex]);
-                    const uintmax_t totalMemTemp = static_cast<uintmax_t>(props.totalGlobalMem);
-                    const uintmax_t allocationSize = nPointsPerDevice * static_cast<uintmax_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<uintmax_t>());
+                    const host::label_t totalMemTemp = static_cast<host::label_t>(props.totalGlobalMem);
+                    const host::label_t allocationSize = nPointsPerDevice * static_cast<host::label_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<host::label_t>());
 
                     if (allocationSize >= totalMemTemp)
                     {
@@ -406,15 +406,15 @@ namespace LBM
             {
                 GPU::forAll(
                     nDevices,
-                    [&](const label_t dx, const label_t dy, const label_t dz)
+                    [&](const device::label_t dx, const device::label_t dy, const device::label_t dz)
                     {
-                        const label_t virtualDeviceIndex = GPU::idx(dx, dy, dz, nDevices.value<axis::X>(), nDevices.value<axis::Y>());
+                        const device::label_t virtualDeviceIndex = GPU::idx(dx, dy, dz, nDevices.value<axis::X>(), nDevices.value<axis::Y>());
 
                         errorHandler::check(cudaSetDevice(programCtrl.deviceList()[virtualDeviceIndex]));
 
-                        const label_t nxBlocksPerDevice = nBlocks.value<axis::X>() / nDevices.value<axis::X>();
-                        const label_t nyBlocksPerDevice = nBlocks.value<axis::Y>() / nDevices.value<axis::Y>();
-                        const label_t nzBlocksPerDevice = nBlocks.value<axis::Z>() / nDevices.value<axis::Z>();
+                        const device::label_t nxBlocksPerDevice = nBlocks.value<axis::X>() / nDevices.value<axis::X>();
+                        const device::label_t nyBlocksPerDevice = nBlocks.value<axis::Y>() / nDevices.value<axis::Y>();
+                        const device::label_t nzBlocksPerDevice = nBlocks.value<axis::Z>() / nDevices.value<axis::Z>();
 
                         // Allocate mesh symbols on the GPU
                         device::copyToSymbol(device::nx, dimensions.x);

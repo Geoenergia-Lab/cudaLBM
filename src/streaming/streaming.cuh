@@ -90,7 +90,7 @@ namespace LBM
         __device__ static inline void save(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             scalar_t *const ptrRestrict s_pop,
-            const label_t tid) noexcept
+            const device::label_t tid) noexcept
         {
             device::constexpr_for<0, (VelocitySet::Q() - 1)>(
                 [&](const auto i)
@@ -99,11 +99,11 @@ namespace LBM
                 });
         }
 
-        template <class VelocitySet, const std::size_t N>
+        template <class VelocitySet, const host::label_t N>
         __device__ static inline void save(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, N> &s_pop,
-            const label_t tid) noexcept
+            const device::label_t tid) noexcept
         {
             save<VelocitySet>(pop, s_pop.data(), tid);
         }
@@ -128,14 +128,14 @@ namespace LBM
             device::constexpr_for<0, (VelocitySet::Q() - 1)>(
                 [&](const auto i)
                 {
-                    const label_t x = periodic_index<-VelocitySet::template cx<int>(q_i<i + 1>()), block::nx()>(Tx.value<axis::X>());
-                    const label_t y = periodic_index<-VelocitySet::template cy<int>(q_i<i + 1>()), block::ny()>(Tx.value<axis::Y>());
-                    const label_t z = periodic_index<-VelocitySet::template cz<int>(q_i<i + 1>()), block::nz()>(Tx.value<axis::Z>());
+                    const device::label_t x = periodic_index<-VelocitySet::template cx<int>(q_i<i + 1>()), block::nx()>(Tx.value<axis::X>());
+                    const device::label_t y = periodic_index<-VelocitySet::template cy<int>(q_i<i + 1>()), block::ny()>(Tx.value<axis::Y>());
+                    const device::label_t z = periodic_index<-VelocitySet::template cz<int>(q_i<i + 1>()), block::nz()>(Tx.value<axis::Z>());
                     pop[q_i<i + 1>()] = s_pop[q_i<i * block::stride()>() + block::idx(x, y, z)];
                 });
         }
 
-        template <class VelocitySet, const std::size_t N>
+        template <class VelocitySet, const host::label_t N>
         __device__ static inline void pull(
             thread::array<scalar_t, VelocitySet::Q()> &pop,
             const thread::array<scalar_t, N> &s_pop,
@@ -155,8 +155,8 @@ namespace LBM
          * This function uses bitwise AND optimization when Dim is power-of-two
          * for improved performance, falling back to modulo arithmetic otherwise.
          **/
-        template <const int coeff, const label_t Dim>
-        __device__ [[nodiscard]] static inline label_t periodic_index(const label_t idx) noexcept
+        template <const int coeff, const device::label_t Dim>
+        __device__ [[nodiscard]] static inline device::label_t periodic_index(const device::label_t idx) noexcept
         {
             velocityCoefficient::assertions::validate<coeff, velocityCoefficient::CAN_BE_NULL>();
 

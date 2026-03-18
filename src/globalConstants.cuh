@@ -57,7 +57,7 @@ namespace LBM
     /**
      * @brief Number of hydrodynamic moments
      **/
-    template <typename T = label_t>
+    template <typename T = device::label_t>
     __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() noexcept
     {
         return 10;
@@ -97,114 +97,15 @@ namespace LBM
         /**
          * @brief Mesh constant variables
          **/
-        __device__ __constant__ label_t nx;
-        __device__ __constant__ label_t ny;
-        __device__ __constant__ label_t nz;
-        __device__ __constant__ label_t NUM_BLOCK_X;
-        __device__ __constant__ label_t NUM_BLOCK_Y;
-        __device__ __constant__ label_t NUM_BLOCK_Z;
-        __device__ __constant__ label_t BLOCK_OFFSET_X;
-        __device__ __constant__ label_t BLOCK_OFFSET_Y;
-        __device__ __constant__ label_t BLOCK_OFFSET_Z;
-
-        // __device__ __constant__ constexpr const label_t STREAMING_OFFSET_XM1 = 0;
-        // __device__ __constant__ constexpr const label_t STREAMING_OFFSET_XP1 = 0;
-        // __device__ __constant__ constexpr const label_t STREAMING_OFFSET_YM1 = 0;
-        // __device__ __constant__ constexpr const label_t STREAMING_OFFSET_YP1 = 0;
-        // __device__ __constant__ constexpr const label_t STREAMING_OFFSET_ZM1 = 0;
-        // __device__ __constant__ label_t STREAMING_OFFSET_ZP1 = 0; // This is 1 in the case that we have a GPU boundary on the back of the subdomain, otherwise 0
-
-        // __device__ __constant__ constexpr const label_t HAS_EXTRA_LAYER_XM1 = 0;
-        // __device__ __constant__ constexpr const label_t HAS_EXTRA_LAYER_XP1 = 0;
-        // __device__ __constant__ constexpr const label_t HAS_EXTRA_LAYER_YM1 = 0;
-        // __device__ __constant__ constexpr const label_t HAS_EXTRA_LAYER_YP1 = 0;
-        // __device__ __constant__ label_t HAS_EXTRA_LAYER_ZM1;
-        // __device__ __constant__ label_t HAS_EXTRA_LAYER_ZP1;
-
-        // __device__ static int alreadyPrinted0 = 0;
-        // __device__ static int alreadyPrinted1 = 0;
-        // __device__ static int alreadyPrinted2 = 0;
-        // __device__ static int alreadyPrinted3 = 0;
-
-        // template <const axis::type alpha, const int coeff>
-        // __device__ [[nodiscard]] inline constexpr label_t STREAMING_OFFSET() noexcept
-        // {
-        //     if constexpr (alpha == axis::X)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return STREAMING_OFFSET_XM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return STREAMING_OFFSET_XP1;
-        //         }
-        //     }
-
-        //     if constexpr (alpha == axis::Y)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return STREAMING_OFFSET_YM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return STREAMING_OFFSET_YP1;
-        //         }
-        //     }
-
-        //     if constexpr (alpha == axis::Z)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return STREAMING_OFFSET_ZM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return STREAMING_OFFSET_ZP1;
-        //         }
-        //     }
-        // }
-
-        // template <const axis::type alpha, const int coeff>
-        // __device__ [[nodiscard]] inline constexpr label_t HAS_EXTRA_LAYER() noexcept
-        // {
-        //     if constexpr (alpha == axis::X)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return HAS_EXTRA_LAYER_XM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return HAS_EXTRA_LAYER_XP1;
-        //         }
-        //     }
-
-        //     if constexpr (alpha == axis::Y)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return HAS_EXTRA_LAYER_YM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return HAS_EXTRA_LAYER_YP1;
-        //         }
-        //     }
-
-        //     if constexpr (alpha == axis::Z)
-        //     {
-        //         if constexpr (coeff == -1)
-        //         {
-        //             return HAS_EXTRA_LAYER_ZM1;
-        //         }
-        //         if constexpr (coeff == +1)
-        //         {
-        //             return HAS_EXTRA_LAYER_ZP1;
-        //         }
-        //     }
-        // }
+        __device__ __constant__ device::label_t nx;
+        __device__ __constant__ device::label_t ny;
+        __device__ __constant__ device::label_t nz;
+        __device__ __constant__ device::label_t NUM_BLOCK_X;
+        __device__ __constant__ device::label_t NUM_BLOCK_Y;
+        __device__ __constant__ device::label_t NUM_BLOCK_Z;
+        __device__ __constant__ device::label_t BLOCK_OFFSET_X;
+        __device__ __constant__ device::label_t BLOCK_OFFSET_Y;
+        __device__ __constant__ device::label_t BLOCK_OFFSET_Z;
 
         /**
          * @brief Allocates a symbol of type T to the device
@@ -220,7 +121,7 @@ namespace LBM
             errorHandler::check(cudaDeviceSynchronize());
         }
 
-        template <typename T, const std::size_t N>
+        template <typename T, const host::label_t N>
         void copyToSymbol(const T (&symbol)[N], const T (&value)[N])
         {
             errorHandler::check(cudaDeviceSynchronize());
@@ -228,16 +129,16 @@ namespace LBM
             errorHandler::check(cudaDeviceSynchronize());
         }
 
-        template <typename T, const std::size_t N, typename SizeType>
+        template <typename T, const host::label_t N, typename SizeType>
         void copyToSymbol(const T (&symbol)[N], const T value, const SizeType index)
         {
-            if (static_cast<std::size_t>(index) >= N)
+            if (static_cast<host::label_t>(index) >= N)
             {
                 throw std::runtime_error("Error setting device symbol index" + std::to_string(index) + " out of bounds for array of size " + std::to_string(N) + ".");
             }
             errorHandler::check(cudaDeviceSynchronize());
             const T valueTemp = value;
-            errorHandler::check(cudaMemcpyToSymbol(symbol, &valueTemp, static_cast<std::size_t>(sizeof(T)), static_cast<std::size_t>(index) * static_cast<std::size_t>(sizeof(T)), cudaMemcpyHostToDevice));
+            errorHandler::check(cudaMemcpyToSymbol(symbol, &valueTemp, static_cast<host::label_t>(sizeof(T)), static_cast<host::label_t>(index) * static_cast<host::label_t>(sizeof(T)), cudaMemcpyHostToDevice));
             errorHandler::check(cudaDeviceSynchronize());
         }
     }

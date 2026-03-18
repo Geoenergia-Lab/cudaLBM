@@ -22,14 +22,14 @@ namespace LBM
         launchBounds __global__ void calculate(
             const scalar_t *const ptrRestrict fMom,
             scalar_t *const ptrRestrict fMomMean,
-            const label_t step)
+            const device::label_t step)
         {
             if (device::out_of_bounds())
             {
                 return;
             }
 
-            const label_t meanCounter = static_cast<scalar_t>(step);
+            const device::label_t meanCounter = static_cast<scalar_t>(step);
 
             const scalar_t invCount = static_cast<scalar_t>(1.0) / (meanCounter + static_cast<scalar_t>(1.0));
 

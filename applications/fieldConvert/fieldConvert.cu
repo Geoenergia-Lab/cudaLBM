@@ -72,7 +72,7 @@ int main(const int argc, const char *const argv[])
     const words_t &fieldNames = getFieldNames(fileNamePrefix, doCustomField);
 
     // Get the time indices
-    const std::vector<label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
+    const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
     // Get the conversion type
     const name_t conversion = programCtrl.getArgument("-fileType");
@@ -85,7 +85,7 @@ int main(const int argc, const char *const argv[])
     {
         const postProcess::writerFunction writer = it->second;
 
-        for (label_t timeStep = fileIO::getStartIndex(fileNamePrefix, programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+        for (device::label_t timeStep = fileIO::getStartIndex(fileNamePrefix, programCtrl); timeStep < fileNameIndices.size(); timeStep++)
         {
             const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments = initialiseArrays(
                 fileNamePrefix,

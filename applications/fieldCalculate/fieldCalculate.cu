@@ -68,9 +68,9 @@ int main(const int argc, const char *const argv[])
     if (calculationTypeString == "containsNaN")
     {
         // Get the time indices
-        const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
+        const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
 
-        for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+        for (device::label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
         {
             // We should check for field names here. Currently we are just doing the default fields
             const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments(
@@ -85,9 +85,9 @@ int main(const int argc, const char *const argv[])
     if (calculationTypeString == "spatialMean")
     {
         // Get the time indices
-        const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
+        const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
 
-        for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+        for (device::label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
         {
             // We should check for field names here. Currently we are just doing the default fields
             const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments(
@@ -108,11 +108,11 @@ int main(const int argc, const char *const argv[])
         const std::unordered_map<name_t, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
 
         // Get the time indices
-        const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
+        const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
 
         if (it != postProcess::writers.end())
         {
-            for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+            for (device::label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
             {
                 // Get the file name at the present time step
                 const name_t fileName = "vorticity_" + std::to_string(fileNameIndices[timeStep]);
@@ -143,11 +143,11 @@ int main(const int argc, const char *const argv[])
         const std::unordered_map<name_t, postProcess::writerFunction>::const_iterator it = postProcess::writers.find(conversion);
 
         // Get the time indices
-        const std::vector<label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
+        const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
 
         if (it != postProcess::writers.end())
         {
-            for (label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+            for (device::label_t timeStep = fileIO::getStartIndex(programCtrl.caseName(), programCtrl); timeStep < fileNameIndices.size(); timeStep++)
             {
                 // Get the file name at the present time step
                 const name_t fileName = "div[U]_" + std::to_string(fileNameIndices[timeStep]);
@@ -168,7 +168,7 @@ int main(const int argc, const char *const argv[])
         }
     }
 
-    // constexpr label_t IntegrationOrder = 2;
+    // constexpr device::label_t IntegrationOrder = 2;
 
     // // Integrate the vorticity in all axes
     // const std::vector<scalar_t> int_omega_x = integral(integrate_x<IntegrationOrder, scalar_t>(omega[0], mesh));

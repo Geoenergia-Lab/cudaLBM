@@ -312,7 +312,7 @@ namespace LBM
          * - Bit 5: Front boundary (z == device::nz - 1)
          * - Bit 6: Any boundary (logical OR of bits 0-5)
          **/
-        __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const label_t x, const label_t y, const label_t z) noexcept
+        __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const device::label_t x, const device::label_t y, const device::label_t z) noexcept
         {
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(normalVector::computeBitmask, "Believed correct"));
             return static_cast<nodeType_t>(

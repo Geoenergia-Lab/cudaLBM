@@ -62,7 +62,7 @@ namespace LBM
          * @tparam alpha The axis
          **/
         template <axis::type alpha>
-        __device__ [[nodiscard]] inline constexpr label_t n() noexcept
+        __device__ [[nodiscard]] inline constexpr device::label_t n() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 
@@ -87,7 +87,7 @@ namespace LBM
          * @tparam alpha The axis
          **/
         template <axis::type alpha>
-        __device__ [[nodiscard]] inline constexpr label_t NUM_BLOCK() noexcept
+        __device__ [[nodiscard]] inline constexpr device::label_t NUM_BLOCK() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 
@@ -114,10 +114,10 @@ namespace LBM
          * @brief Returns the thread that lies on a particular boundary
          * @tparam alpha The axis direction
          * @tparam coeff The axis normal coefficient
-         * @tparam ValueType The return type (defualt label_t)
+         * @tparam ValueType The return type (defualt device::label_t)
          * @returns One of two thread coordinates that lie on the extremities of alpha within the block
          **/
-        template <const axis::type alpha, const int coeff, typename ValueType = label_t>
+        template <const axis::type alpha, const int coeff, typename ValueType = device::label_t>
         __host__ [[nodiscard]] inline consteval ValueType boundary() noexcept
         {
             if constexpr (coeff == -1)
@@ -137,17 +137,17 @@ namespace LBM
          * Stores the three thread indices (x, y, z) and provides access per axis
          * as well as a method to compute neighbour coordinates with periodic wrap‑around.
          */
-        struct coordinate : public var3<label_t>
+        struct coordinate : public var3<device::label_t>
         {
         public:
             /**
              * @brief Constructs from threadIdx
              **/
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
-                : var3<label_t>(
-                      static_cast<label_t>(threadIdx.x),
-                      static_cast<label_t>(threadIdx.y),
-                      static_cast<label_t>(threadIdx.z)) {}
+                : var3<device::label_t>(
+                      static_cast<device::label_t>(threadIdx.x),
+                      static_cast<device::label_t>(threadIdx.y),
+                      static_cast<device::label_t>(threadIdx.z)) {}
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
@@ -155,7 +155,7 @@ namespace LBM
              * @tparam coeff The coefficient to shift by (-1, 0 or +1)
              **/
             template <axis::type alpha, const int coeff>
-            __device__ [[nodiscard]] inline constexpr label_t shifted_coordinate() const noexcept
+            __device__ [[nodiscard]] inline constexpr device::label_t shifted_coordinate() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
@@ -186,17 +186,17 @@ namespace LBM
          * Stores the three block indices (x, y, z) and provides access per axis
          * as well as a method to compute neighbour block indices with periodic wrap‑around.
          **/
-        struct coordinate : public var3<label_t>
+        struct coordinate : public var3<device::label_t>
         {
         public:
             /**
              * @brief Constructs from blockIdx
              **/
             __device__ [[nodiscard]] inline explicit coordinate() noexcept
-                : var3<label_t>(
-                      static_cast<label_t>(blockIdx.x),
-                      static_cast<label_t>(blockIdx.y),
-                      static_cast<label_t>(blockIdx.z)) {}
+                : var3<device::label_t>(
+                      static_cast<device::label_t>(blockIdx.x),
+                      static_cast<device::label_t>(blockIdx.y),
+                      static_cast<device::label_t>(blockIdx.z)) {}
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
@@ -204,14 +204,14 @@ namespace LBM
              * @tparam coeff The coefficient to shift by (-1, 0 or +1)
              **/
             template <axis::type alpha, const int coeff>
-            __device__ [[nodiscard]] inline constexpr label_t shifted_block() const noexcept
+            __device__ [[nodiscard]] inline constexpr device::label_t shifted_block() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
                 if constexpr (coeff == -1)
                 {
-                    return (value<alpha>() + device::NUM_BLOCK<alpha>() - static_cast<label_t>(1)) % (device::NUM_BLOCK<alpha>());
+                    return (value<alpha>() + device::NUM_BLOCK<alpha>() - static_cast<device::label_t>(1)) % (device::NUM_BLOCK<alpha>());
                 }
 
                 if constexpr (coeff == 0)
@@ -221,7 +221,7 @@ namespace LBM
 
                 if constexpr (coeff == +1)
                 {
-                    return (value<alpha>() + device::NUM_BLOCK<alpha>() + +static_cast<label_t>(1)) % (device::NUM_BLOCK<alpha>());
+                    return (value<alpha>() + device::NUM_BLOCK<alpha>() + +static_cast<device::label_t>(1)) % (device::NUM_BLOCK<alpha>());
                 }
             }
         };
@@ -235,7 +235,7 @@ namespace LBM
          * Stores the absolute x, y, z indices of a lattice cell.
          * The calculation includes block offsets and thread indices scaled by block dimensions.
          **/
-        struct pointCoordinate : public var3<label_t>
+        struct pointCoordinate : public var3<device::label_t>
         {
         public:
             /**
@@ -246,10 +246,10 @@ namespace LBM
             __device__ [[nodiscard]] inline explicit pointCoordinate(
                 const thread::coordinate &Tx,
                 const block::coordinate &Bx) noexcept
-                : var3<label_t>(
-                      Tx.value<axis::X>() + block::nx<label_t>() * (Bx.value<axis::X>() + device::BLOCK_OFFSET_X),
-                      Tx.value<axis::Y>() + block::ny<label_t>() * (Bx.value<axis::Y>() + device::BLOCK_OFFSET_Y),
-                      Tx.value<axis::Z>() + block::nz<label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)) {}
+                : var3<device::label_t>(
+                      Tx.value<axis::X>() + block::nx<device::label_t>() * (Bx.value<axis::X>() + device::BLOCK_OFFSET_X),
+                      Tx.value<axis::Y>() + block::ny<device::label_t>() * (Bx.value<axis::Y>() + device::BLOCK_OFFSET_Y),
+                      Tx.value<axis::Z>() + block::nz<device::label_t>() * (Bx.value<axis::Z>() + device::BLOCK_OFFSET_Z)) {}
         };
     }
 
@@ -264,33 +264,33 @@ namespace LBM
          * @brief Constructs from a linear index of a flattened 2D array with dimensions (block::n<alpha>(), block::n<beta>())
          * @param[in] linearIdx The linear index to convert to 2D indices
          **/
-        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t linearIdx) noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr dim2(const device::label_t linearIdx) noexcept
             : i_(linearIdx % (block::n<axis::orthogonal<alpha, 0>()>())),
               j_(linearIdx / (block::n<axis::orthogonal<alpha, 0>()>()))
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
         };
 
-        __device__ __host__ [[nodiscard]] inline constexpr dim2(const label_t a, const label_t b) noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr dim2(const device::label_t a, const device::label_t b) noexcept
             : i_(a),
               j_(b)
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
         };
 
-        __device__ __host__ [[nodiscard]] inline constexpr label_t i() const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr device::label_t i() const noexcept
         {
             return i_;
         }
 
-        __device__ __host__ [[nodiscard]] inline constexpr label_t j() const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr device::label_t j() const noexcept
         {
             return j_;
         }
 
     private:
-        const label_t i_;
-        const label_t j_;
+        const device::label_t i_;
+        const device::label_t j_;
     };
 } // namespace LBM
 

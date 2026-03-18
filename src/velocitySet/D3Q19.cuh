@@ -62,7 +62,7 @@ namespace LBM
              * @brief Get number of discrete velocity directions
              * @return 19 (number of directions in D3Q19 lattice)
              **/
-            template <typename T = label_t>
+            template <typename T = device::label_t>
             __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
             {
                 return 19;
@@ -72,7 +72,7 @@ namespace LBM
              * @brief Get number of velocity components on a lattice face
              * @return 5 (number of directions crossing each face in D3Q19)
              **/
-            template <typename T = label_t>
+            template <typename T = device::label_t>
             __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
             {
                 return 5;
@@ -106,7 +106,7 @@ namespace LBM
          * @brief Get number of discrete velocity directions
          * @return 19 (number of directions in D3Q19 lattice)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
         {
             return vs::Q<T>();
@@ -116,7 +116,7 @@ namespace LBM
          * @brief Get number of velocity components on a lattice face
          * @return 5 (number of directions crossing each face in D3Q19)
          **/
-        template <typename T = label_t>
+        template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
         {
             return vs::QF<T>();
@@ -165,7 +165,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return Weight for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T w_q(const q_i<q_> q) noexcept
         {
             // Return the component
@@ -188,7 +188,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return x-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cx(const q_i<q_> q) noexcept
         {
             // Return the component
@@ -211,7 +211,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return y-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cy(const q_i<q_> q) noexcept
         {
             // Return the component
@@ -234,7 +234,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return z-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cz(const q_i<q_> q) noexcept
         {
             // Return the component
@@ -253,7 +253,7 @@ namespace LBM
             if constexpr (alpha == axis::NO_DIRECTION)
             {
                 thread::array<T, vs::Q()> result;
-                for (std::size_t i = 0; i < vs::Q(); i++)
+                for (host::label_t i = 0; i < vs::Q(); i++)
                 {
                     result[i] = 1;
                 }
@@ -346,7 +346,7 @@ namespace LBM
          * @brief Implementation of the print loop
          * @note This function effectively unrolls the loop at compile-time and checks for its bounds
          **/
-        template <const label_t q_ = 0>
+        template <const device::label_t q_ = 0>
         __host__ static inline void printAll(const q_i<q_> q = q_i<0>()) noexcept
         {
             // Loop over the velocity set, print to terminal

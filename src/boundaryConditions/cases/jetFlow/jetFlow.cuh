@@ -116,7 +116,7 @@ namespace LBM
 #include "jetBoundaryCondition.cuh"
         }
 
-        template <class VelocitySet, const label_t N>
+        template <class VelocitySet, const device::label_t N>
         __device__ static inline constexpr void calculate_moments(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS()> &moments,

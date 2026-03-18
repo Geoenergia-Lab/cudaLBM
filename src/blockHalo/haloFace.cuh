@@ -104,27 +104,27 @@ namespace LBM
              * @brief Provide const access to halo face data
              * @return Const pointer to halo face data
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x0Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x0Const(const device::label_t i) const noexcept
             {
                 return West_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x1Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x1Const(const device::label_t i) const noexcept
             {
                 return East_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y0Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y0Const(const device::label_t i) const noexcept
             {
                 return South_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y1Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y1Const(const device::label_t i) const noexcept
             {
                 return North_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z0Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z0Const(const device::label_t i) const noexcept
             {
                 return Back_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z1Const(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z1Const(const device::label_t i) const noexcept
             {
                 return Front_.constPtr(i);
             }
@@ -134,27 +134,27 @@ namespace LBM
              * @brief Provide mutable access to halo face data
              * @return Pointer to halo face data
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x0(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x0(const device::label_t i) noexcept
             {
                 return West_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x1(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x1(const device::label_t i) noexcept
             {
                 return East_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y0(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y0(const device::label_t i) noexcept
             {
                 return South_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y1(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y1(const device::label_t i) noexcept
             {
                 return North_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z0(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z0(const device::label_t i) noexcept
             {
                 return Back_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z1(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z1(const device::label_t i) noexcept
             {
                 return Front_.ptr(i);
             }
@@ -165,27 +165,27 @@ namespace LBM
              * @return Reference to pointer (used for buffer swapping)
              * @note These methods are specifically for pointer swapping and should not be used elsewhere
              **/
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x0Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x0Ref(const device::label_t i) noexcept
             {
                 return West_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x1Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x1Ref(const device::label_t i) noexcept
             {
                 return East_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y0Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y0Ref(const device::label_t i) noexcept
             {
                 return South_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y1Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y1Ref(const device::label_t i) noexcept
             {
                 return North_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z0Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z0Ref(const device::label_t i) noexcept
             {
                 return Back_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z1Ref(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z1Ref(const device::label_t i) noexcept
             {
                 return Front_.ptrRef(i);
             }
@@ -230,11 +230,11 @@ namespace LBM
                 std::vector<scalar_t> face(mesh.nFaces<alpha, VelocitySet::QF()>(), 0);
 
                 // Loop over all the blocks of the global domain
-                for (label_t bz = 0; bz < mesh.nBlocks<axis::Z>(); bz++)
+                for (device::label_t bz = 0; bz < mesh.nBlocks<axis::Z>(); bz++)
                 {
-                    for (label_t by = 0; by < mesh.nBlocks<axis::Y>(); by++)
+                    for (device::label_t by = 0; by < mesh.nBlocks<axis::Y>(); by++)
                     {
-                        for (label_t bx = 0; bx < mesh.nBlocks<axis::X>(); bx++)
+                        for (device::label_t bx = 0; bx < mesh.nBlocks<axis::X>(); bx++)
                         {
                             // Handle the ghost cells for this block
                             const blockLabel Bx(bx, by, bz);
@@ -284,21 +284,21 @@ namespace LBM
 
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
-                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, coeff>();
+                constexpr const thread::array<device::label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, coeff>();
 
                 // For all velocity coefficients on this face
-                for (label_t i = 0; i < VelocitySet::QF(); i++)
+                for (device::label_t i = 0; i < VelocitySet::QF(); i++)
                 {
                     // Second perpendicular axis
-                    for (label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>()>(); tb++)
+                    for (device::label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>()>(); tb++)
                     {
                         // First perpendicular axis
-                        for (label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>()>(); ta++)
+                        for (device::label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>()>(); ta++)
                         {
                             // Recover the 3D thread coordinates from the orthogonals, the axis and the normal coefficient
                             const blockLabel Tx = axis::to_3d<alpha, coeff>(ta, tb);
 
-                            const label_t base = host::idx(Tx, Bx, mesh);
+                            const device::label_t base = host::idx(Tx, Bx, mesh);
 
                             const thread::array<scalar_t, VelocitySet::Q()> pop = VelocitySet::reconstruct(
                                 {rho[base] + rho0(),
@@ -312,7 +312,7 @@ namespace LBM
                                  m_yz[base],
                                  m_zz[base]});
 
-                            const label_t j = host::idxPop<alpha, VelocitySet::QF()>(i, Tx, Bx, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+                            const device::label_t j = host::idxPop<alpha, VelocitySet::QF()>(i, Tx, Bx, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
 
                             if (j >= face.size())
                             {

@@ -67,9 +67,9 @@ namespace LBM
              * @param[in] label A dim3 struct containing the point indices
              **/
             __device__ [[nodiscard]] inline constexpr pointLabel_t(const dim3 &label) noexcept
-                : x(static_cast<label_t>(label.x)),
-                  y(static_cast<label_t>(label.y)),
-                  z(static_cast<label_t>(label.z)) {}
+                : x(static_cast<device::label_t>(label.x)),
+                  y(static_cast<device::label_t>(label.y)),
+                  z(static_cast<device::label_t>(label.z)) {}
 
             /**
              * @brief Constructor for pointLabel_t
@@ -77,14 +77,14 @@ namespace LBM
              * @param[in] Y The point index in the y-direction
              * @param[in] Z The point index in the z-direction
              **/
-            __device__ [[nodiscard]] inline constexpr pointLabel_t(const label_t X, const label_t Y, const label_t Z) noexcept
+            __device__ [[nodiscard]] inline constexpr pointLabel_t(const device::label_t X, const device::label_t Y, const device::label_t Z) noexcept
                 : x(X),
                   y(Y),
                   z(Z) {}
 
-            const label_t x;
-            const label_t y;
-            const label_t z;
+            const device::label_t x;
+            const device::label_t y;
+            const device::label_t z;
         };
 
         /**
@@ -121,7 +121,7 @@ namespace LBM
             /**
              * @brief Get the size of the memory allocation for this partition of the global mesh for a single field
              **/
-            __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
+            __host__ [[nodiscard]] inline constexpr device::label_t size() const noexcept
             {
                 return size_;
             }
@@ -147,7 +147,7 @@ namespace LBM
              **/
             const deviceIndex_t deviceID_;
 
-            const label_t size_;
+            const device::label_t size_;
 
             /**
              * @brief Computes the device ID assigned to a mesh partition
@@ -162,14 +162,14 @@ namespace LBM
             {
                 // Calculate how many blocks each GPU gets in each dimension
                 // Using ceiling division to distribute blocks as evenly as possible
-                const label_t blocksPerDevicex = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
-                const label_t blocksPerDevicey = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
-                const label_t blocksPerDevicez = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
+                const device::label_t blocksPerDevicex = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
+                const device::label_t blocksPerDevicey = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
+                const device::label_t blocksPerDevicez = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
 
                 // Determine which GPU partition this block belongs to
-                const label_t gpuX = blockOffsets.nx / blocksPerDevicex;
-                const label_t gpuY = blockOffsets.ny / blocksPerDevicey;
-                const label_t gpuZ = blockOffsets.nz / blocksPerDevicez;
+                const device::label_t gpuX = blockOffsets.nx / blocksPerDevicex;
+                const device::label_t gpuY = blockOffsets.ny / blocksPerDevicey;
+                const device::label_t gpuZ = blockOffsets.nz / blocksPerDevicez;
 
                 // Calculate and return GPU device ID
                 return static_cast<deviceIndex_t>(gpuX + gpuY * nGPUs.nx + gpuZ * nGPUs.nx * nGPUs.ny);

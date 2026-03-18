@@ -57,13 +57,13 @@ SourceFiles
 namespace LBM
 {
     template <typename T>
-    __host__ void allocateMessage(const name_t &functionName, const std::size_t nPoints, const T *ptr) noexcept
+    __host__ void allocateMessage(const name_t &functionName, const host::label_t nPoints, const T *ptr) noexcept
     {
         std::cout << "Allocated " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " to address " << ptr << " (current device: " << GPU::current_ordinal() << ")" << std::endl;
     }
 
     template <typename T>
-    __host__ void copyMessage(const name_t &functionName, const std::size_t nPoints, const T *srcPtr, const T *destPtr) noexcept
+    __host__ void copyMessage(const name_t &functionName, const host::label_t nPoints, const T *srcPtr, const T *destPtr) noexcept
     {
         std::cout << "Copied " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " from address " << srcPtr << " to address " << destPtr << " (current device: " << GPU::current_ordinal() << ")" << std::endl;
     }
@@ -77,7 +77,7 @@ namespace LBM
          * @param[in] nPoints The number of points of type T to be allocated
          **/
         template <typename T>
-        __host__ void allocateMemory(T **ptr, const std::size_t nPoints) noexcept
+        __host__ void allocateMemory(T **ptr, const host::label_t nPoints) noexcept
         {
             errorHandler::check(cudaMallocHost(ptr, sizeof(T) * nPoints));
         }
@@ -90,7 +90,7 @@ namespace LBM
          * @return A pointer to a block of pinned memory on the host, all initialised to val
          **/
         template <typename T>
-        __host__ [[nodiscard]] T *allocate(const std::size_t nPoints, const T val) noexcept
+        __host__ [[nodiscard]] T *allocate(const host::label_t nPoints, const T val) noexcept
         {
             T *ptr;
 
@@ -116,7 +116,7 @@ namespace LBM
          * @throws std::runtime_error if CUDA memory copy fails or if the pointer is null
          **/
         template <typename T>
-        __host__ void to_host(const T *const ptrRestrict devPtr, T *const ptrRestrict hostPtr, const label_t fieldIndex, const std::size_t nPoints) noexcept
+        __host__ void to_host(const T *const ptrRestrict devPtr, T *const ptrRestrict hostPtr, const device::label_t fieldIndex, const host::label_t nPoints) noexcept
         {
             errorHandler::check(cudaMemcpy(hostPtr + (fieldIndex * nPoints), devPtr, nPoints * sizeof(T), cudaMemcpyDeviceToHost));
 
@@ -135,7 +135,7 @@ namespace LBM
          * @throws std::runtime_error if CUDA memory copy fails
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> to_host(const T *const ptrRestrict devPtr, const std::size_t nPoints) noexcept
+        __host__ [[nodiscard]] const std::vector<T> to_host(const T *const ptrRestrict devPtr, const host::label_t nPoints) noexcept
         {
             std::vector<T> hostFields(nPoints, 0);
 
@@ -155,7 +155,7 @@ namespace LBM
          * @throws std::runtime_error if CUDA allocation fails
          **/
         template <typename T>
-        __host__ void allocateMemory(T **ptr, const std::size_t nPoints) noexcept
+        __host__ void allocateMemory(T **ptr, const host::label_t nPoints) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 
@@ -173,7 +173,7 @@ namespace LBM
          * @note Verbose mode prints allocation details
          **/
         template <typename T>
-        __host__ [[nodiscard]] T *allocate(const std::size_t nPoints) noexcept
+        __host__ [[nodiscard]] T *allocate(const host::label_t nPoints) noexcept
         {
             T *ptr;
 
@@ -197,7 +197,7 @@ namespace LBM
          * @param[in] deviceID The device on which to allocate the memory
          **/
         template <typename T>
-        __host__ [[nodiscard]] T *allocate(const std::size_t nPoints, const deviceIndex_t deviceID) noexcept
+        __host__ [[nodiscard]] T *allocate(const host::label_t nPoints, const deviceIndex_t deviceID) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 
@@ -242,7 +242,7 @@ namespace LBM
          * @note Verbose mode prints copy details
          **/
         template <typename T>
-        __host__ void copy(T *const devPtr, const T *const ptrRestrict hostPtr, const std::size_t nPoints) noexcept
+        __host__ void copy(T *const devPtr, const T *const ptrRestrict hostPtr, const host::label_t nPoints) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 
@@ -257,7 +257,7 @@ namespace LBM
         }
 
         template <typename T>
-        __host__ void copy(T *const devPtr, const T *const ptrRestrict hostPtr, const std::size_t nPoints, const deviceIndex_t deviceID) noexcept
+        __host__ void copy(T *const devPtr, const T *const ptrRestrict hostPtr, const host::label_t nPoints, const deviceIndex_t deviceID) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 
@@ -341,7 +341,7 @@ namespace LBM
          * @throws std::runtime_error if CUDA operations fail
          **/
         template <typename T>
-        __host__ [[nodiscard]] T *allocateArray(const label_t nPoints, const T val) noexcept
+        __host__ [[nodiscard]] T *allocateArray(const device::label_t nPoints, const T val) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 
@@ -363,7 +363,7 @@ namespace LBM
          * @param[in] deviceID The device on which to allocate the memory
          **/
         template <typename T>
-        __host__ [[nodiscard]] T *allocateArray(const label_t nPoints, const T val, const deviceIndex_t deviceID) noexcept
+        __host__ [[nodiscard]] T *allocateArray(const device::label_t nPoints, const T val, const deviceIndex_t deviceID) noexcept
         {
             errorHandler::check(cudaDeviceSynchronize());
 

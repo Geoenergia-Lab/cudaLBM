@@ -112,7 +112,7 @@ namespace LBM
              * @param[in] i Index of the GPU (virtual device index).
              * @return Const pointer to device memory.
              **/
-            __device__ __host__ [[nodiscard]] inline const T *constPtr(const label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline const T *constPtr(const device::label_t i) const noexcept
             {
                 return ptr_[i];
             }
@@ -122,7 +122,7 @@ namespace LBM
              * @param[in] i Index of the GPU (virtual device index).
              * @return Pointer to device memory.
              **/
-            __device__ __host__ [[nodiscard]] inline T *ptr(const label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline T *ptr(const device::label_t i) noexcept
             {
                 return ptr_[i];
             }
@@ -132,30 +132,30 @@ namespace LBM
              * @param[in] i Index of the GPU (virtual device index).
              * @return Reference to the pointer (host side).
              **/
-            __host__ [[nodiscard]] inline constexpr T * ptrRestrict & ptrRef(const label_t i) noexcept
+            __host__ [[nodiscard]] inline constexpr T * ptrRestrict & ptrRef(const device::label_t i) noexcept
             {
                 return ptr_[i];
             }
 
         private:
-            template <const axis::type alpha, const label_t QF>
-            __host__ [[nodiscard]] static inline label_t idxPopTest(
-                const label_t pop,
+            template <const axis::type alpha, const device::label_t QF>
+            __host__ [[nodiscard]] static inline device::label_t idxPopTest(
+                const device::label_t pop,
                 const threadLabel &Tx,
                 const blockLabel &Bx,
-                const label_t nxBlocks,
-                const label_t nyBlocks) noexcept
+                const device::label_t nxBlocks,
+                const device::label_t nyBlocks) noexcept
             {
                 return Tx.value<axis::orthogonal<alpha, 0>()>() + block::n<axis::orthogonal<alpha, 0>()>() * (Tx.value<axis::orthogonal<alpha, 1>()>() + block::n<axis::orthogonal<alpha, 1>()>() * (pop + QF * (Bx.x + nxBlocks * (Bx.y + nyBlocks * Bx.z))));
             }
 
             template <const axis::type alpha>
-            __host__ [[nodiscard]] static inline constexpr std::size_t AllocationSize(
-                const label_t nxBlocksTrue,
-                const label_t nyBlocksTrue,
-                const label_t nzBlocksTrue) noexcept
+            __host__ [[nodiscard]] static inline constexpr host::label_t AllocationSize(
+                const device::label_t nxBlocksTrue,
+                const device::label_t nyBlocksTrue,
+                const device::label_t nzBlocksTrue) noexcept
             {
-                return VelocitySet::template QF<std::size_t>() * ((static_cast<std::size_t>(nxBlocksTrue) * static_cast<std::size_t>(nyBlocksTrue) * static_cast<std::size_t>(nzBlocksTrue) * block::nx<std::size_t>() * block::ny<std::size_t>() * block::nz<std::size_t>()) / block::n<alpha, std::size_t>());
+                return VelocitySet::template QF<host::label_t>() * ((static_cast<host::label_t>(nxBlocksTrue) * static_cast<host::label_t>(nyBlocksTrue) * static_cast<host::label_t>(nzBlocksTrue) * block::nx<host::label_t>() * block::ny<host::label_t>() * block::nz<host::label_t>()) / block::n<alpha, host::label_t>());
             }
 
             template <const axis::type alpha>
@@ -181,40 +181,40 @@ namespace LBM
             __host__ [[nodiscard]] static const std::vector<scalar_t> halo_partition(
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
-                const label_t GPU_x,
-                const label_t GPU_y,
-                const label_t GPU_z)
+                const device::label_t GPU_x,
+                const device::label_t GPU_y,
+                const device::label_t GPU_z)
             {
                 // Get the number of non-halo blocks per device
-                const label_t nxBlocksPerGPU = mesh.blocksPerDevice<axis::X>();
-                const label_t nyBlocksPerGPU = mesh.blocksPerDevice<axis::Y>();
-                const label_t nzBlocksPerGPU = mesh.blocksPerDevice<axis::Z>();
+                const device::label_t nxBlocksPerGPU = mesh.blocksPerDevice<axis::X>();
+                const device::label_t nyBlocksPerGPU = mesh.blocksPerDevice<axis::Y>();
+                const device::label_t nzBlocksPerGPU = mesh.blocksPerDevice<axis::Z>();
 
                 // So, the Z allocation size is nz blocks + haloHasExtraFace
-                const label_t nxBlocksTrue = nxBlocksPerGPU;
-                const label_t nyBlocksTrue = nyBlocksPerGPU;
-                const label_t nzBlocksTrue = nzBlocksPerGPU;
+                const device::label_t nxBlocksTrue = nxBlocksPerGPU;
+                const device::label_t nyBlocksTrue = nyBlocksPerGPU;
+                const device::label_t nzBlocksTrue = nzBlocksPerGPU;
 
                 // Get the starting block indices for this GPU
                 // These indices are not offset to account for the extra halo
-                const label_t bx0 = GPU_x * nxBlocksPerGPU;
-                const label_t by0 = GPU_y * nyBlocksPerGPU;
-                const label_t bz0 = GPU_z * nzBlocksPerGPU;
+                const device::label_t bx0 = GPU_x * nxBlocksPerGPU;
+                const device::label_t by0 = GPU_y * nyBlocksPerGPU;
+                const device::label_t bz0 = GPU_z * nzBlocksPerGPU;
 
-                const std::size_t partitionAllocationSize = AllocationSize<alpha>(nxBlocksTrue, nyBlocksTrue, nzBlocksTrue);
+                const host::label_t partitionAllocationSize = AllocationSize<alpha>(nxBlocksTrue, nyBlocksTrue, nzBlocksTrue);
                 std::vector<scalar_t> haloAlloc(partitionAllocationSize, 0);
 
-                for (label_t bz = 0; bz < nzBlocksTrue; bz++)
+                for (device::label_t bz = 0; bz < nzBlocksTrue; bz++)
                 {
-                    for (label_t by = 0; by < nyBlocksTrue; by++)
+                    for (device::label_t by = 0; by < nyBlocksTrue; by++)
                     {
-                        for (label_t bx = 0; bx < nxBlocksTrue; bx++)
+                        for (device::label_t bx = 0; bx < nxBlocksTrue; bx++)
                         {
                             // Second perpendicular axis
-                            for (label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>()>(); tb++)
+                            for (device::label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>()>(); tb++)
                             {
                                 // First perpendicular axis
-                                for (label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>()>(); ta++)
+                                for (device::label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>()>(); ta++)
                                 {
                                     // Get the 3d indices on the face
                                     // Note: This call might not be correct, I am not sure if it should be + or - coeff
@@ -228,12 +228,12 @@ namespace LBM
                                     const blockLabel Bx_global(bx0 + bx, by0 + by, bz0 + bz);
 
                                     // Local index in haloAlloc (same layout, but using local block dimensions)
-                                    for (label_t i = 0; i < VelocitySet::QF(); i++)
+                                    for (device::label_t i = 0; i < VelocitySet::QF(); i++)
                                     {
                                         // Linear index in the global matrix
-                                        const label_t global_idx = idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx_global, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+                                        const device::label_t global_idx = idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx_global, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
 
-                                        const label_t local_idx = idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx, nxBlocksTrue, nyBlocksTrue);
+                                        const device::label_t local_idx = idxPopTest<alpha, VelocitySet::QF()>(i, Tx, Bx, nxBlocksTrue, nyBlocksTrue);
 
                                         haloAlloc[local_idx] = hostArrayGlobal[global_idx];
                                     }
@@ -251,7 +251,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
                 const programControl &programCtrl,
-                const std::size_t globalSize)
+                const host::label_t globalSize)
             {
                 T **hostPtrsToDevice = host::allocate<T *>(mesh.nDevices().size(), nullptr);
 
@@ -259,16 +259,16 @@ namespace LBM
                 if ((mesh.nDevices<axis::X>() == 1) && (mesh.nDevices<axis::Y>() == 1) && (mesh.nDevices<axis::Z>() == 1))
                 {
                     // We can just go straight to the allocation and copy step
-                    const label_t virtualDeviceIndex = GPU::idx(static_cast<label_t>(0), static_cast<label_t>(0), static_cast<label_t>(0), mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                    const device::label_t virtualDeviceIndex = GPU::idx(static_cast<device::label_t>(0), static_cast<device::label_t>(0), static_cast<device::label_t>(0), mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
                     hostPtrsToDevice[virtualDeviceIndex] = allocate_halo_segment(hostArrayGlobal, virtualDeviceIndex, programCtrl, globalSize);
                 }
                 else
                 {
                     GPU::forAll(
                         mesh.nDevices(),
-                        [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                        [&](const device::label_t GPU_x, const device::label_t GPU_y, const device::label_t GPU_z)
                         {
-                            const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                            const device::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
 
                             errorHandler::check(cudaDeviceSynchronize());
                             errorHandler::check(cudaSetDevice(programCtrl.deviceList()[virtualDeviceIndex]));
@@ -303,9 +303,9 @@ namespace LBM
 
             __host__ [[nodiscard]] static T *allocate_halo_segment(
                 const T *hostArrayGlobal,
-                const label_t virtualDeviceIndex,
+                const device::label_t virtualDeviceIndex,
                 const programControl &programCtrl,
-                const std::size_t partitionAllocationSize)
+                const host::label_t partitionAllocationSize)
             {
                 T *devPtr = device::allocate<T>(partitionAllocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
 

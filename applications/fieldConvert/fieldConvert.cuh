@@ -83,7 +83,7 @@ namespace LBM
 
         // Create the error message with supported formats
         name_t errorMsg = "Unsupported conversion format: " + conversion + "\nSupported formats are: ";
-        for (std::size_t i = 0; i < supportedFormats.size(); ++i)
+        for (host::label_t i = 0; i < supportedFormats.size(); ++i)
         {
             if (i != 0)
             {
@@ -106,7 +106,7 @@ namespace LBM
         const name_t &fileNamePrefix,
         const programControl &programCtrl,
         const words_t &fieldNames,
-        const label_t timeStep)
+        const device::label_t timeStep)
     {
         // Construct from a custom field name
         if (programCtrl.input().isArgPresent("-fieldName"))
@@ -202,14 +202,14 @@ namespace LBM
     template <const axis::type alpha>
     __host__ [[nodiscard]] std::vector<std::vector<scalar_t>> initialiseSlice(
         const host::latticeMesh &mesh,
-        const std::size_t nFields)
+        const host::label_t nFields)
     {
         axis::assertions::validate<alpha, axis::NOT_NULL>();
 
         return std::vector<std::vector<scalar_t>>(
             nFields,
             std::vector<scalar_t>(
-                mesh.dimension<axis::orthogonal<alpha, 0>(), std::size_t>() * mesh.dimension<axis::orthogonal<alpha, 1>(), std::size_t>(), 0));
+                mesh.dimension<axis::orthogonal<alpha, 0>(), host::label_t>() * mesh.dimension<axis::orthogonal<alpha, 1>(), host::label_t>(), 0));
     }
 
     template <const axis::type alpha>
@@ -236,24 +236,24 @@ namespace LBM
 
         // Get the "index" coordinate
         const scalar_t i = indexCoordinate<alpha>(mesh, pointCoordinate);
-        const std::size_t i_0 = static_cast<std::size_t>(std::floor(i));
-        const std::size_t i_1 = static_cast<std::size_t>(std::ceil(i));
+        const host::label_t i_0 = static_cast<host::label_t>(std::floor(i));
+        const host::label_t i_1 = static_cast<host::label_t>(std::ceil(i));
         const scalar_t weight = pointCoordinate - static_cast<scalar_t>(i_0);
 
         std::vector<std::vector<scalar_t>> cutPlane = initialiseSlice<alpha>(mesh, fields.size());
 
         if constexpr (alpha == axis::X)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t z = 0; z < mesh.dimension<axis::Z, std::size_t>(); z++)
+                for (host::label_t z = 0; z < mesh.dimension<axis::Z, host::label_t>(); z++)
                 {
-                    for (std::size_t y = 0; y < mesh.dimension<axis::Y, std::size_t>(); y++)
+                    for (host::label_t y = 0; y < mesh.dimension<axis::Y, host::label_t>(); y++)
                     {
-                        const scalar_t f0 = fields[field][(global::idx<std::size_t>(i_0, y, z, mesh.dimension<axis::X, std::size_t>(), mesh.dimension<axis::Y, std::size_t>()))];
-                        const scalar_t f1 = fields[field][(global::idx<std::size_t>(i_1, y, z, mesh.dimension<axis::X, std::size_t>(), mesh.dimension<axis::Y, std::size_t>()))];
+                        const scalar_t f0 = fields[field][(global::idx<host::label_t>(i_0, y, z, mesh.dimension<axis::X, host::label_t>(), mesh.dimension<axis::Y, host::label_t>()))];
+                        const scalar_t f1 = fields[field][(global::idx<host::label_t>(i_1, y, z, mesh.dimension<axis::X, host::label_t>(), mesh.dimension<axis::Y, host::label_t>()))];
 
-                        cutPlane[field][y + (z * mesh.dimension<axis::Y, std::size_t>())] = linearInterpolate(f0, f1, weight);
+                        cutPlane[field][y + (z * mesh.dimension<axis::Y, host::label_t>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
@@ -261,15 +261,15 @@ namespace LBM
         }
         if constexpr (alpha == axis::Y)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t z = 0; z < mesh.dimension<axis::Z, std::size_t>(); z++)
+                for (host::label_t z = 0; z < mesh.dimension<axis::Z, host::label_t>(); z++)
                 {
-                    for (std::size_t x = 0; x < mesh.dimension<axis::X, std::size_t>(); x++)
+                    for (host::label_t x = 0; x < mesh.dimension<axis::X, host::label_t>(); x++)
                     {
-                        const scalar_t f0 = fields[field][(global::idx<std::size_t>(x, i_0, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
-                        const scalar_t f1 = fields[field][(global::idx<std::size_t>(x, i_1, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
-                        cutPlane[field][x + (z * mesh.dimension<axis::X, std::size_t>())] = linearInterpolate(f0, f1, weight);
+                        const scalar_t f0 = fields[field][(global::idx<host::label_t>(x, i_0, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
+                        const scalar_t f1 = fields[field][(global::idx<host::label_t>(x, i_1, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
+                        cutPlane[field][x + (z * mesh.dimension<axis::X, host::label_t>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
@@ -277,15 +277,15 @@ namespace LBM
         }
         if constexpr (alpha == axis::Z)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t y = 0; y < mesh.dimension<axis::Y, std::size_t>(); y++)
+                for (host::label_t y = 0; y < mesh.dimension<axis::Y, host::label_t>(); y++)
                 {
-                    for (std::size_t x = 0; x < mesh.dimension<axis::X, std::size_t>(); x++)
+                    for (host::label_t x = 0; x < mesh.dimension<axis::X, host::label_t>(); x++)
                     {
-                        const scalar_t f0 = fields[field][(global::idx<std::size_t>(x, y, i_0, mesh.dimension<axis::X, std::size_t>(), mesh.dimension<axis::Y, std::size_t>()))];
-                        const scalar_t f1 = fields[field][(global::idx<std::size_t>(x, y, i_1, mesh.dimension<axis::X, std::size_t>(), mesh.dimension<axis::Y, std::size_t>()))];
-                        cutPlane[field][x + (y * mesh.dimension<axis::X, std::size_t>())] = linearInterpolate(f0, f1, weight);
+                        const scalar_t f0 = fields[field][(global::idx<host::label_t>(x, y, i_0, mesh.dimension<axis::X, host::label_t>(), mesh.dimension<axis::Y, host::label_t>()))];
+                        const scalar_t f1 = fields[field][(global::idx<host::label_t>(x, y, i_1, mesh.dimension<axis::X, host::label_t>(), mesh.dimension<axis::Y, host::label_t>()))];
+                        cutPlane[field][x + (y * mesh.dimension<axis::X, host::label_t>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
@@ -364,7 +364,7 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
+    __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const device::label_t nameIndex, const bool cutPlane)
     {
         // Get the file name at the present time step
         if (cutPlane)

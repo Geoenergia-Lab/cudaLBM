@@ -83,15 +83,15 @@ namespace LBM
             const LatticeMesh &mesh,
             const words_t &varNames,
             const T *const ptrRestrict fields,
-            const label_t timeStep,
-            const label_t meanCount)
+            const device::label_t timeStep,
+            const device::label_t meanCount)
         {
             types::assertions::validate<T>();
             endian::assertions::validate();
 
-            const uintmax_t nVars = static_cast<uintmax_t>(varNames.size());
-            const uintmax_t nPoints = mesh.template size<uintmax_t>();
-            const uintmax_t expectedSize = nPoints * nVars;
+            const host::label_t nVars = static_cast<host::label_t>(varNames.size());
+            const host::label_t nPoints = mesh.template size<host::label_t>();
+            const host::label_t expectedSize = nPoints * nVars;
 
             // Check if there is enough disk space to store the file
             fileSystem::diskSpaceAssertion<
@@ -154,9 +154,9 @@ namespace LBM
             out << std::endl;
 
             // Write binary data with safe size conversion
-            const std::size_t byteSize = expectedSize * sizeof(T);
+            const host::label_t byteSize = expectedSize * sizeof(T);
 
-            if (byteSize > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteSize > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Data size exceeds maximum stream size");
             }

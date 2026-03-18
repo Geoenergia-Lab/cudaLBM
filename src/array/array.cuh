@@ -119,10 +119,10 @@ namespace LBM
      * @param[in] target The line content that stops counting (excluded).
      * @return Number of lines read before target; if target not found, returns total lines.
      **/
-    __host__ [[nodiscard]] std::size_t line_count(std::ifstream &file, const name_t &target)
+    __host__ [[nodiscard]] host::label_t line_count(std::ifstream &file, const name_t &target)
     {
         name_t line;
-        std::size_t result = 0;
+        host::label_t result = 0;
         // bool found = false;
 
         while (std::getline(file, line))
@@ -161,7 +161,7 @@ namespace LBM
 
         // Count lines before target
         // If target not found, lineCount already holds total lines in file.
-        const std::size_t lineCount = line_count(file, target);
+        const host::label_t lineCount = line_count(file, target);
 
         // Read and store exactly lineCount lines
         file.clear();                 // clear EOF and error flags
@@ -171,7 +171,7 @@ namespace LBM
         std::vector<std::string> lines;
         lines.reserve(lineCount); // allocate once
 
-        for (std::size_t i = 0; i < lineCount; i++)
+        for (host::label_t i = 0; i < lineCount; i++)
         {
             std::getline(file, line);
             lines.push_back(std::move(line));
@@ -183,9 +183,9 @@ namespace LBM
     /**
      * @brief Initialises the mean counter from a file.
      * @param[in] programCtrl The program control object
-     * @returns The mean counter as a label_t.
+     * @returns The mean counter as a device::label_t.
      **/
-    __host__ [[nodiscard]] label_t initialiseMeanCount(const programControl &programCtrl)
+    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const programControl &programCtrl)
     {
         if (fileIO::hasIndexedFiles(programCtrl.caseName()))
         {
@@ -195,7 +195,7 @@ namespace LBM
 
             const fileIO::fieldInformation fieldInfo(string::extractBlock(lines, "fieldInformation", 0));
 
-            return static_cast<label_t>(fieldInfo.meanCount());
+            return static_cast<device::label_t>(fieldInfo.meanCount());
         }
         else
         {

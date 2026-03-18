@@ -134,14 +134,14 @@ namespace LBM
             __host__ [[nodiscard]] static T *allocate_device_segment(
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
-                const label_t GPU_x,
-                const label_t GPU_y,
-                const label_t GPU_z,
+                const device::label_t GPU_x,
+                const device::label_t GPU_y,
+                const device::label_t GPU_z,
                 const programControl &programCtrl,
-                const label_t allocationSize)
+                const device::label_t allocationSize)
             {
-                const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
-                const label_t startIndex = virtualDeviceIndex * allocationSize;
+                const device::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                const device::label_t startIndex = virtualDeviceIndex * allocationSize;
 
                 T *devPtr = device::allocate<T>(allocationSize, programCtrl.deviceList()[virtualDeviceIndex]);
 
@@ -162,15 +162,15 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
                 const programControl &programCtrl,
-                const label_t allocationSize)
+                const device::label_t allocationSize)
             {
                 T **hostPtrsToDevice = host::allocate<T *>(mesh.nDevices().size(), nullptr);
 
                 GPU::forAll(
                     mesh.nDevices(),
-                    [&](const label_t GPU_x, const label_t GPU_y, const label_t GPU_z)
+                    [&](const device::label_t GPU_x, const device::label_t GPU_y, const device::label_t GPU_z)
                     {
-                        const label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                        const device::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
                         hostPtrsToDevice[virtualDeviceIndex] = allocate_device_segment(mesh, hostArrayGlobal, GPU_x, GPU_y, GPU_z, programCtrl, allocationSize);
                     });
 
@@ -207,9 +207,9 @@ namespace LBM
 
                 GPU::forAll(
                     mesh_.nDevices(),
-                    [&](std::size_t GPU_x, std::size_t GPU_y, std::size_t GPU_z)
+                    [&](host::label_t GPU_x, host::label_t GPU_y, host::label_t GPU_z)
                     {
-                        const std::size_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh_.nDevices<axis::X, std::size_t>(), mesh_.nDevices<axis::Y, std::size_t>());
+                        const host::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh_.nDevices<axis::X, host::label_t>(), mesh_.nDevices<axis::Y, host::label_t>());
                         if (ptr_[virtualDeviceIndex] != nullptr)
                         {
                             errorHandler::check(cudaDeviceSynchronize());

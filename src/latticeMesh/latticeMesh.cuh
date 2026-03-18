@@ -71,15 +71,15 @@ namespace LBM
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        __host__ [[nodiscard]] inline label_t idx(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
+        __host__ [[nodiscard]] inline device::label_t idx(
+            const device::label_t tx, const device::label_t ty, const device::label_t tz,
+            const device::label_t bx, const device::label_t by, const device::label_t bz,
             const latticeMesh &mesh) noexcept
         {
             return idx(tx, ty, tz, bx, by, bz, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
         }
 
-        __host__ [[nodiscard]] inline label_t idx(
+        __host__ [[nodiscard]] inline device::label_t idx(
             const threadLabel &Tx,
             const blockLabel &Bx,
             const latticeMesh &mesh) noexcept

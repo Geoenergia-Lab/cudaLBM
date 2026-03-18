@@ -78,13 +78,13 @@ namespace LBM
              * @param[in] nVars Number of variables
              */
             template <typename T, const T Present, const format Format>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz, const host::label_t nVars) noexcept
             {
                 static_assert(Format == ASCII || Format == BINARY, "Format must be ASCII or BINARY");
 
                 if constexpr (static_cast<bool>(Present))
                 {
-                    const uintmax_t nElements = nx * ny * nz;
+                    const host::label_t nElements = nx * ny * nz;
                     if constexpr (Format == BINARY)
                     {
                         return nVars * nElements * sizeof(scalar_t);
@@ -116,12 +116,12 @@ namespace LBM
              * @tparam Elements Whether elements are included
              * @tparam N Number of labels per element
              */
-            template <typename T, const T Present, const uintmax_t N>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            template <typename T, const T Present, const host::label_t N>
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
             {
                 if constexpr (static_cast<bool>(Present))
                 {
-                    return N * (nx - 1) * (ny - 1) * (nz - 1) * sizeof(label_t);
+                    return N * (nx - 1) * (ny - 1) * (nz - 1) * sizeof(device::label_t);
                 }
                 else
                 {
@@ -146,7 +146,7 @@ namespace LBM
              * @param[in] nVars Number of variables
              */
             template <const contained Fields, const format Format>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz, const host::label_t nVars) noexcept
             {
                 return scalar::usage<contained, Fields, Format>(nx, ny, nz, nVars);
             }
@@ -167,7 +167,7 @@ namespace LBM
              * @param[in] nx, ny, nz Mesh dimensions
              */
             template <const contained Points, const format Format>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
             {
                 return scalar::usage<contained, Points, Format>(nx, ny, nz, 3);
             }
@@ -187,7 +187,7 @@ namespace LBM
              * @param[in] nx, ny, nz Mesh dimensions
              */
             template <const contained Elements>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
             {
                 return connectivity::usage<contained, Elements, 8>(nx, ny, nz);
             }
@@ -207,7 +207,7 @@ namespace LBM
              * @param[in] nx, ny, nz Mesh dimensions
              */
             template <const contained Offsets>
-            __host__ [[nodiscard]] inline constexpr uintmax_t usage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz) noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
             {
                 return connectivity::usage<contained, Offsets, 1>(nx, ny, nz);
             }
@@ -225,7 +225,7 @@ namespace LBM
          * @return Total bytes required
          */
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets>
-        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const uintmax_t nx, const uintmax_t ny, const uintmax_t nz, const uintmax_t nVars) noexcept
+        __host__ [[nodiscard]] inline constexpr host::label_t expectedDiskUsage(const host::label_t nx, const host::label_t ny, const host::label_t nz, const host::label_t nVars) noexcept
         {
             return fields::usage<Fields, Format>(nx, ny, nz, nVars) + points::usage<Points, Format>(nx, ny, nz) + elements::usage<Elements>(nx, ny, nz) + offsets::usage<Offsets>(nx, ny, nz);
         }
@@ -233,15 +233,15 @@ namespace LBM
         /**
          * @brief Overload for usage with a mesh object.
          * @tparam Format,fields, points, elements, offsets Same as above.
-         * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, uintmax_t>(), etc.).
+         * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, host::label_t>(), etc.).
          * @param[in] mesh The lattice mesh.
          * @param[in] nVars Number of field variables.
          * @return Total bytes required.
          */
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
-        __host__ [[nodiscard]] inline constexpr uintmax_t expectedDiskUsage(const LatticeMesh &mesh, const uintmax_t nVars) noexcept
+        __host__ [[nodiscard]] inline constexpr host::label_t expectedDiskUsage(const LatticeMesh &mesh, const host::label_t nVars) noexcept
         {
-            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<uintmax_t>(mesh.template dimension<axis::X, uintmax_t>()), static_cast<uintmax_t>(mesh.template dimension<axis::Y, uintmax_t>()), static_cast<uintmax_t>(mesh.template dimension<axis::Z, uintmax_t>()), nVars);
+            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<host::label_t>(mesh.template dimension<axis::X, host::label_t>()), static_cast<host::label_t>(mesh.template dimension<axis::Y, host::label_t>()), static_cast<host::label_t>(mesh.template dimension<axis::Z, host::label_t>()), nVars);
         }
 
         /**
@@ -249,7 +249,7 @@ namespace LBM
          * @param[in] dir The directory to query
          * @return Available bytes.
          */
-        __host__ [[nodiscard]] inline uintmax_t availableDiskSpace(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] inline host::label_t availableDiskSpace(const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             std::error_code ec;
             const std::filesystem::space_info space = std::filesystem::space(dir, ec);
@@ -259,7 +259,7 @@ namespace LBM
         /**
          * @brief Checks if at least `required` bytes are available on the disk of `dir`.
          */
-        __host__ [[nodiscard]] inline bool hasEnoughSpace(const uintmax_t required, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] inline bool hasEnoughSpace(const host::label_t required, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
             return required < availableDiskSpace(dir);
         }
@@ -267,7 +267,7 @@ namespace LBM
         /**
          * @brief Throws a runtime_error due to insufficient disk space
          */
-        __host__ void insufficientDiskSpace(const std::string &fileName, const uintmax_t expected, const uintmax_t available = availableDiskSpace())
+        __host__ void insufficientDiskSpace(const std::string &fileName, const host::label_t expected, const host::label_t available = availableDiskSpace())
         {
             throw std::runtime_error("Insufficient disk space to write " + fileName + "\nRequired: " + std::to_string(expected) + "\nAvailable: " + std::to_string(available));
         }
@@ -275,7 +275,7 @@ namespace LBM
         /**
          * @brief Throws if insufficient disk space.
          */
-        __host__ void ensureDiskSpace(const std::string &fileName, const uintmax_t required, const uintmax_t available = availableDiskSpace())
+        __host__ void ensureDiskSpace(const std::string &fileName, const host::label_t required, const host::label_t available = availableDiskSpace())
         {
             if (required > available)
             {
@@ -287,9 +287,9 @@ namespace LBM
          * @brief Check whether sufficient disk space exists for a given output config.
          */
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
-        __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const uintmax_t nVars, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
+        __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const host::label_t nVars, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
-            const uintmax_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
+            const host::label_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
             return hasEnoughSpace(needed, dir);
         }
 
@@ -297,9 +297,9 @@ namespace LBM
          * @brief Assert (throw) that sufficient disk space exists.
          */
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
-        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const uintmax_t nVars, const std::string &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
+        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const host::label_t nVars, const std::string &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
         {
-            const uintmax_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
+            const host::label_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
 
             ensureDiskSpace(fileName, needed, availableDiskSpace(dir));
         }
@@ -310,7 +310,7 @@ namespace LBM
          * @param[in] bytes Number of bytes
          */
         template <typename T>
-        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const uintmax_t bytes) noexcept
+        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const host::label_t bytes) noexcept
         {
             return static_cast<T>(static_cast<double>(bytes) / (1024.0 * 1024.0));
         }

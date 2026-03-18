@@ -138,7 +138,7 @@ namespace LBM
         void print() const noexcept
         {
             const words_t regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
-            for (std::size_t field = 0; field < regionNames.size(); field++)
+            for (host::label_t field = 0; field < regionNames.size(); field++)
             {
                 std::cout << regionNames[field] << ": " << values_[field]() << std::endl;
             }

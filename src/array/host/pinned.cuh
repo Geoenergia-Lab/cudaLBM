@@ -85,7 +85,7 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              **/
             __host__ [[nodiscard]] array(
-                const label_t nPoints,
+                const device::label_t nPoints,
                 const host::latticeMesh &mesh)
                 : arrayBase<T, VelocitySet, TimeType>("", mesh),
                   ptr_(host::allocate<T>(nPoints, 0)),
@@ -98,7 +98,7 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              **/
             __host__ [[nodiscard]] array(
-                const label_t nPoints,
+                const device::label_t nPoints,
                 const T val,
                 const host::latticeMesh &mesh)
                 : arrayBase<T, VelocitySet, TimeType>("", mesh),
@@ -128,7 +128,7 @@ namespace LBM
              * @param[in] idx Index (0‑based).
              * @return Reference to element.
              **/
-            __host__ [[nodiscard]] inline constexpr T &operator[](const label_t idx) noexcept
+            __host__ [[nodiscard]] inline constexpr T &operator[](const device::label_t idx) noexcept
             {
                 return ptr_[idx];
             }
@@ -138,7 +138,7 @@ namespace LBM
              * @param[in] idx Index (0‑based).
              * @return Const reference to element.
              **/
-            __host__ [[nodiscard]] inline constexpr const T &operator[](const label_t idx) const noexcept
+            __host__ [[nodiscard]] inline constexpr const T &operator[](const device::label_t idx) const noexcept
             {
                 return ptr_[idx];
             }
@@ -146,7 +146,7 @@ namespace LBM
             /**
              * @brief Get the number of elements.
              **/
-            __host__ [[nodiscard]] inline constexpr label_t size() const noexcept { return nPoints_; }
+            __host__ [[nodiscard]] inline constexpr device::label_t size() const noexcept { return nPoints_; }
 
             /**
              * @brief Copy data from a collection of device pointers into this array.
@@ -160,27 +160,27 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] virtualDeviceIndex Index of the GPU whose segment is being copied.
              **/
-            template <const label_t N>
+            template <const device::label_t N>
             __host__ void copy_from_device(
                 const device::ptrCollection<N, T> &devPtrs,
                 const host::latticeMesh &mesh,
-                const label_t virtualDeviceIndex)
+                const device::label_t virtualDeviceIndex)
             {
-                const label_t nxGPUs = mesh.nDevices<axis::X>();
-                const label_t nyGPUs = mesh.nDevices<axis::Y>();
-                const label_t nzGPUs = mesh.nDevices<axis::Z>();
+                const device::label_t nxGPUs = mesh.nDevices<axis::X>();
+                const device::label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const device::label_t nzGPUs = mesh.nDevices<axis::Z>();
 
-                const label_t nxPointsPerDevice = mesh.dimension<axis::X>() / nxGPUs;
-                const label_t nyPointsPerDevice = mesh.dimension<axis::Y>() / nyGPUs;
-                const label_t nzPointsPerDevice = mesh.dimension<axis::Z>() / nzGPUs;
-                const label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
+                const device::label_t nxPointsPerDevice = mesh.dimension<axis::X>() / nxGPUs;
+                const device::label_t nyPointsPerDevice = mesh.dimension<axis::Y>() / nyGPUs;
+                const device::label_t nzPointsPerDevice = mesh.dimension<axis::Z>() / nzGPUs;
+                const device::label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
 
                 if (mesh.size() * N > nPoints_)
                 {
                     throw std::runtime_error("Insufficient host array size");
                 }
 
-                for (label_t field = 0; field < N; ++field)
+                for (device::label_t field = 0; field < N; ++field)
                 {
                     errorHandler::check(cudaMemcpy(&(ptr_[(field * mesh.size()) + (virtualDeviceIndex * nPointsPerDevice)]), devPtrs[field], nPointsPerDevice * sizeof(T), cudaMemcpyDeviceToHost));
                 }
@@ -195,7 +195,7 @@ namespace LBM
             /**
              * @brief Number of elements
              **/
-            const label_t nPoints_;
+            const device::label_t nPoints_;
         };
     }
 }
