@@ -83,14 +83,14 @@ namespace LBM
             const LatticeMesh &mesh,
             const words_t &varNames,
             const T *const ptrRestrict fields,
-            const device::label_t timeStep,
-            const device::label_t meanCount)
+            const host::label_t timeStep,
+            const host::label_t meanCount)
         {
             types::assertions::validate<T>();
             endian::assertions::validate();
 
-            const host::label_t nVars = static_cast<host::label_t>(varNames.size());
-            const host::label_t nPoints = mesh.template size<host::label_t>();
+            const host::label_t nVars = varNames.size();
+            const host::label_t nPoints = mesh.size();
             const host::label_t expectedSize = nPoints * nVars;
 
             // Check if there is enough disk space to store the file

@@ -62,7 +62,7 @@ namespace LBM
              * @brief Get number of discrete velocity directions
              * @return 19 (number of directions in D3Q19 lattice)
              **/
-            template <typename T = device::label_t>
+            template <typename T = host::label_t>
             __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
             {
                 return 19;
@@ -72,7 +72,7 @@ namespace LBM
              * @brief Get number of velocity components on a lattice face
              * @return 5 (number of directions crossing each face in D3Q19)
              **/
-            template <typename T = device::label_t>
+            template <typename T = host::label_t>
             __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
             {
                 return 5;
@@ -106,7 +106,7 @@ namespace LBM
          * @brief Get number of discrete velocity directions
          * @return 19 (number of directions in D3Q19 lattice)
          **/
-        template <typename T = device::label_t>
+        template <typename T = host::label_t>
         __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
         {
             return vs::Q<T>();
@@ -116,7 +116,7 @@ namespace LBM
          * @brief Get number of velocity components on a lattice face
          * @return 5 (number of directions crossing each face in D3Q19)
          **/
-        template <typename T = device::label_t>
+        template <typename T = host::label_t>
         __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
         {
             return vs::QF<T>();
@@ -154,7 +154,7 @@ namespace LBM
          * @return Thread array of 19 weights in D3Q19 order
          **/
         template <typename T>
-        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, 19> w_q() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> w_q() noexcept
         {
             return {w_0<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_1<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>(), w_2<T>()};
         }

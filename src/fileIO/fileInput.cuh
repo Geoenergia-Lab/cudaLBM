@@ -342,7 +342,7 @@ namespace LBM
         template <typename T, class LatticeMesh>
         __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const std::vector<T> &fMom, const LatticeMesh &mesh)
         {
-            const host::label_t nNodes = mesh.template dimension<axis::X, host::label_t>() * mesh.template dimension<axis::Y, host::label_t>() * mesh.template dimension<axis::Z, host::label_t>();
+            const host::label_t nNodes = mesh.template dimension<axis::X>() * mesh.template dimension<axis::Y>() * mesh.template dimension<axis::Z>();
             if (fMom.size() % nNodes != 0)
             {
                 throw std::invalid_argument("fMom size (" + std::to_string(fMom.size()) + ") is not divisible by mesh points (" + std::to_string(nNodes) + ")");
@@ -351,13 +351,13 @@ namespace LBM
 
             std::vector<std::vector<T>> soa(nFields, std::vector<T>(nNodes, 0));
 
-            const host::label_t nxGPUs = mesh.template nDevices<axis::X, host::label_t>();
-            const host::label_t nyGPUs = mesh.template nDevices<axis::Y, host::label_t>();
-            const host::label_t nzGPUs = mesh.template nDevices<axis::Z, host::label_t>();
+            const host::label_t nxGPUs = mesh.template nDevices<axis::X>();
+            const host::label_t nyGPUs = mesh.template nDevices<axis::Y>();
+            const host::label_t nzGPUs = mesh.template nDevices<axis::Z>();
 
-            const host::label_t nxBlocksPerDevice = mesh.template nBlocks<axis::X, host::label_t>() / nxGPUs;
-            const host::label_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y, host::label_t>() / nyGPUs;
-            const host::label_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z, host::label_t>() / nzGPUs;
+            const host::label_t nxBlocksPerDevice = mesh.template nBlocks<axis::X>() / nxGPUs;
+            const host::label_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y>() / nyGPUs;
+            const host::label_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z>() / nzGPUs;
 
             const host::label_t pointsPerBlock = block::size<host::label_t>();
             const host::label_t nPointsPerDevice = nxBlocksPerDevice * nyBlocksPerDevice * nzBlocksPerDevice * pointsPerBlock;
@@ -366,7 +366,7 @@ namespace LBM
                 mesh.nDevices(),
                 [&](const host::label_t GPU_x, const host::label_t GPU_y, const host::label_t GPU_z)
                 {
-                    const host::label_t virtualDeviceIndex = GPU::idx<host::label_t>(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
+                    const host::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
                     host::forAll(
                         mesh.blocksPerDevice(),
@@ -378,7 +378,7 @@ namespace LBM
                             const host::label_t y = (GPU_y * nyBlocksPerDevice + by) * block::ny<host::label_t>() + ty;
                             const host::label_t z = (GPU_z * nzBlocksPerDevice + bz) * block::nz<host::label_t>() + tz;
 
-                            const host::label_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X, host::label_t>(), mesh.template dimension<axis::Y, host::label_t>());
+                            const host::label_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X>(), mesh.template dimension<axis::Y>());
 
                             // Local index within this GPU's storage (block‑major order)
                             const host::label_t blockLin = (bz * nyBlocksPerDevice + by) * nxBlocksPerDevice + bx;

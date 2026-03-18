@@ -156,9 +156,9 @@ namespace LBM
                 return 0;
             }
 
-            const host::label_t nPoints = mesh.dimension<axis::X, host::label_t>() * mesh.dimension<axis::Y, host::label_t>() * mesh.dimension<axis::Z, host::label_t>();
+            const host::label_t nPoints = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
 
-            const host::label_t nTime = programCtrl.nt<host::label_t>() - programCtrl.latestTime<host::label_t>() - 1;
+            const host::label_t nTime = programCtrl.nt() - programCtrl.latestTime() - 1;
 
             const host::label_t numerator = nPoints * nTime;
 

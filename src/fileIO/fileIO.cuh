@@ -125,9 +125,9 @@ namespace LBM
          * Parses files with pattern: {fileName}_{number}.LBMBin and extracts
          * the numeric portion as time indices.
          **/
-        __host__ [[nodiscard]] const std::vector<device::label_t> timeIndices(const name_t &fileName)
+        __host__ [[nodiscard]] const std::vector<host::label_t> timeIndices(const name_t &fileName)
         {
-            std::vector<device::label_t> indices;
+            std::vector<host::label_t> indices;
             const std::filesystem::path currentDir = std::filesystem::current_path();
             const name_t prefix = fileName + "_";
 
@@ -158,7 +158,7 @@ namespace LBM
 
                 try
                 {
-                    indices.push_back(LBM::string::extractParameter<device::label_t>(num_str));
+                    indices.push_back(LBM::string::extractParameter<host::label_t>(num_str));
                 }
                 catch (...)
                 {
@@ -182,11 +182,11 @@ namespace LBM
          * @param[in] fileName Case name prefix to search for
          * @return Highest time index found, or 0 if no files found
          **/
-        __host__ [[nodiscard]] device::label_t latestTime(const name_t &fileName)
+        __host__ [[nodiscard]] host::label_t latestTime(const name_t &fileName)
         {
             if (hasIndexedFiles(fileName))
             {
-                const std::vector<device::label_t> indices = timeIndices(fileName);
+                const std::vector<host::label_t> indices = timeIndices(fileName);
                 return indices[indices.size() - 1];
             }
             else
@@ -203,18 +203,18 @@ namespace LBM
          * @return Starting index (0 for earliest, last index for latest)
          **/
         template <class ProgramControl>
-        __host__ [[nodiscard]] device::label_t getStartIndex(const ProgramControl &programCtrl, const bool isLatestTime)
+        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl, const bool isLatestTime)
         {
-            const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
+            const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
 
-            return isLatestTime ? static_cast<device::label_t>(fileNameIndices.size() - 1) : 0;
+            return isLatestTime ? static_cast<host::label_t>(fileNameIndices.size() - 1) : 0;
         }
 
-        __host__ [[nodiscard]] device::label_t getStartIndex(const name_t &fileNamePrefix, const bool isLatestTime)
+        __host__ [[nodiscard]] host::label_t getStartIndex(const name_t &fileNamePrefix, const bool isLatestTime)
         {
-            const std::vector<device::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
+            const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
-            return isLatestTime ? static_cast<device::label_t>(fileNameIndices.size() - 1) : 0;
+            return isLatestTime ? static_cast<host::label_t>(fileNameIndices.size() - 1) : 0;
         }
 
         /**
@@ -224,13 +224,13 @@ namespace LBM
          * @return Starting index determined by command line arguments
          **/
         template <class ProgramControl>
-        __host__ [[nodiscard]] device::label_t getStartIndex(const ProgramControl &programCtrl)
+        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl)
         {
             return getStartIndex(programCtrl, programCtrl.input().isArgPresent("-latestTime"));
         }
 
         template <class ProgramControl>
-        __host__ [[nodiscard]] device::label_t getStartIndex(const name_t &fileNamePrefix, const ProgramControl &programCtrl)
+        __host__ [[nodiscard]] host::label_t getStartIndex(const name_t &fileNamePrefix, const ProgramControl &programCtrl)
         {
             return getStartIndex(fileNamePrefix, programCtrl.input().isArgPresent("-latestTime"));
         }

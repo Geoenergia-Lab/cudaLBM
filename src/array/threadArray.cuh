@@ -104,34 +104,6 @@ namespace LBM
             }
 
             /**
-             * @brief Constructor that initializes array from global memory via shared buffer cache
-             * @tparam SharedBufferSize Size of the shared memory buffer
-             * @param[in] tid Thread index within the block
-             * @param[in] idx Linear index for accessing global memory
-             * @param[in] devPtrs Collection of device pointers (one per array element)
-             * @param[in] shared_buffer Shared memory array for caching
-             * @note Uses shared_buffer as a read-through cache and initializes data_ via aggregate initialization
-             **/
-            // template <const device::label_t SharedBufferSize>
-            // __device__ [[nodiscard]] inline array(
-            //     const device::label_t tid,
-            //     const device::label_t idx,
-            //     const device::ptrCollection<N, T> &devPtrs,
-            //     thread::array<T, SharedBufferSize> &shared_buffer) noexcept
-            // {
-            //     // Initialize data_ in the constructor body using pack expansion
-            //     [&]<const device::label_t... Is>(std::index_sequence<Is...>)
-            //     {
-            //         // Direct fold expression with comma operator for multiple operations
-            //         ((shared_buffer[tid * m_i<N + 1>() + m_i<Is>()] = devPtrs.template ptr<Is>()[idx],
-            //           data_[Is] = shared_buffer[tid * m_i<N + 1>() + m_i<Is>()] + rho0<T>()),
-            //          ...);
-            //     }(std::make_index_sequence<N>{});
-
-            //     block::sync();
-            // }
-
-            /**
              * @brief Default constructor (value-initializes all elements)
              * @note Elements will be default-initialized or zero-initialized
              **/
@@ -197,7 +169,7 @@ namespace LBM
              * @pre index_ must be in range [0, N-1]
              * @note No runtime bounds checking - compile-time safe
              **/
-            template <const device::label_t index_>
+            template <const host::label_t index_>
             __device__ __host__ [[nodiscard]] inline constexpr T &operator[](const size_constant<index_> &index) __restrict__ noexcept
             {
                 assert_legal_access<index_>();
@@ -212,7 +184,7 @@ namespace LBM
              * @pre index_ must be in range [0, N-1]
              * @note No runtime bounds checking - compile-time safe
              **/
-            template <const device::label_t index_>
+            template <const host::label_t index_>
             __device__ __host__ [[nodiscard]] inline constexpr const T &operator[](const size_constant<index_> &index) __restrict__ const noexcept
             {
                 assert_legal_access<index_>();
@@ -228,7 +200,8 @@ namespace LBM
              * @note Compile-time bounds checking for integral_constant types
              * @note Runtime access for integral types (no bounds checking)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr T &operator[](const device::label_t idx) __restrict__ noexcept
+            template <typename Idx>
+            __device__ __host__ [[nodiscard]] inline constexpr T &operator[](const Idx idx) __restrict__ noexcept
             {
                 // Runtime index
                 return data_[idx];
@@ -243,7 +216,8 @@ namespace LBM
              * @note Compile-time bounds checking for integral_constant types
              * @note Runtime access for integral types (no bounds checking)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const T &operator[](const device::label_t idx) __restrict__ const noexcept
+            template <typename Idx>
+            __device__ __host__ [[nodiscard]] inline constexpr const T &operator[](const Idx idx) __restrict__ const noexcept
             {
                 return data_[idx];
             }
@@ -265,25 +239,9 @@ namespace LBM
              * @brief Returns the number of elements in the array
              * @return Compile-time constant number of elements (N)
              **/
-            __device__ __host__ [[nodiscard]] static inline consteval device::label_t size() noexcept
+            __device__ __host__ [[nodiscard]] static inline consteval host::label_t size() noexcept
             {
                 return N;
-            }
-
-            /**
-             * @brief Store array elements back to device memory through pointer collection
-             * @param[in] idx Linear index for device memory access
-             * @param[in] devPtrs Collection of device pointers
-             * @note Compile-time unrolled loop for storing all elements
-             **/
-            __device__ inline void save_to(const device::ptrCollection<N, T> &devPtrs, const device::label_t idx) const noexcept
-            {
-                // Use pack expansion with index_sequence
-                [&]<const device::label_t... Is>(std::index_sequence<Is...>)
-                {
-                    // Fold expression using compile-time indexing
-                    ((devPtrs.template ptr<Is>()[idx] = data_[size_constant<Is>{}]), ...);
-                }(std::make_index_sequence<N>{});
             }
 
         private:
@@ -295,7 +253,7 @@ namespace LBM
             /**
              * @brief Compile-time check that accesses are valid
              **/
-            template <const device::label_t i>
+            template <const host::label_t i>
             __device__ __host__ static inline consteval void assert_legal_access() noexcept
             {
                 static_assert(in_bounds<i, N>, "index is out of range: Must be < N.");

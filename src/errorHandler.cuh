@@ -81,7 +81,7 @@ namespace LBM
          * If the error is non-zero, the program terminates with the provided
          * error code and message.
          **/
-        [[nodiscard]] errorHandler(const int err, const std::string &errorString) noexcept
+        [[nodiscard]] errorHandler(const int err, const name_t &errorString) noexcept
         {
             check(err, errorString);
         }

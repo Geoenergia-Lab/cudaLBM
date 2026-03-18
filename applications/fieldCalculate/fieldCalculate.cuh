@@ -64,7 +64,7 @@ SourceFiles
 
 namespace LBM
 {
-    __host__ [[nodiscard]] inline consteval device::label_t SchemeOrder() { return 8; }
+    __host__ [[nodiscard]] inline consteval host::label_t SchemeOrder() { return 8; }
 
     /**
      * @brief Checks if a field contains any NaN values
@@ -92,7 +92,7 @@ namespace LBM
     __host__ void containsNaN(
         const host::arrayCollection<scalar_t, ctorType::MUST_READ> &variables,
         const host::latticeMesh &mesh,
-        const device::label_t timeStep) noexcept
+        const host::label_t timeStep) noexcept
     {
         // De-interleave the fields
         const std::vector<std::vector<scalar_t>> fields = fileIO::deinterleaveAoS(variables.arr(), mesh);
@@ -150,7 +150,7 @@ namespace LBM
     __host__ void spatialMean(
         const host::arrayCollection<scalar_t, ctorType::MUST_READ> &variables,
         const host::latticeMesh &mesh,
-        const device::label_t timeStep) noexcept
+        const host::label_t timeStep) noexcept
     {
         // De-interleave the fields
         const std::vector<std::vector<scalar_t>> fields = fileIO::deinterleaveAoS(variables.arr(), mesh);

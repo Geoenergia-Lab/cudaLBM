@@ -62,7 +62,7 @@ namespace LBM
             /**
              * @brief Check that the selected numerical scheme order is valid: positive multiple number of 2 up to the maximum scheme order
              **/
-            template <const device::label_t Order, const device::label_t MaximumSchemeOrder>
+            template <const host::label_t Order, const host::label_t MaximumSchemeOrder>
             __device__ __host__ inline consteval void validate() noexcept
             {
                 static_assert(((Order % 2 == 0) && (Order < (1 << MaximumSchemeOrder))), "Invalid numerical scheme order");
@@ -84,7 +84,7 @@ namespace LBM
 
             std::vector<scalar_t> magu(u.size(), 0);
 
-            for (device::label_t i = 0; i < u.size(); i++)
+            for (host::label_t i = 0; i < u.size(); i++)
             {
                 magu[i] = std::sqrt((u[i] * u[i]) + (v[i] * v[i]) + (w[i] * w[i]));
             }

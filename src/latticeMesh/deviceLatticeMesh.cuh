@@ -102,7 +102,7 @@ namespace LBM
             __host__ [[nodiscard]] inline latticeMesh(
                 const host::latticeMesh &hostMesh,
                 const pointLabel_t &deviceID,
-                const blockLabel &nGPUs) noexcept
+                const device::blockLabel &nGPUs) noexcept
                 : mesh_(hostMesh),
                   blockOffsets_({deviceID.x / (hostMesh.nxBlocks() / nGPUs.nx), deviceID.y / (hostMesh.nyBlocks() / nGPUs.ny), deviceID.z / (hostMesh.nzBlocks() / nGPUs.nz)}),
                   blockSpan_({hostMesh.nxBlocks() / nGPUs.nx, hostMesh.nyBlocks() / nGPUs.ny, hostMesh.nzBlocks() / nGPUs.nz}),
@@ -135,12 +135,12 @@ namespace LBM
             /**
              * @brief Global block offsets: the blocks at which this partition of the mesh begins
              **/
-            const blockLabel blockOffsets_;
+            const device::blockLabel blockOffsets_;
 
             /**
              * @brief Device block span: the number of mesh blocks per device
              **/
-            const blockLabel blockSpan_;
+            const device::blockLabel blockSpan_;
 
             /**
              * @brief Device index: the flattened index of the device
@@ -156,9 +156,9 @@ namespace LBM
              * @param[in] nGPUs The number of GPUs partitioning the domain in the x, y and z directions
              **/
             __host__ [[nodiscard]] deviceIndex_t getPartitionDeviceID(
-                const blockLabel &blockOffsets,
-                const blockLabel &blockSpan,
-                const blockLabel &nGPUs) noexcept
+                const device::blockLabel &blockOffsets,
+                const device::blockLabel &blockSpan,
+                const device::blockLabel &nGPUs) noexcept
             {
                 // Calculate how many blocks each GPU gets in each dimension
                 // Using ceiling division to distribute blocks as evenly as possible

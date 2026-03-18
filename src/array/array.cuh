@@ -167,8 +167,8 @@ namespace LBM
         file.clear();                 // clear EOF and error flags
         file.seekg(0, std::ios::beg); // rewind to beginning
 
-        std::string line;
-        std::vector<std::string> lines;
+        name_t line;
+        words_t lines;
         lines.reserve(lineCount); // allocate once
 
         for (host::label_t i = 0; i < lineCount; i++)

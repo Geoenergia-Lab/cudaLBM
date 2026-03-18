@@ -128,29 +128,58 @@ namespace LBM
         }
     };
 
-    /**
-     * @brief Block dimensions descriptor (specialisation for device::label_t)
-     */
-    struct blockLabel : var3<device::label_t>
+    namespace device
     {
-    public:
         /**
-         * @brief Inherit constructors
+         * @brief Block dimensions descriptor (specialisation for device::label_t)
          */
-        using var3<value_type>::var3;
-
-        /**
-         * @brief Total size
-         */
-        template <typename ValueType = value_type>
-        __host__ __device__ [[nodiscard]] inline constexpr ValueType size() const noexcept
+        struct blockLabel : var3<device::label_t>
         {
-            return value<axis::X, ValueType>() * value<axis::Y, ValueType>() * value<axis::Z, ValueType>();
-        }
-    };
+        public:
+            /**
+             * @brief Inherit constructors
+             */
+            using var3<value_type>::var3;
 
-    using pointLabel = blockLabel;
-    using threadLabel = blockLabel;
+            /**
+             * @brief Total size
+             */
+            template <typename ValueType = value_type>
+            __host__ __device__ [[nodiscard]] inline constexpr ValueType size() const noexcept
+            {
+                return value<axis::X, ValueType>() * value<axis::Y, ValueType>() * value<axis::Z, ValueType>();
+            }
+        };
+
+        using pointLabel = blockLabel;
+        using threadLabel = blockLabel;
+    }
+
+    namespace host
+    {
+        /**
+         * @brief Block dimensions descriptor (specialisation for host::label_t)
+         */
+        struct blockLabel : var3<host::label_t>
+        {
+        public:
+            /**
+             * @brief Inherit constructors
+             */
+            using var3<value_type>::var3;
+
+            /**
+             * @brief Total size
+             */
+            __host__ __device__ [[nodiscard]] inline constexpr host::label_t size() const noexcept
+            {
+                return value<axis::X>() * value<axis::Y>() * value<axis::Z>();
+            }
+        };
+
+        using pointLabel = blockLabel;
+        using threadLabel = blockLabel;
+    }
 
     /**
      * @brief Generic vector of scalar_t

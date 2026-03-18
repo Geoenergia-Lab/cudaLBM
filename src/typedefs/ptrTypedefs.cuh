@@ -57,7 +57,7 @@ namespace LBM
         /**
          * @brief Class holding N device pointers of type T
          **/
-        template <const device::label_t N, typename T>
+        template <const host::label_t N, typename T>
         class ptrCollection
         {
         public:
@@ -81,7 +81,7 @@ namespace LBM
              * @brief Provides access to the GPU pointer
              * @param[in] i The index of the pointer
              **/
-            template <const device::label_t i>
+            template <const host::label_t i>
             __device__ __host__ [[nodiscard]] inline constexpr T *ptr() const noexcept
             {
                 static_assert(i < N, "Invalid pointer access");
@@ -95,7 +95,7 @@ namespace LBM
              * @return Value at index @p i
              * @warning No bounds checking performed
              **/
-            __device__ __host__ [[nodiscard]] inline const T *operator[](const device::label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline const T *operator[](const host::label_t i) const noexcept
             {
                 return ptrs_[i];
             }

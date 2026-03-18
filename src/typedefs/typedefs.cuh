@@ -60,7 +60,7 @@ namespace LBM
 #define ptrRestrict __restrict__
 
     /**
-     * @brief Shorthand for std::string and std::vector<std::string>
+     * @brief Shorthand for name_t and words_t
      **/
     typedef std::string name_t;
     typedef std::vector<name_t> words_t;
@@ -208,7 +208,7 @@ namespace LBM
     namespace axis
     {
         template <const axis::type alpha, const int coeff>
-        __host__ [[nodiscard]] static inline constexpr blockLabel to_3d(const device::label_t ta, const device::label_t tb) noexcept
+        __host__ [[nodiscard]] static inline constexpr host::blockLabel to_3d(const host::label_t ta, const host::label_t tb) noexcept
         {
             if constexpr (alpha == axis::X)
             {

@@ -270,7 +270,7 @@ namespace LBM
          * @return Indices of the distribution on a specific face
          **/
         template <class VelocitySet, const axis::type alpha, const int coeff>
-        __device__ __host__ [[nodiscard]] static inline consteval thread::array<device::label_t, VelocitySet::QF()> indices_on_face() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval thread::array<host::label_t, VelocitySet::QF()> indices_on_face() noexcept
         {
             assertions::velocitySet::validate<VelocitySet>();
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -279,11 +279,11 @@ namespace LBM
 
             constexpr const thread::array<int, VelocitySet::Q()> vals = VelocitySet::template c<int, alpha>();
 
-            thread::array<device::label_t, VelocitySet::QF()> indices;
+            thread::array<host::label_t, VelocitySet::QF()> indices;
 
-            device::label_t j = 0;
+            host::label_t j = 0;
 
-            for (device::label_t i = 0; i < VelocitySet::Q(); i++)
+            for (host::label_t i = 0; i < VelocitySet::Q(); i++)
             {
                 if (vals[i] == coeff)
                 {

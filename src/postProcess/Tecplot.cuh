@@ -94,7 +94,7 @@ namespace LBM
                 const words_t &solutionVarNames) noexcept
             {
                 // Check input sizes
-                const device::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
 
                 // Set high precision output
                 outFile << std::setprecision(std::numeric_limits<scalar_t>::max_digits10);
@@ -109,26 +109,26 @@ namespace LBM
                 outFile << "\n";
 
                 // UNSTRUCTURED GRID FORMAT
-                const device::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
+                const host::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
                 outFile << "ZONE T=\"Hexahedral Zone\", NODES=" << numNodes << ", ELEMENTS=" << numElements << ", DATAPACKING=BLOCK, ZONETYPE=FEBRICK\n";
 
                 const std::vector<scalar_t> coords = meshCoordinates<scalar_t>(mesh);
 
                 // Write node coordinates (X, Y, Z blocks)
                 // Write X
-                for (device::label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 0] << "\n";
                 }
 
                 // Write Y
-                for (device::label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 1] << "\n";
                 }
 
                 // Write Z
-                for (device::label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 2] << "\n";
                 }
@@ -142,10 +142,10 @@ namespace LBM
                     }
                 }
 
-                const std::vector<device::label_t> connectivity = meshConnectivity<true, device::label_t>(mesh);
-                for (device::label_t e = 0; e < numElements; ++e)
+                const std::vector<host::label_t> connectivity = meshConnectivity<true, host::label_t>(mesh);
+                for (host::label_t e = 0; e < numElements; ++e)
                 {
-                    for (device::label_t n = 0; n < 8; ++n)
+                    for (host::label_t n = 0; n < 8; ++n)
                     {
                         outFile << connectivity[e * 8 + n] << (n < 7 ? " " : "\n");
                     }
@@ -160,7 +160,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames)
             {
-                const host::label_t numNodes = mesh.dimension<axis::X, host::label_t>() * mesh.dimension<axis::Y, host::label_t>() * mesh.dimension<axis::Z, host::label_t>();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
                 const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())

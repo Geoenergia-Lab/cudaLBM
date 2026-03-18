@@ -209,10 +209,9 @@ namespace LBM
              * @tparam SizeType Desired return type (default device::label_t).
              * @return Number of elements.
              **/
-            template <typename SizeType = device::label_t>
-            __host__ [[nodiscard]] inline constexpr SizeType size() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t size() const noexcept
             {
-                return mesh_.template nPoints<SizeType>();
+                return mesh_.nPoints();
             }
 
             /**
@@ -228,7 +227,7 @@ namespace LBM
              * @brief Get the current averaging count (for time‑averaged fields).
              * @return Number of time steps averaged so far.
              **/
-            __host__ [[nodiscard]] inline constexpr device::label_t meanCount() const noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept
             {
                 return meanCount_;
             }
@@ -237,7 +236,7 @@ namespace LBM
              * @brief Get a reference to the averaging count (for modification).
              * @return Reference to meanCount_.
              **/
-            __host__ [[nodiscard]] inline constexpr device::label_t &meanCountRef() noexcept
+            __host__ [[nodiscard]] inline constexpr host::label_t &meanCountRef() noexcept
             {
                 return meanCount_;
             }
@@ -255,7 +254,7 @@ namespace LBM
 
                 for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < nDevices; ++virtualDeviceIndex)
                 {
-                    const device::label_t startIndex = virtualDeviceIndex * nPointsPerDevice;
+                    const host::label_t startIndex = virtualDeviceIndex * nPointsPerDevice;
                     errorHandler::check(cudaMemcpy(&(hostPtr[startIndex]), ptr_[virtualDeviceIndex], nPointsPerDevice * sizeof(T), cudaMemcpyDeviceToHost));
                 }
             }
@@ -269,7 +268,7 @@ namespace LBM
             /**
              * @brief Number of time steps averaged over (for time‑averaged fields)
              **/
-            device::label_t meanCount_;
+            host::label_t meanCount_;
 
             /**
              * @brief Allocate all GPU segments for a full field from a raw host pointer.
@@ -284,7 +283,7 @@ namespace LBM
                 const T *hostArrayGlobal,
                 const bool allocate,
                 const programControl &programCtrl,
-                const device::label_t allocationSize)
+                const host::label_t allocationSize)
             {
                 return (allocate) ? (arrayBase<T>::allocate_on_devices(mesh, hostArrayGlobal, programCtrl, allocationSize)) : (nullptr);
             }
@@ -337,7 +336,7 @@ namespace LBM
                 const bool allocate,
                 const programControl &programCtrl)
             {
-                const std::vector<T> toAllocate(static_cast<host::label_t>(allocate) * mesh.size<host::label_t>(), val);
+                const std::vector<T> toAllocate(static_cast<host::label_t>(allocate) * mesh.size(), val);
                 return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.sizePerDevice());
             }
 

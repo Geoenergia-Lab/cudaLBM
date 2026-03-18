@@ -82,9 +82,9 @@ namespace LBM
                 host::label_t currentOffset = 0;
 
                 // Calculate extents - note the -1 for the maximum indices
-                const host::label_t dimX = mesh.dimension<axis::X, host::label_t>() - 1;
-                const host::label_t dimY = mesh.dimension<axis::Y, host::label_t>() - 1;
-                const host::label_t dimZ = mesh.dimension<axis::Z, host::label_t>() - 1;
+                const host::label_t dimX = mesh.dimension<axis::X>() - 1;
+                const host::label_t dimY = mesh.dimension<axis::Y>() - 1;
+                const host::label_t dimZ = mesh.dimension<axis::Z>() - 1;
 
                 xml << "<?xml version=\"1.0\"?>\n";
                 xml << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
@@ -140,7 +140,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const words_t &solutionVarNames)
             {
-                const host::label_t numNodes = (mesh.dimension<axis::X, host::label_t>()) * (mesh.dimension<axis::Y, host::label_t>()) * (mesh.dimension<axis::Z, host::label_t>());
+                const host::label_t numNodes = (mesh.dimension<axis::X>()) * (mesh.dimension<axis::Y>()) * (mesh.dimension<axis::Z>());
                 const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())

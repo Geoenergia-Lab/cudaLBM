@@ -64,7 +64,7 @@ namespace LBM
              * @param[in] w The z component of the vector
              * @param[in] mesh The lattice mesh
              **/
-            template <const device::label_t SchemeOrder, typename T>
+            template <const host::label_t SchemeOrder, typename T>
             __host__ [[nodiscard]] const std::vector<T> div(
                 const std::vector<T> &u,
                 const std::vector<T> &v,
@@ -78,7 +78,7 @@ namespace LBM
 
                 // Sum the components
                 std::vector<T> divu(dudx.size(), 0);
-                for (device::label_t i = 0; i < dudx.size(); i++)
+                for (host::label_t i = 0; i < dudx.size(); i++)
                 {
                     divu[i] = static_cast<T>(dudx[i] + dvdy[i] + dwdz[i]);
                 }

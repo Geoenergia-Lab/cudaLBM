@@ -72,9 +72,9 @@ namespace LBM
               Re_(initialiseConst<scalar_t>("Re")),
               u_inf_(initialiseConst<scalar_t>("u_inf")),
               L_char_(initialiseConst<scalar_t>("L_char")),
-              nTimeSteps_(string::extractParameter<device::label_t>(string::readFile("programControl"), "nTimeSteps")),
-              saveInterval_(string::extractParameter<device::label_t>(string::readFile("programControl"), "saveInterval")),
-              infoInterval_(string::extractParameter<device::label_t>(string::readFile("programControl"), "infoInterval")),
+              nTimeSteps_(string::extractParameter<host::label_t>(string::readFile("programControl"), "nTimeSteps")),
+              saveInterval_(string::extractParameter<host::label_t>(string::readFile("programControl"), "saveInterval")),
+              infoInterval_(string::extractParameter<host::label_t>(string::readFile("programControl"), "infoInterval")),
               latestTime_(fileIO::latestTime(caseName_))
         {
             types::assertions::validate<scalar_t>();
@@ -103,7 +103,7 @@ namespace LBM
             std::cout << "    deviceList: [";
             if (deviceList().size() > 1)
             {
-                for (device::label_t i = 0; i < deviceList().size() - 1; i++)
+                for (host::label_t i = 0; i < deviceList().size() - 1; i++)
                 {
                     std::cout << deviceList()[i] << ", ";
                 }
@@ -211,17 +211,16 @@ namespace LBM
          * @brief Returns the total number of simulation time steps
          * @return The total number of simulation time steps
          **/
-        template <typename T = device::label_t>
-        __device__ __host__ [[nodiscard]] inline constexpr T nt() const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr host::label_t nt() const noexcept
         {
-            return static_cast<T>(nTimeSteps_);
+            return nTimeSteps_;
         }
 
         /**
          * @brief Decide whether or not the program should perform a checkpoint
          * @return True if the program should checkpoint, false otherwise
          **/
-        __device__ __host__ [[nodiscard]] inline constexpr bool save(const device::label_t timeStep) const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr bool save(const host::label_t timeStep) const noexcept
         {
             return (timeStep % saveInterval_) == 0;
         }
@@ -230,19 +229,18 @@ namespace LBM
          * @brief Decide whether or not the program should perform a checkpoint
          * @return True if the program should checkpoint, false otherwise
          **/
-        __device__ __host__ [[nodiscard]] inline constexpr bool print(const device::label_t timeStep) const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr bool print(const host::label_t timeStep) const noexcept
         {
             return (timeStep % infoInterval_) == 0;
         }
 
         /**
          * @brief Returns the latest time step of the solution files contained within the current directory
-         * @return The latest time step as a device::label_t
+         * @return The latest time step as a host::label_t
          **/
-        template <typename T = device::label_t>
-        __device__ __host__ [[nodiscard]] inline constexpr T latestTime() const noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr host::label_t latestTime() const noexcept
         {
-            return static_cast<T>(latestTime_);
+            return latestTime_;
         }
 
         /**
@@ -263,7 +261,7 @@ namespace LBM
         {
             if (input_.isArgPresent(argument))
             {
-                for (device::label_t arg = 0; arg < commandLine().size(); arg++)
+                for (host::label_t arg = 0; arg < commandLine().size(); arg++)
                 {
                     if (commandLine()[arg] == argument)
                     {
@@ -297,7 +295,7 @@ namespace LBM
          * @tparam T The function type (e.g., a lambda or a function pointer)
          * @param[in] func The kernel function to configure
          **/
-        template <const device::label_t smem_alloc_size, class T>
+        template <const host::label_t smem_alloc_size, class T>
         __host__ void configure(T *func) const
         {
             for (host::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < deviceList().size(); VirtualDeviceIndex++)
@@ -341,10 +339,10 @@ namespace LBM
         /**
          * @brief Total number of simulation time steps, the save interval, info output interval and the latest time step at program start
          **/
-        const device::label_t nTimeSteps_;
-        const device::label_t saveInterval_;
-        const device::label_t infoInterval_;
-        const device::label_t latestTime_;
+        const host::label_t nTimeSteps_;
+        const host::label_t saveInterval_;
+        const host::label_t infoInterval_;
+        const host::label_t latestTime_;
 
         /**
          * @brief Reads a variable from the caseInfo file into a parameter of type T

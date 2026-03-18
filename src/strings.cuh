@@ -172,11 +172,11 @@ namespace LBM
             return newLines;
         }
 
-        __host__ [[nodiscard]] const std::vector<std::string> splitByWhitespace(const std::string &str)
+        __host__ [[nodiscard]] const words_t splitByWhitespace(const name_t &str)
         {
             std::istringstream iss(str);
-            std::vector<std::string> tokens;
-            std::string token;
+            words_t tokens;
+            name_t token;
             while (iss >> token)
             {
                 // operator>> skips leading whitespace and stops at whitespace

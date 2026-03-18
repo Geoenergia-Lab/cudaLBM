@@ -106,7 +106,7 @@ int main(const int argc, const char *const argv[])
 
     const runTimeIO IO(mesh, programCtrl);
 
-    for (device::label_t timeStep = programCtrl.latestTime(); timeStep < programCtrl.nt(); timeStep++)
+    for (host::label_t timeStep = programCtrl.latestTime(); timeStep < programCtrl.nt(); timeStep++)
     {
         // Do the run-time IO
         if (programCtrl.print(timeStep))

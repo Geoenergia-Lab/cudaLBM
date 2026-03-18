@@ -83,7 +83,7 @@ namespace LBM
             __host__ [[nodiscard]] arrayCollection(
                 const programControl &programCtrl,
                 const words_t &varNames,
-                const device::label_t timeIndex)
+                const host::label_t timeIndex)
                 : arr_(initialiseVector(programCtrl, timeIndex)),
                   varNames_(varNames) {}
 
@@ -107,7 +107,7 @@ namespace LBM
             __host__ [[nodiscard]] arrayCollection(
                 const name_t &fileNamePrefix,
                 const words_t &varNames,
-                const device::label_t timeIndex)
+                const host::label_t timeIndex)
                 : arr_(initialiseVector(fileNamePrefix, timeIndex)),
                   varNames_(varNames) {}
 
@@ -166,7 +166,7 @@ namespace LBM
                 return fileIO::readFieldFile<T>(fileName);
             }
 
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const name_t &fileNamePrefix, const device::label_t timeIndex) const
+            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const name_t &fileNamePrefix, const host::label_t timeIndex) const
             {
                 static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
 
@@ -186,7 +186,7 @@ namespace LBM
              * @return Initialized data vector
              * @throws std::runtime_error if indexed files not found
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const device::label_t timeIndex) const
+            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const host::label_t timeIndex) const
             {
                 static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
 

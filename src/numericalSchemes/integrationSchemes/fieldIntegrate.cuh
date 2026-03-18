@@ -63,7 +63,7 @@ namespace LBM
          * @note This function uses the cumulative trapezoidal rule. The integration constant is set by
          * assuming the integral is zero at x=0 for each (y, z) line.
          **/
-        template <const device::label_t SchemeOrder, typename TReturn, typename T>
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_x(
             const std::vector<T> &f,
             const host::latticeMesh &mesh)
@@ -72,9 +72,9 @@ namespace LBM
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_x));
 
-            const host::label_t nx = mesh.dimension<axis::X, host::label_t>();
-            const host::label_t ny = mesh.dimension<axis::Y, host::label_t>();
-            const host::label_t nz = mesh.dimension<axis::Z, host::label_t>();
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
             constexpr const double dx = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);
@@ -84,13 +84,13 @@ namespace LBM
                 for (host::label_t y = 0; y < ny; ++y)
                 {
                     // Initial condition for integration along this x-line
-                    integral_f[global::idx<host::label_t>(0, y, z, nx, ny)] = 0;
+                    integral_f[global::idx(0, y, z, nx, ny)] = 0;
 
                     // Cumulative integration using the trapezoidal rule
                     for (host::label_t x = 1; x < nx; ++x)
                     {
-                        const host::label_t current_idx = global::idx<host::label_t>(x, y, z, nx, ny);
-                        const host::label_t prev_idx = global::idx<host::label_t>(x - 1, y, z, nx, ny);
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x - 1, y, z, nx, ny);
 
                         integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dx * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
                     }
@@ -102,7 +102,7 @@ namespace LBM
         /**
          * @brief Calculates the integral of a scalar field along the y-axis.
          **/
-        template <const device::label_t SchemeOrder, typename TReturn, typename T>
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_y(
             const std::vector<T> &f,
             const host::latticeMesh &mesh)
@@ -111,9 +111,9 @@ namespace LBM
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_y));
 
-            const host::label_t nx = mesh.dimension<axis::X, host::label_t>();
-            const host::label_t ny = mesh.dimension<axis::Y, host::label_t>();
-            const host::label_t nz = mesh.dimension<axis::Z, host::label_t>();
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
             constexpr const double dy = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);
@@ -123,13 +123,13 @@ namespace LBM
                 for (host::label_t x = 0; x < nx; ++x)
                 {
                     // Initial condition for integration along this y-line
-                    integral_f[global::idx<host::label_t>(x, 0, z, nx, ny)] = 0;
+                    integral_f[global::idx(x, 0, z, nx, ny)] = 0;
 
                     // Cumulative integration using the trapezoidal rule
                     for (host::label_t y = 1; y < ny; ++y)
                     {
-                        const host::label_t current_idx = global::idx<host::label_t>(x, y, z, nx, ny);
-                        const host::label_t prev_idx = global::idx<host::label_t>(x, y - 1, z, nx, ny);
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x, y - 1, z, nx, ny);
 
                         integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dy * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
                     }
@@ -141,7 +141,7 @@ namespace LBM
         /**
          * @brief Calculates the integral of a scalar field along the z-axis.
          **/
-        template <const device::label_t SchemeOrder, typename TReturn, typename T>
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
         __host__ [[nodiscard]] const std::vector<TReturn> integrate_z(
             const std::vector<T> &f,
             const host::latticeMesh &mesh)
@@ -150,9 +150,9 @@ namespace LBM
 
             static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_z));
 
-            const host::label_t nx = mesh.dimension<axis::X, host::label_t>();
-            const host::label_t ny = mesh.dimension<axis::Y, host::label_t>();
-            const host::label_t nz = mesh.dimension<axis::Z, host::label_t>();
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
             constexpr const double dz = 1.0;
 
             std::vector<TReturn> integral_f(f.size(), 0);
@@ -162,13 +162,13 @@ namespace LBM
                 for (host::label_t x = 0; x < nx; ++x)
                 {
                     // Initial condition for integration along this z-line
-                    integral_f[global::idx<host::label_t>(x, y, 0, nx, ny)] = 0;
+                    integral_f[global::idx(x, y, 0, nx, ny)] = 0;
 
                     // Cumulative integration using the trapezoidal rule
                     for (host::label_t z = 1; z < nz; ++z)
                     {
-                        const host::label_t current_idx = global::idx<host::label_t>(x, y, z, nx, ny);
-                        const host::label_t prev_idx = global::idx<host::label_t>(x, y, z - 1, nx, ny);
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x, y, z - 1, nx, ny);
 
                         integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dz * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
                     }

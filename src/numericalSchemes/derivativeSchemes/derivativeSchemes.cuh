@@ -56,7 +56,7 @@ namespace LBM
     {
         namespace derivative
         {
-            __device__ __host__ [[nodiscard]] inline consteval device::label_t maxSchemeOrder() noexcept { return 8; }
+            __device__ __host__ [[nodiscard]] inline consteval host::label_t maxSchemeOrder() noexcept { return 8; }
 
             /**
              * @brief Calculates the x derivative of a scalar field
@@ -64,7 +64,7 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const device::label_t SchemeOrder, typename TReturn, typename T>
+            template <const host::label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdx(
                 const std::vector<T> &f,
                 const host::latticeMesh &mesh)
@@ -73,43 +73,43 @@ namespace LBM
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdx));
 
-                const device::label_t nx = mesh.dimension<axis::X>();
-                const device::label_t ny = mesh.dimension<axis::Y>();
-                const device::label_t nz = mesh.dimension<axis::Z>();
+                const host::label_t nx = mesh.dimension<axis::X>();
+                const host::label_t ny = mesh.dimension<axis::Y>();
+                const host::label_t nz = mesh.dimension<axis::Z>();
 
                 const double dx = 1;
 
                 std::vector<TReturn> dfdx(f.size(), 0);
-                constexpr const device::label_t pad = SchemeOrder - 1;
-                const device::label_t nx_padded = nx + 2 * pad;
+                constexpr const host::label_t pad = SchemeOrder - 1;
+                const host::label_t nx_padded = nx + 2 * pad;
                 std::vector<double> padded_line(nx_padded, 0);
 
-                for (device::label_t z = 0; z < nz; ++z)
+                for (host::label_t z = 0; z < nz; ++z)
                 {
-                    for (device::label_t y = 0; y < ny; ++y)
+                    for (host::label_t y = 0; y < ny; ++y)
                     {
                         // Fill interior region of padded_line
-                        for (device::label_t x = 0; x < nx; ++x)
+                        for (host::label_t x = 0; x < nx; ++x)
                         {
                             padded_line[pad + x] = static_cast<double>(f[global::idx(x, y, z, nx, ny)]);
                         }
 
                         // Set left ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[i] = static_cast<double>(-f[global::idx(pad - i, y, z, nx, ny)]);
                         }
 
                         // Set right ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[pad + nx + i] = static_cast<double>(-f[global::idx(nx - 2 - i, y, z, nx, ny)]);
                         }
 
                         // Compute derivatives for each point in x-direction
-                        for (device::label_t x = 0; x < nx; ++x)
+                        for (host::label_t x = 0; x < nx; ++x)
                         {
-                            const device::label_t center = pad + x;
+                            const host::label_t center = pad + x;
 
                             if constexpr (SchemeOrder == 2)
                             {
@@ -155,7 +155,7 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const device::label_t SchemeOrder, typename TReturn, typename T>
+            template <const host::label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdy(
                 const std::vector<T> &f,
                 const host::latticeMesh &mesh)
@@ -164,42 +164,42 @@ namespace LBM
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdy));
 
-                const device::label_t nx = mesh.dimension<axis::X>();
-                const device::label_t ny = mesh.dimension<axis::Y>();
-                const device::label_t nz = mesh.dimension<axis::Z>();
+                const host::label_t nx = mesh.dimension<axis::X>();
+                const host::label_t ny = mesh.dimension<axis::Y>();
+                const host::label_t nz = mesh.dimension<axis::Z>();
                 constexpr const double dy = 1; // Adjust based on actual grid spacing
 
                 std::vector<TReturn> dfdy(f.size(), 0);
-                constexpr const device::label_t pad = SchemeOrder - 1;
-                const device::label_t ny_padded = ny + 2 * pad;
+                constexpr const host::label_t pad = SchemeOrder - 1;
+                const host::label_t ny_padded = ny + 2 * pad;
                 std::vector<double> padded_line(ny_padded, 0);
 
-                for (device::label_t z = 0; z < nz; ++z)
+                for (host::label_t z = 0; z < nz; ++z)
                 {
-                    for (device::label_t x = 0; x < nx; ++x)
+                    for (host::label_t x = 0; x < nx; ++x)
                     {
                         // Fill interior region of padded_line
-                        for (device::label_t y = 0; y < ny; ++y)
+                        for (host::label_t y = 0; y < ny; ++y)
                         {
                             padded_line[pad + y] = static_cast<double>(f[global::idx(x, y, z, nx, ny)]);
                         }
 
                         // Set bottom ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[i] = -static_cast<double>(f[global::idx(x, pad - i, z, nx, ny)]);
                         }
 
                         // Set top ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[pad + ny + i] = -static_cast<double>(f[global::idx(x, ny - 2 - i, z, nx, ny)]);
                         }
 
                         // Compute derivatives for each point in y-direction
-                        for (device::label_t y = 0; y < ny; ++y)
+                        for (host::label_t y = 0; y < ny; ++y)
                         {
-                            const device::label_t center = pad + y;
+                            const host::label_t center = pad + y;
 
                             if constexpr (SchemeOrder == 2)
                             {
@@ -245,7 +245,7 @@ namespace LBM
              * @param[in] f The field to be differentiated
              * @param[in] mesh The lattice mesh
              **/
-            template <const device::label_t SchemeOrder, typename TReturn, typename T>
+            template <const host::label_t SchemeOrder, typename TReturn, typename T>
             __host__ [[nodiscard]] const std::vector<TReturn> dfdz(
                 const std::vector<T> &f,
                 const host::latticeMesh &mesh)
@@ -254,42 +254,42 @@ namespace LBM
 
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(derivative::dfdz));
 
-                const device::label_t nx = mesh.dimension<axis::X>();
-                const device::label_t ny = mesh.dimension<axis::Y>();
-                const device::label_t nz = mesh.dimension<axis::Z>();
+                const host::label_t nx = mesh.dimension<axis::X>();
+                const host::label_t ny = mesh.dimension<axis::Y>();
+                const host::label_t nz = mesh.dimension<axis::Z>();
                 constexpr const double dz = 1; // Adjust based on actual grid spacing
 
                 std::vector<TReturn> dfdz(f.size(), 0);
-                constexpr const device::label_t pad = SchemeOrder - 1;
-                const device::label_t nz_padded = nz + 2 * pad;
+                constexpr const host::label_t pad = SchemeOrder - 1;
+                const host::label_t nz_padded = nz + 2 * pad;
                 std::vector<double> padded_line(nz_padded, 0);
 
-                for (device::label_t y = 0; y < ny; ++y)
+                for (host::label_t y = 0; y < ny; ++y)
                 {
-                    for (device::label_t x = 0; x < nx; ++x)
+                    for (host::label_t x = 0; x < nx; ++x)
                     {
                         // Fill interior region of padded_line
-                        for (device::label_t z = 0; z < nz; ++z)
+                        for (host::label_t z = 0; z < nz; ++z)
                         {
                             padded_line[pad + z] = static_cast<double>(f[global::idx(x, y, z, nx, ny)]);
                         }
 
                         // Set front ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[i] = -static_cast<double>(f[global::idx(x, y, pad - i, nx, ny)]);
                         }
 
                         // Set back ghost cells (reflect & negate)
-                        for (device::label_t i = 0; i < pad; ++i)
+                        for (host::label_t i = 0; i < pad; ++i)
                         {
                             padded_line[pad + nz + i] = -static_cast<double>(f[global::idx(x, y, nz - 2 - i, nx, ny)]);
                         }
 
                         // Compute derivatives for each point in z-direction
-                        for (device::label_t z = 0; z < nz; ++z)
+                        for (host::label_t z = 0; z < nz; ++z)
                         {
-                            const device::label_t center = pad + z;
+                            const host::label_t center = pad + z;
 
                             if constexpr (SchemeOrder == 2)
                             {

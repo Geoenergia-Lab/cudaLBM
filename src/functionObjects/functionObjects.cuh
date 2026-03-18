@@ -54,6 +54,8 @@ namespace LBM
 {
     namespace functionObjects
     {
+        using save_function_signature = std::function<void(const host::label_t)>;
+
         /**
          * @brief The names of the 10 solution variables of the moment representation
          **/

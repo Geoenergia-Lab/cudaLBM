@@ -118,29 +118,29 @@ namespace LBM
              * @param[in] idx Index.
              * @return Reference to element.
              **/
-            __host__ [[nodiscard]] inline constexpr T &operator[](const device::label_t idx) noexcept { return arr_[idx]; }
+            __host__ [[nodiscard]] inline constexpr T &operator[](const host::label_t idx) noexcept { return arr_[idx]; }
 
             /**
              * @brief Element access (read‑only).
              * @param[in] idx Index.
              * @return Const reference to element.
              **/
-            __host__ [[nodiscard]] inline constexpr const T &operator[](const device::label_t idx) const noexcept { return arr_[idx]; }
+            __host__ [[nodiscard]] inline constexpr const T &operator[](const host::label_t idx) const noexcept { return arr_[idx]; }
 
             /**
              * @brief Get the number of elements.
              **/
-            __host__ [[nodiscard]] inline constexpr device::label_t size() const noexcept { return arr_.size(); }
+            __host__ [[nodiscard]] inline constexpr host::label_t size() const noexcept { return arr_.size(); }
 
             /**
              * @brief Get the current averaging count (for time‑averaged fields).
              **/
-            __host__ [[nodiscard]] inline constexpr device::label_t meanCount() const noexcept { return meanCount_; }
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept { return meanCount_; }
 
             /**
              * @brief Get a reference to the averaging count (for modification).
              **/
-            __host__ [[nodiscard]] inline constexpr device::label_t &meanCountRef() noexcept { return meanCount_; }
+            __host__ [[nodiscard]] inline constexpr host::label_t &meanCountRef() noexcept { return meanCount_; }
 
         private:
             /**
@@ -151,7 +151,7 @@ namespace LBM
             /**
              * @brief Number of averaged time steps
              **/
-            device::label_t meanCount_;
+            host::label_t meanCount_;
 
             /**
              * @brief Initialise array from file or initial conditions.
@@ -188,33 +188,33 @@ namespace LBM
             {
                 const boundaryFields<VelocitySet, true> bField(fieldName);
 
-                const device::label_t nxGPUs = mesh.nDevices<axis::X>();
-                const device::label_t nyGPUs = mesh.nDevices<axis::Y>();
-                const device::label_t nzGPUs = mesh.nDevices<axis::Z>();
-                const device::label_t nPointsPerDevice = mesh.sizePerDevice();
+                const host::label_t nxGPUs = mesh.nDevices<axis::X>();
+                const host::label_t nyGPUs = mesh.nDevices<axis::Y>();
+                const host::label_t nzGPUs = mesh.nDevices<axis::Z>();
+                const host::label_t nPointsPerDevice = mesh.sizePerDevice();
 
                 std::vector<T> field(mesh.size(), 0);
 
-                const blockLabel nBlocksPerDevice = mesh.blocksPerDevice();
+                const host::blockLabel nBlocksPerDevice = mesh.blocksPerDevice();
 
                 GPU::forAll(
                     mesh.nDevices(),
-                    [&](const device::label_t GPU_x, const device::label_t GPU_y, const device::label_t GPU_z)
+                    [&](const host::label_t GPU_x, const host::label_t GPU_y, const host::label_t GPU_z)
                     {
-                        const device::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
+                        const host::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, mesh.nDevices<axis::X>(), mesh.nDevices<axis::Y>());
 
                         host::forAll(
                             nBlocksPerDevice,
-                            [&](const device::label_t bx, const device::label_t by, const device::label_t bz,
-                                const device::label_t tx, const device::label_t ty, const device::label_t tz)
+                            [&](const host::label_t bx, const host::label_t by, const host::label_t bz,
+                                const host::label_t tx, const host::label_t ty, const host::label_t tz)
                             {
                                 // Global coordinates (for boundary detection)
-                                const device::label_t x = tx + block::nx() * (bx + (GPU_x * nBlocksPerDevice.value<axis::X>()));
-                                const device::label_t y = ty + block::ny() * (by + (GPU_y * nBlocksPerDevice.value<axis::Y>()));
-                                const device::label_t z = tz + block::nz() * (bz + (GPU_z * nBlocksPerDevice.value<axis::Z>()));
+                                const host::label_t x = tx + block::nx() * (bx + (GPU_x * nBlocksPerDevice.value<axis::X>()));
+                                const host::label_t y = ty + block::ny() * (by + (GPU_y * nBlocksPerDevice.value<axis::Y>()));
+                                const host::label_t z = tz + block::nz() * (bz + (GPU_z * nBlocksPerDevice.value<axis::Z>()));
 
                                 // Local index within this GPU's segment
-                                const device::label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nBlocksPerDevice.value<axis::X>(), nBlocksPerDevice.value<axis::Y>());
+                                const host::label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nBlocksPerDevice.value<axis::X>(), nBlocksPerDevice.value<axis::Y>());
 
                                 // Boundary detection
                                 const bool is_west = mesh.West(x);
@@ -224,13 +224,13 @@ namespace LBM
                                 const bool is_back = mesh.Back(z);
                                 const bool is_front = mesh.Front(z);
 
-                                const device::label_t boundary_count =
-                                    static_cast<device::label_t>(is_west) +
-                                    static_cast<device::label_t>(is_east) +
-                                    static_cast<device::label_t>(is_south) +
-                                    static_cast<device::label_t>(is_north) +
-                                    static_cast<device::label_t>(is_back) +
-                                    static_cast<device::label_t>(is_front);
+                                const host::label_t boundary_count =
+                                    static_cast<host::label_t>(is_west) +
+                                    static_cast<host::label_t>(is_east) +
+                                    static_cast<host::label_t>(is_south) +
+                                    static_cast<host::label_t>(is_north) +
+                                    static_cast<host::label_t>(is_back) +
+                                    static_cast<host::label_t>(is_front);
 
                                 const T value_sum =
                                     (is_west * bField.West()) +
@@ -243,7 +243,7 @@ namespace LBM
                                 const T value = (boundary_count > 0) ? (value_sum / static_cast<T>(boundary_count)) : bField.internalField();
 
                                 // Global index in host vector (per‑GPU segmented)
-                                const device::label_t globalIdx = virtualDeviceIndex * nPointsPerDevice + localIdx;
+                                const host::label_t globalIdx = virtualDeviceIndex * nPointsPerDevice + localIdx;
                                 field[globalIdx] = value;
                             });
                     });

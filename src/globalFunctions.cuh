@@ -60,29 +60,29 @@ namespace LBM
      * @brief Compile-time recursive loop unroller
      * @tparam Start Starting index (inclusive)
      * @tparam End Ending index (exclusive)
-     * @tparam F Callable type accepting integral_constant<device::label_t>
+     * @tparam F Callable type accepting integral_constant<host::label_t>
      * @param[in] f Function object to execute per iteration
      *
-     * @note Equivalent to runtime loop: `for(device::label_t i=Start; i<End; ++i)`
+     * @note Equivalent to runtime loop: `for(host::label_t i=Start; i<End; ++i)`
      * @note Enables `if constexpr` usage in loop bodies
      * @warning Recursion depth limited by compiler constraints
      *
      * Example usage:
      * @code
      * constexpr_for<0, 5>([](auto i) {
-     *     // i is integral_constant<device::label_t, N>
+     *     // i is integral_constant<host::label_t, N>
      *     if constexpr (i.value % 2 == 0) { ... }
      * });
      * @endcode
      **/
     namespace host
     {
-        template <const device::label_t Start, const device::label_t End, typename F>
+        template <const host::label_t Start, const host::label_t End, typename F>
         __host__ inline constexpr void constexpr_for(F &&f) noexcept
         {
             if constexpr (Start < End)
             {
-                f(std::integral_constant<device::label_t, Start>());
+                f(std::integral_constant<host::label_t, Start>());
                 if constexpr (Start + 1 < End)
                 {
                     host::constexpr_for<Start + 1, End>(std::forward<F>(f));
@@ -157,15 +157,15 @@ namespace LBM
          * });
          * @endcode
          **/
-        template <typename T = device::label_t, typename F>
-        __host__ void forAll(const blockLabel &nGPUs, const F &&f) noexcept
+        template <typename F>
+        __host__ void forAll(const host::blockLabel &nGPUs, const F &&f) noexcept
         {
             // Loops for block indices
-            for (T GPU_z = 0; GPU_z < nGPUs.value<axis::Z, T>(); GPU_z++)
+            for (host::label_t GPU_z = 0; GPU_z < nGPUs.template value<axis::Z>(); GPU_z++)
             {
-                for (T GPU_y = 0; GPU_y < nGPUs.value<axis::Y, T>(); GPU_y++)
+                for (host::label_t GPU_y = 0; GPU_y < nGPUs.template value<axis::Y>(); GPU_y++)
                 {
-                    for (T GPU_x = 0; GPU_x < nGPUs.value<axis::X, T>(); GPU_x++)
+                    for (host::label_t GPU_x = 0; GPU_x < nGPUs.template value<axis::X>(); GPU_x++)
                     {
                         // Execute the arbitrary loop body
                         f(GPU_x, GPU_y, GPU_z);
@@ -198,22 +198,22 @@ namespace LBM
          * });
          * @endcode
          **/
-        template <typename T = device::label_t, typename F>
-        __host__ void forAll(const blockLabel &nBlocks, const F &&f) noexcept
+        template <typename F>
+        __host__ void forAll(const host::blockLabel &nBlocks, const F &&f) noexcept
         {
             // Loops for block indices
-            for (T bz = 0; bz < nBlocks.value<axis::Z, T>(); bz++)
+            for (host::label_t bz = 0; bz < nBlocks.template value<axis::Z>(); bz++)
             {
-                for (T by = 0; by < nBlocks.value<axis::Y, T>(); by++)
+                for (host::label_t by = 0; by < nBlocks.template value<axis::Y>(); by++)
                 {
-                    for (T bx = 0; bx < nBlocks.value<axis::X, T>(); bx++)
+                    for (host::label_t bx = 0; bx < nBlocks.template value<axis::X>(); bx++)
                     {
                         // Loops for thread indices
-                        for (T tz = 0; tz < block::nz<T>(); tz++)
+                        for (host::label_t tz = 0; tz < block::nz<host::label_t>(); tz++)
                         {
-                            for (T ty = 0; ty < block::ny<T>(); ty++)
+                            for (host::label_t ty = 0; ty < block::ny<host::label_t>(); ty++)
                             {
-                                for (T tx = 0; tx < block::nx<T>(); tx++)
+                                for (host::label_t tx = 0; tx < block::nx<host::label_t>(); tx++)
                                 {
                                     // Execute the arbitrary loop body
                                     f(bx, by, bz, tx, ty, tz);
@@ -240,14 +240,14 @@ namespace LBM
          * });
          * @endcode
          **/
-        template <const blockLabel Indent, typename F>
-        __host__ void forAll(const blockLabel &dimensions, const F &&f) noexcept
+        template <typename F>
+        __host__ void forAll(const host::blockLabel &dimensions, const host::blockLabel &indent, const F &&f) noexcept
         {
-            for (device::label_t z = 0; z < dimensions.z - Indent.z; z++)
+            for (host::label_t z = 0; z < dimensions.z - indent.z; z++)
             {
-                for (device::label_t y = 0; y < dimensions.y - Indent.y; y++)
+                for (host::label_t y = 0; y < dimensions.y - indent.y; y++)
                 {
-                    for (device::label_t x = 0; x < dimensions.x - Indent.x; x++)
+                    for (host::label_t x = 0; x < dimensions.x - indent.x; x++)
                     {
                         f(x, y, z);
                     }
@@ -270,16 +270,17 @@ namespace LBM
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        template <typename T = device::label_t>
-        __host__ [[nodiscard]] inline constexpr T idx(const T tx, const T ty, const T tz, const T bx, const T by, const T bz, const T nxBlocks, const T nyBlocks) noexcept
+        __host__ [[nodiscard]] inline constexpr label_t idx(
+            const label_t tx, const label_t ty, const label_t tz,
+            const label_t bx, const label_t by, const label_t bz,
+            const label_t nxBlocks, const label_t nyBlocks) noexcept
         {
-            return (tx + block::nx<T>() * (ty + block::ny<T>() * (tz + block::nz<T>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
+            return (tx + block::nx<label_t>() * (ty + block::ny<label_t>() * (tz + block::nz<label_t>() * (bx + nxBlocks * (by + nyBlocks * bz)))));
         }
 
-        template <typename T = device::label_t>
-        __host__ [[nodiscard]] inline constexpr T idx(const threadLabel &Tx, const blockLabel &Bx, const T nxBlocks, const T nyBlocks) noexcept
+        __host__ [[nodiscard]] inline constexpr label_t idx(const host::threadLabel &Tx, const host::blockLabel &Bx, const label_t nxBlocks, const label_t nyBlocks) noexcept
         {
-            return idx<T>(Tx.x, Tx.y, Tx.z, Bx.x, Bx.y, Bx.z, nxBlocks, nyBlocks);
+            return idx(Tx.x, Tx.y, Tx.z, Bx.x, Bx.y, Bx.z, nxBlocks, nyBlocks);
         }
     }
 
@@ -291,8 +292,7 @@ namespace LBM
          * @param[in] nx,ny Global dimensions
          * @return Linearized index: x + nx*(y + ny*z)
          **/
-        template <typename T = device::label_t>
-        __device__ __host__ [[nodiscard]] inline T idx(const T x, const T y, const T z, const T nx, const T ny) noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr host::label_t idx(const host::label_t x, const host::label_t y, const host::label_t z, const host::label_t nx, const host::label_t ny) noexcept
         {
             return x + (nx * (y + (ny * z)));
         }
@@ -385,10 +385,11 @@ namespace LBM
          * @param[in] dx, dy, dz Device indices in the X, Y and Z directions
          * @param[in] ndx, ndy Number of devices in the X and Y directions
          **/
-        template <typename T = device::label_t>
-        __device__ __host__ [[nodiscard]] inline constexpr T idx(const T dx, const T dy, const T dz, const T ndx, const T ndy) noexcept
+        __device__ __host__ [[nodiscard]] inline constexpr host::label_t idx(
+            const host::label_t dx, const host::label_t dy, const host::label_t dz,
+            const host::label_t ndx, const host::label_t ndy) noexcept
         {
-            return global::idx<T>(dx, dy, dz, ndx, ndy);
+            return global::idx(dx, dy, dz, ndx, ndy);
         }
 
         /**

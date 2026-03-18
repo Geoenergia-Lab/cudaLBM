@@ -58,7 +58,7 @@ namespace LBM
         {
             namespace kernel
             {
-                __host__ [[nodiscard]] inline consteval device::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+                __host__ [[nodiscard]] inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
 #define launchBounds __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
                 /**
@@ -68,7 +68,7 @@ namespace LBM
                  * @param[in] mAlphaBeta Second order moment component
                  * @return The calculated strain rate tensor component
                  **/
-                template <const device::label_t Index, typename T>
+                template <const host::label_t Index, typename T>
                 __device__ [[nodiscard]] inline constexpr T S(const T uAlpha, const T uBeta, const T mAlphaBeta) noexcept
                 {
                     static_assert((Index == index::xx || Index == index::yy || Index == index::zz || Index == index::xy || Index == index::xz || Index == index::yz), "Invalid index");
@@ -321,9 +321,9 @@ namespace LBM
                  * @brief Calculate instantaneous strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneous([[maybe_unused]] const device::label_t timeStep) noexcept
+                __host__ void calculateInstantaneous([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
-                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -335,11 +335,11 @@ namespace LBM
                  * @brief Calculate time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean([[maybe_unused]] const device::label_t timeStep) noexcept
+                __host__ void calculateMean([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -354,11 +354,11 @@ namespace LBM
                  * @brief Calculate both the instantaneous and time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const device::label_t timeStep) noexcept
+                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    for (device::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             devPtrs_,
@@ -374,9 +374,9 @@ namespace LBM
                  * @brief Saves the instantaneous strain rate tensor components to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveInstantaneous(const device::label_t timeStep) noexcept
+                __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
                 {
-                    for (device::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xx_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xx_.programCtrl().deviceList().size(); virtualDeviceIndex++)
                     {
                         hostWriteBuffer_.copy_from_device(
                             device::ptrCollection<6, scalar_t>(
@@ -400,9 +400,9 @@ namespace LBM
                  * @brief Saves the mean strain rate tensor components to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveMean(const device::label_t timeStep) noexcept
+                __host__ void saveMean(const host::label_t timeStep) noexcept
                 {
-                    for (device::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xxMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xxMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
                     {
                         hostWriteBuffer_.copy_from_device(
                             device::ptrCollection<6, scalar_t>(

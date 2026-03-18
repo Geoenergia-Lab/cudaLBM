@@ -110,7 +110,7 @@ namespace LBM
              * @brief Swaps read and write halo buffers
              * @note Synchronizes device before swapping to ensure all operations complete
              **/
-            __host__ inline void swap(const device::label_t i) noexcept
+            __host__ inline void swap(const host::label_t i) noexcept
             {
                 errorHandler::checkInline(cudaDeviceSynchronize());
                 std::swap(readBuffer_.x0Ref(i), writeBuffer_.x0Ref(i));
@@ -125,7 +125,7 @@ namespace LBM
              * @brief Provides read-only access to the current read halo
              * @return Collection of const pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const device::label_t i) const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const host::label_t i) const noexcept
             {
                 return {readBuffer_.x0Const(i), readBuffer_.x1Const(i), readBuffer_.y0Const(i), readBuffer_.y1Const(i), readBuffer_.z0Const(i), readBuffer_.z1Const(i)};
             }
@@ -134,7 +134,7 @@ namespace LBM
              * @brief Provides mutable access to the current write halo
              * @return Collection of mutable pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const device::label_t i) noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const host::label_t i) noexcept
             {
                 return {writeBuffer_.x0(i), writeBuffer_.x1(i), writeBuffer_.y0(i), writeBuffer_.y1(i), writeBuffer_.z0(i), writeBuffer_.z1(i)};
             }
@@ -211,7 +211,7 @@ namespace LBM
 
                 velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
 
-                return velocitySet::template indices_on_face<VelocitySet, alpha, coeff>()[i];
+                return static_cast<device::label_t>(velocitySet::template indices_on_face<VelocitySet, alpha, coeff>()[i]);
             }
 
             /**
@@ -359,7 +359,7 @@ namespace LBM
                             thread_stencil<-VelocitySet::template c<int, axis::Z>()[streaming_index<alpha, coeff>(i)]>(dBz, Bx.value<axis::Z>()),
                             Bx.value<axis::Z>());
 
-                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&(readBuffer.ptr<static_cast<device::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]));
+                        pop[q_i<streaming_index<alpha, coeff>(i)>()] = __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(t_a, t_b, b_x, b_y, b_z)]));
                     });
             }
 
@@ -415,7 +415,7 @@ namespace LBM
                 device::constexpr_for<0, VelocitySet::QF()>(
                     [&](const auto i)
                     {
-                        writeBuffer.ptr<static_cast<device::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(
+                        writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<alpha, coeff>())>()[idxPop<alpha, i, VelocitySet::QF()>(
                             Tx.value<axis::orthogonal<alpha, 0>()>(),
                             Tx.value<axis::orthogonal<alpha, 1>()>(),
                             Bx.value<axis::X>(),

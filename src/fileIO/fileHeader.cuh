@@ -134,33 +134,33 @@ namespace LBM
                   nDevices_({read<device::label_t>(meshLines, "nxGPUs"), read<device::label_t>(meshLines, "nyGPUs"), read<device::label_t>(meshLines, "nzGPUs")}) {}
 
             /**
-             * @brief Returns the number of lattice points in each direction as a blockLabel struct.
-             * @return A blockLabel struct containing the number of lattice points in x, y, and z directions.
+             * @brief Returns the number of lattice points in each direction as a device::blockLabel struct.
+             * @return A device::blockLabel struct containing the number of lattice points in x, y, and z directions.
              **/
-            __host__ [[nodiscard]] inline constexpr const blockLabel &nPoints() const noexcept
+            __host__ [[nodiscard]] inline constexpr const device::blockLabel &nPoints() const noexcept
             {
                 return nPoints_;
             }
 
             /**
-             * @brief Returns the number of devices (GPUs) in each direction as a blockLabel struct.
-             * @return A blockLabel struct containing the number of devices in x, y, and z directions.
+             * @brief Returns the number of devices (GPUs) in each direction as a device::blockLabel struct.
+             * @return A device::blockLabel struct containing the number of devices in x, y, and z directions.
              **/
-            __host__ [[nodiscard]] inline constexpr const blockLabel &nDevices() const noexcept
+            __host__ [[nodiscard]] inline constexpr const device::blockLabel &nDevices() const noexcept
             {
                 return nDevices_;
             }
 
         private:
             /**
-             * @brief The number of lattice points in each direction (x, y, z) as a blockLabel struct.
+             * @brief The number of lattice points in each direction (x, y, z) as a device::blockLabel struct.
              **/
-            const blockLabel nPoints_;
+            const device::blockLabel nPoints_;
 
             /**
-             * @brief The number of devices (GPUs) in each direction (x, y, z) as a blockLabel struct.
+             * @brief The number of devices (GPUs) in each direction (x, y, z) as a device::blockLabel struct.
              **/
-            const blockLabel nDevices_;
+            const device::blockLabel nDevices_;
         };
 
         class fieldInformation
@@ -217,7 +217,7 @@ namespace LBM
              * @brief Returns the field names as a vector of strings.
              * @return A vector containing the field names.
              **/
-            __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &fieldNames() const noexcept
+            __host__ [[nodiscard]] inline constexpr const words_t &fieldNames() const noexcept
             {
                 return fieldNames_;
             }
@@ -246,7 +246,7 @@ namespace LBM
             /**
              * @brief The field names as a vector of strings.
              **/
-            const std::vector<std::string> fieldNames_;
+            const words_t fieldNames_;
 
             /**
              * @brief Reads the field names from the field information block.

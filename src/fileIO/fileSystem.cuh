@@ -241,7 +241,7 @@ namespace LBM
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
         __host__ [[nodiscard]] inline constexpr host::label_t expectedDiskUsage(const LatticeMesh &mesh, const host::label_t nVars) noexcept
         {
-            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<host::label_t>(mesh.template dimension<axis::X, host::label_t>()), static_cast<host::label_t>(mesh.template dimension<axis::Y, host::label_t>()), static_cast<host::label_t>(mesh.template dimension<axis::Z, host::label_t>()), nVars);
+            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<host::label_t>(mesh.template dimension<axis::X>()), static_cast<host::label_t>(mesh.template dimension<axis::Y>()), static_cast<host::label_t>(mesh.template dimension<axis::Z>()), nVars);
         }
 
         /**
@@ -267,7 +267,7 @@ namespace LBM
         /**
          * @brief Throws a runtime_error due to insufficient disk space
          */
-        __host__ void insufficientDiskSpace(const std::string &fileName, const host::label_t expected, const host::label_t available = availableDiskSpace())
+        __host__ void insufficientDiskSpace(const name_t &fileName, const host::label_t expected, const host::label_t available = availableDiskSpace())
         {
             throw std::runtime_error("Insufficient disk space to write " + fileName + "\nRequired: " + std::to_string(expected) + "\nAvailable: " + std::to_string(available));
         }
@@ -275,7 +275,7 @@ namespace LBM
         /**
          * @brief Throws if insufficient disk space.
          */
-        __host__ void ensureDiskSpace(const std::string &fileName, const host::label_t required, const host::label_t available = availableDiskSpace())
+        __host__ void ensureDiskSpace(const name_t &fileName, const host::label_t required, const host::label_t available = availableDiskSpace())
         {
             if (required > available)
             {
@@ -297,7 +297,7 @@ namespace LBM
          * @brief Assert (throw) that sufficient disk space exists.
          */
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
-        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const host::label_t nVars, const std::string &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
+        __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const host::label_t nVars, const name_t &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
         {
             const host::label_t needed = expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh, nVars);
 

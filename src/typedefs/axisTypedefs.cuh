@@ -68,7 +68,7 @@ namespace LBM
         /**
          * @brief Enumerated type for indexing pointers to halos
          **/
-        typedef enum pointerIndexEnum : device::label_t
+        typedef enum pointerIndexEnum : host::label_t
         {
             West = 0,
             East = 1,
