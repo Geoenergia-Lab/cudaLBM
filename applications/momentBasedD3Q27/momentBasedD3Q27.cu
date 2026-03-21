@@ -102,7 +102,7 @@ int main(const int argc, const char *const argv[])
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    programCtrl.configure<smem_alloc_size()>(momentBasedD3Q27);
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q27);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -150,7 +150,7 @@ int main(const int argc, const char *const argv[])
         host::constexpr_for<0, NStreams()>(
             [&](const auto stream)
             {
-                momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
+                momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[stream]>>>(
                     devPtrs,
                     blockHalo.readBuffer(VirtualDeviceIndex),
                     blockHalo.writeBuffer(VirtualDeviceIndex));

@@ -88,7 +88,7 @@ int main(const int argc, const char *const argv[])
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    programCtrl.configure<smem_alloc_size()>(kernel<VelocitySet>());
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q27);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -162,7 +162,7 @@ int main(const int argc, const char *const argv[])
             const device::ptrCollection<6, scalar_t> writeBuffer = blockHalo.writeBuffer(VirtualDeviceIndex);
 
             // Configure the kernel to run per GPU
-            kernel<VelocitySet>()<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[VirtualDeviceIndex]>>>(devPtrs, readBuffer, writeBuffer);
+            momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[VirtualDeviceIndex]>>>(devPtrs, readBuffer, writeBuffer);
 
             errorHandler::checkLast();
         }
