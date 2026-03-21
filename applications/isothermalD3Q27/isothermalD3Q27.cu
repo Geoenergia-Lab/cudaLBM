@@ -43,11 +43,11 @@ Namespace
     LBM
 
 SourceFiles
-    momentBasedD3Q27.cu
+    isothermalD3Q27.cu
 
 \*---------------------------------------------------------------------------*/
 
-#include "momentBasedD3Q27.cuh"
+#include "isothermalD3Q27.cuh"
 
 using namespace LBM;
 

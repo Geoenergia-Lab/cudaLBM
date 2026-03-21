@@ -37,19 +37,19 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Aliases and kernel definitions for the thermal D3Q19 moment representation
-    lattice Boltzmann model
+    Aliases and kernel definitions for the isothermal D3Q19 moment
+    representation lattice Boltzmann model
 
 Namespace
     LBM
 
 SourceFiles
-    momentBasedD3Q19.cuh
+    isothermalD3Q19.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_MOMENTBASEDD3Q19_CUH
-#define __MBLBM_MOMENTBASEDD3Q19_CUH
+#ifndef __MBLBM_ISOTHERMALD3Q19_CUH
+#define __MBLBM_ISOTHERMALD3Q19_CUH
 
 #include "../../src/LBMIncludes.cuh"
 #include "../../src/typedefs/typedefs.cuh"
@@ -66,7 +66,7 @@ SourceFiles
 namespace LBM
 {
     using BoundaryConditions = boundaryConditions::traits<boundaryConditions::caseName()>::type;
-    using VelocitySet = D3Q19<Thermal>;
+    using VelocitySet = D3Q19<Isothermal>;
     using Collision = secondOrder;
     using BlockHalo = device::halo<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>;
 

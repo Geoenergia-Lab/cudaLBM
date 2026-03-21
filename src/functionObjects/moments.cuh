@@ -68,7 +68,7 @@ namespace LBM
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
                 launchBounds __global__ void mean(
-                    const device::ptrCollection<NUMBER_MOMENTS(), scalar_t> devPtrs,
+                    const device::ptrCollection<NUMBER_MOMENTS(), const scalar_t> devPtrs,
                     const device::ptrCollection<NUMBER_MOMENTS(), scalar_t> devMeanPtrs,
                     const scalar_t invNewCount)
                 {
@@ -119,12 +119,30 @@ namespace LBM
                 __host__ [[nodiscard]] collection(
                     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
-                    const device::ptrCollection<10, scalar_t> &devPtrs,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz,
                     const streamHandler &streamsLBM,
                     const programControl &programCtrl) noexcept
                     : hostWriteBuffer_(hostWriteBuffer),
                       mesh_(mesh),
-                      devPtrs_(devPtrs),
+                      rho_(rho),
+                      u_(u),
+                      v_(v),
+                      w_(w),
+                      mxx_(mxx),
+                      mxy_(mxy),
+                      mxz_(mxz),
+                      myy_(myy),
+                      myz_(myz),
+                      mzz_(mzz),
                       streamsLBM_(streamsLBM),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
                       rhoMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_, programCtrl)),
@@ -191,17 +209,26 @@ namespace LBM
                     for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
                         moments::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                            devPtrs_,
-                            {rhoMean_.ptr(0),
-                             uMean_.ptr(0),
-                             vMean_.ptr(0),
-                             wMean_.ptr(0),
-                             mxxMean_.ptr(0),
-                             mxyMean_.ptr(0),
-                             mxzMean_.ptr(0),
-                             myyMean_.ptr(0),
-                             myzMean_.ptr(0),
-                             mzzMean_.ptr(0)},
+                            {rho_.ptr(stream),
+                             u_.ptr(stream),
+                             v_.ptr(stream),
+                             w_.ptr(stream),
+                             mxx_.ptr(stream),
+                             mxy_.ptr(stream),
+                             mxz_.ptr(stream),
+                             myy_.ptr(stream),
+                             myz_.ptr(stream),
+                             mzz_.ptr(stream)},
+                            {rhoMean_.ptr(stream),
+                             uMean_.ptr(stream),
+                             vMean_.ptr(stream),
+                             wMean_.ptr(stream),
+                             mxxMean_.ptr(stream),
+                             mxyMean_.ptr(stream),
+                             mxzMean_.ptr(stream),
+                             myyMean_.ptr(stream),
+                             myzMean_.ptr(stream),
+                             mzzMean_.ptr(stream)},
                             invNewCount);
                     }
 
@@ -326,7 +353,16 @@ namespace LBM
                 /**
                  * @brief Device pointer collection
                  **/
-                const device::ptrCollection<10, scalar_t> &devPtrs_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz_;
 
                 /**
                  * @brief Stream handler for CUDA operations

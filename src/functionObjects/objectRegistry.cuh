@@ -63,9 +63,8 @@ namespace LBM
     /**
      * @brief Registry for managing function objects and their calculations
      * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
-     * @tparam N The number of streams (as a compile-time constant)
      **/
-    template <class VelocitySet, const host::label_t N>
+    template <class VelocitySet>
     class objectRegistry
     {
     public:
@@ -78,14 +77,23 @@ namespace LBM
         [[nodiscard]] objectRegistry(
             host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
             const host::latticeMesh &mesh,
-            const device::ptrCollection<10, scalar_t> &devPtrs,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz,
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz,
             const streamHandler &streamsLBM,
             const programControl &programCtrl)
             : hostWriteBuffer_(hostWriteBuffer),
               mesh_(mesh),
-              M_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
-              S_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
-              k_(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl),
+              M_(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl),
+              S_(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl),
+              k_(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl),
               functionVector_(functionObjectCallInitialiser(M_, S_, k_)),
               saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {}
 

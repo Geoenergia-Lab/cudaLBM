@@ -37,17 +37,17 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Implementation of the moment representation with the D3Q27 velocity set
+    Implementation of the moment representation with the D3Q19 velocity set
 
 Namespace
     LBM
 
 SourceFiles
-    momentBasedD3Q27.cu
+    isothermalD3Q19.cu
 
 \*---------------------------------------------------------------------------*/
 
-#include "momentBasedD3Q27.cuh"
+#include "isothermalD3Q19.cuh"
 
 using namespace LBM;
 
@@ -102,7 +102,7 @@ int main(const int argc, const char *const argv[])
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q27);
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q19);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -150,10 +150,7 @@ int main(const int argc, const char *const argv[])
         host::constexpr_for<0, NStreams()>(
             [&](const auto stream)
             {
-                momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[stream]>>>(
-                    devPtrs,
-                    blockHalo.readBuffer(VirtualDeviceIndex),
-                    blockHalo.writeBuffer(VirtualDeviceIndex));
+                momentBasedD3Q19<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[stream]>>>(devPtrs, blockHalo.readBuffer(VirtualDeviceIndex), blockHalo.writeBuffer(VirtualDeviceIndex));
             });
 
         // Calculate S kernel

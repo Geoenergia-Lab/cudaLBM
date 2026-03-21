@@ -57,7 +57,19 @@ SourceFiles
 
 namespace LBM
 {
+    /**
+     * @brief Enumerated type for indexing pointers to halos
+     **/
+    typedef enum thermalModelEnum : bool
+    {
+        Thermal = 0,
+        Isothermal = 1
+    } thermalModel_t;
+
+    template <const thermalModel_t IsothermalModel>
     class D3Q19;
+
+    template <const thermalModel_t IsothermalModel>
     class D3Q27;
 
     namespace assertions
@@ -71,7 +83,7 @@ namespace LBM
             template <class VelocitySet>
             __device__ __host__ inline consteval void validate() noexcept
             {
-                static_assert(((std::is_same<VelocitySet, D3Q19>::value) || (std::is_same<VelocitySet, D3Q27>::value)), "VelocitySet must be D3Q19 or D3Q27.");
+                static_assert(((std::is_same<VelocitySet, D3Q19<Thermal>>::value) || (std::is_same<VelocitySet, D3Q27<Thermal>>::value) || (std::is_same<VelocitySet, D3Q19<Isothermal>>::value) || (std::is_same<VelocitySet, D3Q27<Isothermal>>::value)), "VelocitySet must be D3Q19 or D3Q27.");
             }
         }
     }
@@ -158,6 +170,14 @@ namespace LBM
             moments[m_i<7>()] = scale_ii<scalar_t>() * (moments[m_i<7>()]);
             moments[m_i<8>()] = scale_ij<scalar_t>() * (moments[m_i<8>()]);
             moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
+        }
+
+        __device__ __host__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, 3> diagonal_term(
+            const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
+        {
+            const scalar_t Delta_m = (moments[q_i<1>()] * moments[q_i<1>()] + moments[q_i<2>()] * moments[q_i<2>()] + moments[q_i<3>()] * moments[q_i<3>()] - moments[q_i<4>()] - moments[q_i<7>()] - moments[q_i<9>()]) / static_cast<scalar_t>(3);
+
+            return {moments[q_i<4>()] + Delta_m, moments[q_i<7>()] + Delta_m, moments[q_i<9>()] + Delta_m};
         }
 
         /**

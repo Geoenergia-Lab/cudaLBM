@@ -84,11 +84,11 @@ int main(const int argc, const char *const argv[])
     // Allocate a buffer of pinned memory on the host for writing
     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS(), mesh);
 
-    // objectRegistry<VelocitySet, 1> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl);
+    objectRegistry<VelocitySet> runTimeObjects(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl);
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    programCtrl.configure<smem_alloc_size()>(kernel<VelocitySet>());
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q27);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -130,7 +130,7 @@ int main(const int argc, const char *const argv[])
                 timeStep,
                 rho.meanCount());
 
-            // runTimeObjects.save(timeStep);
+            runTimeObjects.save(timeStep);
         }
 
         for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
@@ -162,7 +162,7 @@ int main(const int argc, const char *const argv[])
             const device::ptrCollection<6, scalar_t> writeBuffer = blockHalo.writeBuffer(VirtualDeviceIndex);
 
             // Configure the kernel to run per GPU
-            kernel<VelocitySet>()<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[VirtualDeviceIndex]>>>(devPtrs, readBuffer, writeBuffer);
+            momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[VirtualDeviceIndex]>>>(devPtrs, readBuffer, writeBuffer);
 
             errorHandler::checkLast();
         }

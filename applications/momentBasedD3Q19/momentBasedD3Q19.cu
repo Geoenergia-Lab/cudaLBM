@@ -98,11 +98,11 @@ int main(const int argc, const char *const argv[])
     // Allocate a buffer of pinned memory on the host for writing
     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS(), mesh);
 
-    objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, devPtrs, streamsLBM, programCtrl);
+    objectRegistry<VelocitySet> runTimeObjects(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl);
 
     BlockHalo blockHalo(mesh, programCtrl);
 
-    programCtrl.configure<smem_alloc_size()>(momentBasedD3Q19);
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q19);
 
     const runTimeIO IO(mesh, programCtrl);
 
@@ -150,7 +150,7 @@ int main(const int argc, const char *const argv[])
         host::constexpr_for<0, NStreams()>(
             [&](const auto stream)
             {
-                momentBasedD3Q19<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(devPtrs, blockHalo.readBuffer(VirtualDeviceIndex), blockHalo.writeBuffer(VirtualDeviceIndex));
+                momentBasedD3Q19<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[stream]>>>(devPtrs, blockHalo.readBuffer(VirtualDeviceIndex), blockHalo.writeBuffer(VirtualDeviceIndex));
             });
 
         // Calculate S kernel
