@@ -56,12 +56,12 @@ namespace LBM
     /**
      * @struct boundaryFields
      * @brief Represents a single field value across all boundary regions
-     * @tparam VelocitySet Velocity set configuration defining lattice structure
+     * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
      *
      * This struct provides access to a specific field's value across all
      * boundary regions (North, South, East, West, Back, Front) and the internal field.
      **/
-    template <class VelocitySet>
+    template <class VelocitySet, const bool Scaled>
     class boundaryFields
     {
     public:
@@ -69,16 +69,16 @@ namespace LBM
          * @brief Constructs boundary field values for all regions
          * @param[in] fieldName Name of the field to initialize across all regions
          **/
-        __host__ [[nodiscard]] boundaryFields(const std::string &fieldName)
+        __host__ [[nodiscard]] boundaryFields(const name_t &fieldName)
             : values_{
-                  boundaryValue<VelocitySet>(fieldName, "North"),
-                  boundaryValue<VelocitySet>(fieldName, "South"),
-                  boundaryValue<VelocitySet>(fieldName, "East"),
-                  boundaryValue<VelocitySet>(fieldName, "West"),
-                  boundaryValue<VelocitySet>(fieldName, "Back"),
-                  boundaryValue<VelocitySet>(fieldName, "Front"),
-                  boundaryValue<VelocitySet>(fieldName, "internalField")},
-              fieldName_(fieldName){};
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "North"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "South"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "East"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "West"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "Back"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "Front"),
+                  boundaryValue<VelocitySet, Scaled>(fieldName, "internalField")},
+              fieldName_(fieldName) {}
 
         /**
          * @name Region Accessors
@@ -121,8 +121,8 @@ namespace LBM
         {
             std::cout << fieldName_ << " boundary values:" << std::endl;
 
-            const std::vector<std::string> fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
-            for (std::size_t var = 0; var < fieldNames.size(); var++)
+            const words_t fieldNames({"North", "South", "East", "West", "Back", "Front", "Internal"});
+            for (host::label_t var = 0; var < fieldNames.size(); var++)
             {
                 std::cout << fieldNames[var] << ": " << values_[var]() << std::endl;
             }
@@ -132,12 +132,12 @@ namespace LBM
         /**
          * @brief Field values for all regions
          **/
-        const boundaryValue<VelocitySet> values_[7];
+        const boundaryValue<VelocitySet, Scaled> values_[7];
 
         /**
          * @brief Name of the field
          **/
-        const std::string &fieldName_;
+        const name_t &fieldName_;
     };
 
 }

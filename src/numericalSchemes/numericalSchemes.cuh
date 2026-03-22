@@ -51,31 +51,46 @@ SourceFiles
 #define __MBLBM_NUMERICALSCHEMES_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 
 namespace LBM
 {
-    /**
-     * @brief Calculates the magnitude of a 3D vector field.
-     * @tparam T The data type of the vector components.
-     * @param u A vector representing the x-components of the vector field.
-     * @param v A vector representing the y-components of the vector field.
-     * @param w A vector representing the z-components of the vector field.
-     * @return A vector containing the magnitude of the vector field at each point.
-     **/
-    template <typename T>
-    __host__ [[nodiscard]] const std::vector<T> mag(const std::vector<T> &u, const std::vector<T> &v, const std::vector<T> &w)
+    namespace numericalSchemes
     {
-        // Add a size check here
-
-        std::vector<scalar_t> magu(u.size(), 0);
-
-        for (label_t i = 0; i < u.size(); i++)
+        namespace assertions
         {
-            magu[i] = std::sqrt((u[i] * u[i]) + (v[i] * v[i]) + (w[i] * w[i]));
+            /**
+             * @brief Check that the selected numerical scheme order is valid: positive multiple number of 2 up to the maximum scheme order
+             **/
+            template <const host::label_t Order, const host::label_t MaximumSchemeOrder>
+            __device__ __host__ inline consteval void validate() noexcept
+            {
+                static_assert(((Order % 2 == 0) && (Order < (1 << MaximumSchemeOrder))), "Invalid numerical scheme order");
+            }
         }
 
-        return magu;
+        /**
+         * @brief Calculates the magnitude of a 3D vector field.
+         * @tparam T The data type of the vector components.
+         * @param[in] u A vector representing the x-components of the vector field.
+         * @param[in] v A vector representing the y-components of the vector field.
+         * @param[in] w A vector representing the z-components of the vector field.
+         * @return A vector containing the magnitude of the vector field at each point.
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] const std::vector<T> mag(const std::vector<T> &u, const std::vector<T> &v, const std::vector<T> &w)
+        {
+            // Add a size check here
+
+            std::vector<scalar_t> magu(u.size(), 0);
+
+            for (host::label_t i = 0; i < u.size(); i++)
+            {
+                magu[i] = std::sqrt((u[i] * u[i]) + (v[i] * v[i]) + (w[i] * w[i]));
+            }
+
+            return magu;
+        }
     }
 }
 

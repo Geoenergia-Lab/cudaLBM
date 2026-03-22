@@ -55,440 +55,6 @@ namespace LBM
     namespace fileIO
     {
         /**
-         * @struct fieldFileHeader
-         * @brief Contains metadata extracted from field file headers
-         *
-         * This structure holds all the metadata required to interpret
-         * binary field data files, including dimensions, data format,
-         * and field information.
-         **/
-        struct fieldFileHeader
-        {
-            const bool isLittleEndian;                 //!< Endianness of the binary data
-            const std::size_t scalarSize;              //!< Size of scalar values (4 or 8 bytes)
-            const std::size_t nx;                      //!< Grid dimension in x-direction
-            const std::size_t ny;                      //!< Grid dimension in y-direction
-            const std::size_t nz;                      //!< Grid dimension in z-direction
-            const std::size_t nVars;                   //!< Number of variables per grid point
-            const std::size_t dataStartPos;            //!< File position where binary data begins
-            const std::vector<std::string> fieldNames; //!< Names of all field variables
-        };
-
-        /**
-         * @brief Trims leading/trailing whitespace and trailing semicolons from a string
-         * @param[in] str The input string to trim
-         * @return The trimmed string
-         **/
-        __host__ [[nodiscard]] const std::string filestring_trim(const std::string &str)
-        {
-            const std::size_t start = str.find_first_not_of(" \t\r\n");
-            const std::size_t end = str.find_last_not_of(" \t\r\n;");
-            return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
-        }
-
-        /**
-         * @brief Parse header metadata from field file
-         * @param[in] fileName Name of the file to parse
-         * @return Parsed header information
-         * @throws std::runtime_error if file doesn't exist, is inaccessible, or has invalid format
-         *
-         * This function reads and validates the header section of field files,
-         * extracting metadata about grid dimensions, data format, and field names.
-         * It performs comprehensive error checking for file integrity and format compliance.
-         **/
-        __host__ [[nodiscard]] const fieldFileHeader parseFieldFileHeader(const std::string &fileName)
-        {
-            // Check if file exists and is accessible
-            if (!std::filesystem::exists(fileName))
-            {
-                throw std::runtime_error("File does not exist: " + fileName);
-            }
-
-            std::ifstream in(fileName, std::ios::binary);
-            if (!in)
-            {
-                throw std::runtime_error("Cannot open file: " + fileName);
-            }
-
-            // Get file size for validation
-            in.seekg(0, std::ios::end);
-            const auto fileSizePos = in.tellg();
-            if (fileSizePos == -1)
-            {
-                throw std::runtime_error("Cannot determine file size");
-            }
-
-            // Safe cast: file size should be non-negative
-            if (fileSizePos < 0)
-            {
-                throw std::runtime_error("Invalid file size (negative)");
-            }
-
-            const std::size_t fileSize = static_cast<std::size_t>(fileSizePos);
-            in.seekg(0, std::ios::beg);
-
-            std::string line;
-            bool inSystemInfo = false;
-            bool inFieldData = false;
-            bool inFieldInfo = false;
-            bool inFieldNames = false;
-            bool isLittleEndian = false;
-
-            // Variables to store parsed data
-            std::size_t scalarSize = 0;
-            std::size_t nx = 0;
-            std::size_t ny = 0;
-            std::size_t nz = 0;
-            std::size_t nVars = 0;
-            std::size_t totalPoints = 0;
-            std::size_t dataStartPos = 0;
-            std::vector<std::string> fieldNamesVec;
-            std::size_t expectedFieldCount = 0;
-            bool foundFieldData = false;
-            bool foundSystemInfo = false;
-            bool foundFieldInfo = false;
-
-            // Track which sections we've already seen to detect duplicates
-            bool systemInfoSeen = false;
-            bool fieldDataSeen = false;
-            bool fieldInfoSeen = false;
-
-            // Track line number for better error messages
-            std::size_t lineNumber = 0;
-
-            while (std::getline(in, line))
-            {
-                lineNumber++;
-                line = filestring_trim(line);
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                // Detect sections (regardless of order)
-                if (line == "systemInformation")
-                {
-                    if (systemInfoSeen)
-                    {
-                        throw std::runtime_error("Duplicate systemInformation section at line " + std::to_string(lineNumber));
-                    }
-                    inSystemInfo = true;
-                    foundSystemInfo = true;
-                    systemInfoSeen = true;
-                    continue;
-                }
-                else if (line == "fieldData")
-                {
-                    if (fieldDataSeen)
-                    {
-                        throw std::runtime_error("Duplicate fieldData section at line " + std::to_string(lineNumber));
-                    }
-                    inFieldData = true;
-                    fieldDataSeen = true;
-                    continue;
-                }
-                else if (line == "fieldInformation")
-                {
-                    if (fieldInfoSeen)
-                    {
-                        throw std::runtime_error("Duplicate fieldInformation section at line " + std::to_string(lineNumber));
-                    }
-                    inFieldInfo = true;
-                    foundFieldInfo = true;
-                    fieldInfoSeen = true;
-                    continue;
-                }
-
-                // Parse systemInformation section
-                if (inSystemInfo)
-                {
-                    if (line == "}")
-                    {
-                        inSystemInfo = false;
-                    }
-                    else if (line.find("binaryType") != std::string::npos)
-                    {
-                        isLittleEndian = (line.find("littleEndian") != std::string::npos);
-                    }
-                    else if (line.find("scalarType") != std::string::npos)
-                    {
-                        if (line.find("32 bit") != std::string::npos)
-                        {
-                            scalarSize = 4;
-                        }
-                        else if (line.find("64 bit") != std::string::npos)
-                        {
-                            scalarSize = 8;
-                        }
-                        else
-                        {
-                            throw std::runtime_error("Invalid scalarType at line " + std::to_string(lineNumber));
-                        }
-                    }
-                }
-
-                // Parse fieldData section for dimensions
-                if (inFieldData && !foundFieldData)
-                {
-                    if (line == "}")
-                    {
-                        inFieldData = false;
-                    }
-                    else if (line.find("field[") != std::string::npos)
-                    {
-                        // Extract dimensions from pattern: field[total][nx][ny][nz][nVars]
-                        std::vector<std::size_t> dims;
-                        std::size_t pos = 0;
-
-                        while ((pos = line.find('[', pos)) != std::string::npos)
-                        {
-                            const std::size_t end = line.find(']', pos);
-                            if (end == std::string::npos)
-                            {
-                                throw std::runtime_error("Unclosed bracket at line " + std::to_string(lineNumber));
-                            }
-
-                            try
-                            {
-                                const std::string dimStr = line.substr(pos + 1, end - pos - 1);
-                                const unsigned long long dimValue = std::stoull(dimStr);
-
-                                // Check for overflow before casting to std::size_t
-                                if (dimValue > std::numeric_limits<std::size_t>::max())
-                                {
-                                    throw std::runtime_error("Dimension value too large at line " + std::to_string(lineNumber));
-                                }
-
-                                dims.push_back(static_cast<std::size_t>(dimValue));
-                            }
-                            catch (const std::out_of_range &)
-                            {
-                                throw std::runtime_error("Dimension value out of range at line " + std::to_string(lineNumber));
-                            }
-                            catch (...)
-                            {
-                                throw std::runtime_error("Invalid dimension format at line " + std::to_string(lineNumber));
-                            }
-                            pos = end + 1;
-                        }
-
-                        if (dims.size() < 5)
-                        {
-                            throw std::runtime_error("Invalid field dimensions at line " + std::to_string(lineNumber));
-                        }
-
-                        totalPoints = dims[0];
-                        nVars = dims[1];
-                        nz = dims[2];
-                        ny = dims[3];
-                        nx = dims[4];
-
-                        // Validate dimensions
-                        if (nx == 0 || ny == 0 || nz == 0 || nVars == 0)
-                        {
-                            throw std::runtime_error("Invalid grid dimensions: nx, ny, nz, nVars cannot be zero at line " + std::to_string(lineNumber));
-                        }
-
-                        // Check for potential overflow in multiplication
-                        if (nx > std::numeric_limits<std::size_t>::max() / ny / nz / nVars)
-                        {
-                            throw std::runtime_error("Dimension product would overflow at line " + std::to_string(lineNumber));
-                        }
-
-                        if (totalPoints != nx * ny * nz * nVars)
-                        {
-                            throw std::runtime_error("Dimension mismatch at line " + std::to_string(lineNumber) + ": total points (" + std::to_string(totalPoints) + ") != nx * ny * nz * nVars (" + std::to_string(nx * ny * nz * nVars) + ")");
-                        }
-
-                        // Skip next line (contains "{")
-                        if (!std::getline(in, line))
-                        {
-                            throw std::runtime_error("Unexpected end of file after field declaration");
-                        }
-                        lineNumber++;
-
-                        // Record start position of binary data with safety check
-                        const auto dataPos = in.tellg();
-                        if (dataPos == -1)
-                        {
-                            throw std::runtime_error("Error getting file position");
-                        }
-
-                        if (dataPos < 0)
-                        {
-                            throw std::runtime_error("Invalid file position (negative)");
-                        }
-
-                        // Check for overflow before casting to std::size_t
-                        if (static_cast<unsigned long long>(dataPos) > std::numeric_limits<std::size_t>::max())
-                        {
-                            throw std::runtime_error("File position too large for std::size_t");
-                        }
-
-                        dataStartPos = static_cast<std::size_t>(dataPos);
-
-                        // Check if data start position is within file bounds
-                        if (dataStartPos > fileSize)
-                        {
-                            throw std::runtime_error("Data start position exceeds file size");
-                        }
-
-                        foundFieldData = true;
-                        inFieldData = false;
-                    }
-                }
-
-                // Parse fieldInformation section for field names
-                if (inFieldInfo)
-                {
-                    if (line == "}")
-                    {
-                        inFieldInfo = false;
-                    }
-                    else if (line.find("fieldNames[") != std::string::npos)
-                    {
-                        // Extract expected number of field names
-                        const std::size_t startBracket = line.find('[');
-                        const std::size_t endBracket = line.find(']');
-                        if (startBracket == std::string::npos || endBracket == std::string::npos)
-                        {
-                            throw std::runtime_error("Invalid fieldNames format at line " + std::to_string(lineNumber));
-                        }
-                        try
-                        {
-                            const unsigned long long count = std::stoull(
-                                line.substr(startBracket + 1, endBracket - startBracket - 1));
-
-                            // Check for overflow before casting to std::size_t
-                            if (count > std::numeric_limits<std::size_t>::max())
-                            {
-                                throw std::runtime_error("Field names count too large at line " + std::to_string(lineNumber));
-                            }
-
-                            expectedFieldCount = static_cast<std::size_t>(count);
-                            if (expectedFieldCount == 0)
-                            {
-                                throw std::runtime_error("Field names count cannot be zero at line " + std::to_string(lineNumber));
-                            }
-                        }
-                        catch (const std::out_of_range &)
-                        {
-                            throw std::runtime_error("Field names count out of range at line " + std::to_string(lineNumber));
-                        }
-                        catch (...)
-                        {
-                            throw std::runtime_error("Invalid fieldNames count at line " + std::to_string(lineNumber));
-                        }
-                        // Enter fieldNames block
-                        inFieldNames = true;
-
-                        // Skip the opening brace line
-                        if (!std::getline(in, line))
-                        {
-                            throw std::runtime_error("Unexpected end of file after fieldNames declaration");
-                        }
-                        lineNumber++;
-                        line = filestring_trim(line);
-                        if (line != "{")
-                        {
-                            throw std::runtime_error("Expected opening brace after fieldNames declaration at line " + std::to_string(lineNumber));
-                        }
-                    }
-                    else if (inFieldNames)
-                    {
-                        if (line == "}")
-                        {
-                            inFieldNames = false;
-                            inFieldInfo = false;
-                        }
-                        else if (line != "{") // Skip the opening brace if we encounter it
-                        {
-                            // Remove trailing semicolon and trim to get field name
-                            if (line.back() == ';')
-                            {
-                                line.pop_back();
-                            }
-                            const std::string fieldName = filestring_trim(line);
-
-                            // Validate field name
-                            if (fieldName.empty())
-                            {
-                                throw std::runtime_error("Empty field name at line " + std::to_string(lineNumber));
-                            }
-
-                            // Check for duplicate field names
-                            // if (std::find(fieldNamesVec.begin(), fieldNamesVec.end(), fieldName) != fieldNamesVec.end())
-                            if (string::containsString(fieldNamesVec, fieldName))
-                            {
-                                throw std::runtime_error("Duplicate field name '" + fieldName + "' at line " + std::to_string(lineNumber));
-                            }
-
-                            fieldNamesVec.push_back(fieldName);
-
-                            // Check if we've exceeded the expected number of field names
-                            if (fieldNamesVec.size() > expectedFieldCount)
-                            {
-                                throw std::runtime_error("Too many field names at line " + std::to_string(lineNumber) + ". Expected: " + std::to_string(expectedFieldCount));
-                            }
-                        }
-                    }
-                }
-
-                // Early exit if we've collected all necessary information
-                if (scalarSize > 0 && foundFieldData && fieldNamesVec.size() == expectedFieldCount && expectedFieldCount > 0)
-                {
-                    break;
-                }
-            }
-
-            // Final validation checks
-            if (!foundSystemInfo)
-            {
-                throw std::runtime_error("Missing systemInformation section");
-            }
-
-            if (!foundFieldInfo)
-            {
-                throw std::runtime_error("Missing fieldInformation section");
-            }
-
-            if (!foundFieldData)
-            {
-                throw std::runtime_error("Missing fieldData section");
-            }
-
-            if (scalarSize == 0)
-            {
-                throw std::runtime_error("Missing or invalid scalarType in systemInformation");
-            }
-
-            if (fieldNamesVec.size() != nVars)
-            {
-                throw std::runtime_error("Field names count (" + std::to_string(fieldNamesVec.size()) + ") does not match nVars (" + std::to_string(nVars) + ")");
-            }
-
-            if (fieldNamesVec.size() != expectedFieldCount)
-            {
-                throw std::runtime_error("Field names count (" + std::to_string(fieldNamesVec.size()) + ") does not match declared count (" + std::to_string(expectedFieldCount) + ")");
-            }
-
-            // Check if binary data size matches expectations
-            // Check for potential overflow in multiplication
-            if (totalPoints > std::numeric_limits<std::size_t>::max() / scalarSize)
-            {
-                throw std::runtime_error("Data size calculation would overflow");
-            }
-
-            const std::size_t expectedDataSize = totalPoints * scalarSize;
-            if (fileSize - dataStartPos < expectedDataSize)
-            {
-                throw std::runtime_error("Insufficient data in file. Expected " + std::to_string(expectedDataSize) + " bytes, but only " + std::to_string(fileSize - dataStartPos) + " bytes available");
-            }
-
-            return {isLittleEndian, scalarSize, nx, ny, nz, nVars, dataStartPos, fieldNamesVec};
-        }
-
-        /**
          * @brief Swap endianness for a single value
          * @tparam T Data type of value to swap
          * @param[in,out] value Reference to value whose endianness will be swapped
@@ -497,7 +63,7 @@ namespace LBM
         void swapEndian(T &value)
         {
             char *bytes = reinterpret_cast<char *>(&value);
-            for (std::size_t i = 0; i < sizeof(T) / 2; ++i)
+            for (host::label_t i = 0; i < sizeof(T) / 2; ++i)
             {
                 std::swap(bytes[i], bytes[sizeof(T) - 1 - i]);
             }
@@ -529,10 +95,10 @@ namespace LBM
          * all variables for each point are stored contiguously.
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> readFieldFile(const std::string &fileName)
+        __host__ [[nodiscard]] const std::vector<T> readFieldFile(const name_t &fileName)
         {
-            static_assert(std::is_floating_point_v<T>, "T must be floating point");
-            static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big, "System must be little or big endian");
+            endian::assertions::validate();
+            types::assertions::validate<T>();
 
             // Check that the file exists - if it doesn't, throw an exception
             if (!std::filesystem::exists(fileName))
@@ -550,8 +116,8 @@ namespace LBM
             }
 
             // Calculate expected data size
-            const std::size_t totalPoints = header.nx * header.ny * header.nz;
-            const std::size_t totalDataCount = totalPoints * header.nVars;
+            const host::label_t totalPoints = header.nx * header.ny * header.nz;
+            const host::label_t totalDataCount = totalPoints * header.nVars;
 
             // Open file and jump to binary data
             std::ifstream in(fileName, std::ios::binary);
@@ -561,7 +127,7 @@ namespace LBM
             }
 
             // Safe conversion for seekg
-            if (header.dataStartPos > static_cast<std::size_t>(std::numeric_limits<std::streamoff>::max()))
+            if (header.dataStartPos > static_cast<host::label_t>(std::numeric_limits<std::streamoff>::max()))
             {
                 throw std::runtime_error("File position overflow");
             }
@@ -569,10 +135,10 @@ namespace LBM
 
             // Read binary data
             std::vector<T> data(totalDataCount);
-            const std::size_t byteCount = totalDataCount * sizeof(T);
+            const host::label_t byteCount = totalDataCount * sizeof(T);
 
             // Check for streamsize overflow
-            if (byteCount > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteCount > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Data size exceeds maximum stream size");
             }
@@ -606,10 +172,10 @@ namespace LBM
          * reading the entire file when only specific fields are needed.
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> readFieldByName(const std::string &fileName, const std::string &fieldName)
+        __host__ [[nodiscard]] const std::vector<T> readFieldByName(const name_t &fileName, const name_t &fieldName)
         {
-            static_assert(std::is_floating_point_v<T>, "T must be floating point");
-            static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big, "System must be little or big endian");
+            types::assertions::validate<T>();
+            endian::assertions::validate();
 
             // Check if file exists
             if (!std::filesystem::exists(fileName))
@@ -623,7 +189,7 @@ namespace LBM
             {
                 throw std::runtime_error("Cannot open file for size check: " + fileName);
             }
-            const std::size_t fileSize = static_cast<std::size_t>(sizeCheck.tellg());
+            const host::label_t fileSize = static_cast<host::label_t>(sizeCheck.tellg());
             sizeCheck.close();
 
             // Parse header to get file structure and field names
@@ -640,7 +206,7 @@ namespace LBM
             if (it == header.fieldNames.end())
             {
                 // Create a list of available field names for better error message
-                std::string availableFields;
+                name_t availableFields;
                 for (const auto &name : header.fieldNames)
                 {
                     if (!availableFields.empty())
@@ -659,8 +225,8 @@ namespace LBM
                 throw std::runtime_error("Internal error: Negative field index");
             }
 
-            const std::size_t fieldIndex = static_cast<std::size_t>(signedFieldIndex);
-            const std::size_t pointsPerField = header.nx * header.ny * header.nz;
+            const host::label_t fieldIndex = static_cast<host::label_t>(signedFieldIndex);
+            const host::label_t pointsPerField = header.nx * header.ny * header.nz;
 
             // Check for potential overflow in calculations
             if (pointsPerField == 0)
@@ -675,20 +241,20 @@ namespace LBM
             }
 
             // Check for overflow in fieldOffset calculation
-            if (fieldIndex > (std::numeric_limits<std::size_t>::max() / pointsPerField / sizeof(T)))
+            if (fieldIndex > (std::numeric_limits<host::label_t>::max() / pointsPerField / sizeof(T)))
             {
                 throw std::runtime_error("Field offset calculation would overflow");
             }
 
-            const std::size_t fieldOffset = fieldIndex * pointsPerField * sizeof(T);
+            const host::label_t fieldOffset = fieldIndex * pointsPerField * sizeof(T);
 
             // Check if fieldOffset would exceed file bounds
-            if (fieldOffset > (std::numeric_limits<std::size_t>::max() - header.dataStartPos))
+            if (fieldOffset > (std::numeric_limits<host::label_t>::max() - header.dataStartPos))
             {
                 throw std::runtime_error("Field start position calculation would overflow");
             }
 
-            const std::size_t fieldStartPos = header.dataStartPos + fieldOffset;
+            const host::label_t fieldStartPos = header.dataStartPos + fieldOffset;
 
             // Check if field data would extend beyond file end
             if (fieldStartPos > fileSize)
@@ -696,10 +262,10 @@ namespace LBM
                 throw std::runtime_error("Field start position is beyond file end");
             }
 
-            const std::size_t fieldByteSize = pointsPerField * sizeof(T);
+            const host::label_t fieldByteSize = pointsPerField * sizeof(T);
 
             // Check if field data would extend beyond file end
-            if (fieldStartPos > (std::numeric_limits<std::size_t>::max() - fieldByteSize))
+            if (fieldStartPos > (std::numeric_limits<host::label_t>::max() - fieldByteSize))
             {
                 throw std::runtime_error("Field end position calculation would overflow");
             }
@@ -717,7 +283,7 @@ namespace LBM
             }
 
             // Check for position overflow
-            if (fieldStartPos > static_cast<std::size_t>(std::numeric_limits<std::streamoff>::max()))
+            if (fieldStartPos > static_cast<host::label_t>(std::numeric_limits<std::streamoff>::max()))
             {
                 throw std::runtime_error("Field position overflow");
             }
@@ -730,10 +296,10 @@ namespace LBM
 
             // Read field data
             std::vector<T> fieldData(pointsPerField);
-            const std::size_t byteCount = fieldByteSize;
+            const host::label_t byteCount = fieldByteSize;
 
             // Check for streamsize overflow
-            if (byteCount > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteCount > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Field data size exceeds maximum stream size");
             }
@@ -765,7 +331,7 @@ namespace LBM
          * @tparam T Data type of array elements
          * @tparam M Mesh type providing dimension information
          * @param[in] fMom Input data in AoS format (all variables interleaved per point)
-         * @param[in] mesh Mesh object providing dimension information
+         * @param[in] mesh The lattice mesh
          * @return Vector of vectors where each inner vector contains all values for one variable
          * @throws std::invalid_argument if input size doesn't match mesh dimensions
          *
@@ -773,37 +339,58 @@ namespace LBM
          * each point are stored together) to SoA format (where each variable's values
          * are stored in separate contiguous arrays).
          **/
-        template <typename T, class M>
-        __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const std::vector<T> &fMom, const M &mesh)
+        template <typename T, class LatticeMesh>
+        __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const std::vector<T> &fMom, const LatticeMesh &mesh)
         {
-            const std::size_t nNodes = static_cast<std::size_t>(mesh.nx()) * mesh.ny() * mesh.nz();
-
-            // Safety check for the size of fMom and nPoints
+            const host::label_t nNodes = mesh.template dimension<axis::X>() * mesh.template dimension<axis::Y>() * mesh.template dimension<axis::Z>();
             if (fMom.size() % nNodes != 0)
             {
                 throw std::invalid_argument("fMom size (" + std::to_string(fMom.size()) + ") is not divisible by mesh points (" + std::to_string(nNodes) + ")");
             }
+            const host::label_t nFields = fMom.size() / nNodes;
 
-            const std::size_t nFields = fMom.size() / nNodes;
+            std::vector<std::vector<T>> soa(nFields, std::vector<T>(nNodes, 0));
 
-            std::vector<std::vector<T>> soa(nFields, std::vector<scalar_t>(nNodes, 0));
+            const host::label_t nxGPUs = mesh.template nDevices<axis::X>();
+            const host::label_t nyGPUs = mesh.template nDevices<axis::Y>();
+            const host::label_t nzGPUs = mesh.template nDevices<axis::Z>();
 
-            grid_for(
-                mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
-                [&](const label_t bx, const label_t by, const label_t bz,
-                    const label_t tx, const label_t ty, const label_t tz)
+            const host::label_t nxBlocksPerDevice = mesh.template nBlocks<axis::X>() / nxGPUs;
+            const host::label_t nyBlocksPerDevice = mesh.template nBlocks<axis::Y>() / nyGPUs;
+            const host::label_t nzBlocksPerDevice = mesh.template nBlocks<axis::Z>() / nzGPUs;
+
+            const host::label_t pointsPerBlock = block::size<host::label_t>();
+            const host::label_t nPointsPerDevice = nxBlocksPerDevice * nyBlocksPerDevice * nzBlocksPerDevice * pointsPerBlock;
+
+            GPU::forAll(
+                mesh.nDevices(),
+                [&](const host::label_t GPU_x, const host::label_t GPU_y, const host::label_t GPU_z)
                 {
-                    const label_t x = (bx * block::nx()) + tx;
-                    const label_t y = (by * block::ny()) + ty;
-                    const label_t z = (bz * block::nz()) + tz;
+                    const host::label_t virtualDeviceIndex = GPU::idx(GPU_x, GPU_y, GPU_z, nxGPUs, nyGPUs);
 
-                    const label_t idxGlobal = host::idxScalarGlobal(x, y, z, mesh.nx(), mesh.ny());
-                    const label_t idx = host::idx(tx, ty, tz, bx, by, bz, mesh);
+                    host::forAll(
+                        mesh.blocksPerDevice(),
+                        [&](const host::label_t bx, const host::label_t by, const host::label_t bz,
+                            const host::label_t tx, const host::label_t ty, const host::label_t tz)
+                        {
+                            // Global coordinates (for output)
+                            const host::label_t x = (GPU_x * nxBlocksPerDevice + bx) * block::nx<host::label_t>() + tx;
+                            const host::label_t y = (GPU_y * nyBlocksPerDevice + by) * block::ny<host::label_t>() + ty;
+                            const host::label_t z = (GPU_z * nzBlocksPerDevice + bz) * block::nz<host::label_t>() + tz;
 
-                    for (label_t field = 0; field < nFields; field++)
-                    {
-                        soa[field][idxGlobal] = fMom[idx + (field * mesh.nPoints())];
-                    }
+                            const host::label_t idxGlobal = global::idx(x, y, z, mesh.template dimension<axis::X>(), mesh.template dimension<axis::Y>());
+
+                            // Local index within this GPU's storage (block‑major order)
+                            const host::label_t blockLin = (bz * nyBlocksPerDevice + by) * nxBlocksPerDevice + bx;
+                            const host::label_t threadLin = (tz * block::ny<host::label_t>() + ty) * block::nx<host::label_t>() + tx;
+                            const host::label_t localIdx = blockLin * pointsPerBlock + threadLin;
+
+                            for (host::label_t field = 0; field < nFields; field++)
+                            {
+                                const host::label_t srcIdx = field * nNodes + virtualDeviceIndex * nPointsPerDevice + localIdx;
+                                soa[field][idxGlobal] = fMom[srcIdx];
+                            }
+                        });
                 });
 
             return soa;

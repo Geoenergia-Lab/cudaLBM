@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_FIELDCONVERT_CUH
 
 #include "../../src/LBMIncludes.cuh"
-#include "../../src/LBMTypedefs.cuh"
+#include "../../src/typedefs/typedefs.cuh"
 #include "../../src/strings.cuh"
 #include "../../src/array/array.cuh"
 #include "../../src/collision/collision.cuh"
@@ -59,7 +59,7 @@ SourceFiles
 #include "../../src/fileIO/fileIO.cuh"
 #include "../../src/runTimeIO/runTimeIO.cuh"
 #include "../../src/postProcess/postProcess.cuh"
-#include "../../src/inputControl.cuh"
+#include "../../src/programControl/programControl.cuh"
 #include "../../src/functionObjects/functionObjects.cuh"
 
 namespace LBM
@@ -70,9 +70,9 @@ namespace LBM
      * @param[in] conversion The invalid conversion type provided by the user
      * @return A formatted error message listing the supported formats
      **/
-    __host__ [[nodiscard]] const std::string invalidWriter(const std::unordered_map<std::string, postProcess::writerFunction> &writerNames, const std::string &conversion) noexcept
+    __host__ [[nodiscard]] const name_t invalidWriter(const std::unordered_map<name_t, postProcess::writerFunction> &writerNames, const name_t &conversion) noexcept
     {
-        std::vector<std::string> supportedFormats;
+        words_t supportedFormats;
         for (const auto &pair : writerNames)
         {
             supportedFormats.push_back(pair.first);
@@ -82,8 +82,8 @@ namespace LBM
         std::sort(supportedFormats.begin(), supportedFormats.end());
 
         // Create the error message with supported formats
-        std::string errorMsg = "Unsupported conversion format: " + conversion + "\nSupported formats are: ";
-        for (std::size_t i = 0; i < supportedFormats.size(); ++i)
+        name_t errorMsg = "Unsupported conversion format: " + conversion + "\nSupported formats are: ";
+        for (host::label_t i = 0; i < supportedFormats.size(); ++i)
         {
             if (i != 0)
             {
@@ -103,10 +103,10 @@ namespace LBM
      * @throws std::runtime_error if an invalid field name is provided
      **/
     __host__ [[nodiscard]] host::arrayCollection<scalar_t, ctorType::MUST_READ> initialiseArrays(
-        const std::string &fileNamePrefix,
+        const name_t &fileNamePrefix,
         const programControl &programCtrl,
-        const std::vector<std::string> &fieldNames,
-        const label_t timeStep)
+        const words_t &fieldNames,
+        const host::label_t timeStep)
     {
         // Construct from a custom field name
         if (programCtrl.input().isArgPresent("-fieldName"))
@@ -127,8 +127,8 @@ namespace LBM
      * @return A reference to a vector of field names
      * @throws std::runtime_error if an invalid field name is provided
      **/
-    __host__ [[nodiscard]] const std::vector<std::string> &getFieldNames(
-        const std::string &fileNamePrefix,
+    __host__ [[nodiscard]] const words_t &getFieldNames(
+        const name_t &fileNamePrefix,
         const bool doCustomField)
     {
         if (!doCustomField)
@@ -137,7 +137,7 @@ namespace LBM
         }
         else
         {
-            const std::unordered_map<std::string, std::vector<std::string>>::const_iterator namesIterator = functionObjects::fieldComponentsMap.find(fileNamePrefix);
+            const std::unordered_map<name_t, words_t>::const_iterator namesIterator = functionObjects::fieldComponentsMap.find(fileNamePrefix);
             const bool foundField = namesIterator != functionObjects::fieldComponentsMap.end();
             if (!foundField)
             {
@@ -153,7 +153,7 @@ namespace LBM
 
     __host__ [[nodiscard]] axis::type cutPlaneDirection(const programControl &programCtrl) noexcept
     {
-        const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+        const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
         // Need to check that j = 1 because the first character before the = symbol should be x, y or z and nothing else
         if (!(string::findCharPosition(cutPlanePrefix, "=") == 1))
@@ -179,66 +179,42 @@ namespace LBM
         return axis::NO_DIRECTION;
     }
 
-    __host__ [[nodiscard]] inline host::latticeMesh meshSlice(const host::latticeMesh &mesh, const axis::type dir) noexcept
+    __host__ [[nodiscard]] inline host::latticeMesh meshSlice(const host::latticeMesh &mesh, const axis::type alpha) noexcept
     {
-        if (dir == axis::X)
+        if (alpha == axis::X)
         {
-            return host::latticeMesh(mesh, {1, mesh.ny(), mesh.nz()});
+            return host::latticeMesh(mesh, {1, mesh.dimension<axis::Y>(), mesh.dimension<axis::Z>()});
         }
 
-        if (dir == axis::Y)
+        if (alpha == axis::Y)
         {
-            return host::latticeMesh(mesh, {mesh.nx(), 1, mesh.nz()});
+            return host::latticeMesh(mesh, {mesh.dimension<axis::X>(), 1, mesh.dimension<axis::Z>()});
         }
 
-        if (dir == axis::Z)
+        if (alpha == axis::Z)
         {
-            return host::latticeMesh(mesh, {mesh.nx(), mesh.ny(), 1});
+            return host::latticeMesh(mesh, {mesh.dimension<axis::X>(), mesh.dimension<axis::Y>(), 1});
         }
 
         return host::latticeMesh(mesh, {1, 1, 1});
     }
 
-    template <const axis::type dir>
+    template <const axis::type alpha>
     __host__ [[nodiscard]] std::vector<std::vector<scalar_t>> initialiseSlice(
         const host::latticeMesh &mesh,
-        const label_t nFields)
+        const host::label_t nFields)
     {
-        static_assert((dir == axis::X) | (dir == axis::Y) | (dir == axis::Z), "Bad direction");
+        axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-        if constexpr (dir == axis::X)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.ny() * mesh.nz(), 0));
-        }
-
-        if constexpr (dir == axis::Y)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.nx() * mesh.nz(), 0));
-        }
-
-        if constexpr (dir == axis::Z)
-        {
-            return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.nx() * mesh.ny(), 0));
-        }
+        return std::vector<std::vector<scalar_t>>(nFields, std::vector<scalar_t>(mesh.dimension<axis::orthogonal<alpha, 0>()>() * mesh.dimension<axis::orthogonal<alpha, 1>()>(), 0));
     }
 
-    template <const axis::type dir>
+    template <const axis::type alpha>
     __host__ [[nodiscard]] scalar_t indexCoordinate(const host::latticeMesh &mesh, const scalar_t pointCoordinate)
     {
-        static_assert((dir == axis::X) | (dir == axis::Y) | (dir == axis::Z), "Bad direction");
+        axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-        if constexpr (dir == axis::X)
-        {
-            return static_cast<scalar_t>(mesh.nx() - 1) * (pointCoordinate * mesh.L().x);
-        }
-        if constexpr (dir == axis::Y)
-        {
-            return static_cast<scalar_t>(mesh.ny() - 1) * (pointCoordinate * mesh.L().y);
-        }
-        if constexpr (dir == axis::Z)
-        {
-            return static_cast<scalar_t>(mesh.nz() - 1) * (pointCoordinate * mesh.L().z);
-        }
+        return static_cast<scalar_t>(mesh.dimension<alpha>() - 1) * (pointCoordinate * mesh.L().value<alpha>());
     }
 
     template <typename T>
@@ -247,66 +223,66 @@ namespace LBM
         return ((static_cast<T>(1) - weight) * f0) + (weight * f1);
     }
 
-    template <const axis::type dir>
+    template <const axis::type alpha>
     __host__ [[nodiscard]] const std::vector<std::vector<scalar_t>> extractCutPlane(
         const std::vector<std::vector<scalar_t>> &fields,
         const host::latticeMesh &mesh,
         const scalar_t pointCoordinate)
     {
-        static_assert((dir == axis::X) | (dir == axis::Y) | (dir == axis::Z), "Bad direction");
+        axis::assertions::validate<alpha, axis::NOT_NULL>();
 
         // Get the "index" coordinate
-        const scalar_t i = indexCoordinate<dir>(mesh, pointCoordinate);
-        const label_t i_0 = static_cast<label_t>(std::floor(i));
-        const label_t i_1 = static_cast<label_t>(std::ceil(i));
+        const scalar_t i = indexCoordinate<alpha>(mesh, pointCoordinate);
+        const host::label_t i_0 = static_cast<host::label_t>(std::floor(i));
+        const host::label_t i_1 = static_cast<host::label_t>(std::ceil(i));
         const scalar_t weight = pointCoordinate - static_cast<scalar_t>(i_0);
 
-        std::vector<std::vector<scalar_t>> cutPlane = initialiseSlice<dir>(mesh, fields.size());
+        std::vector<std::vector<scalar_t>> cutPlane = initialiseSlice<alpha>(mesh, fields.size());
 
-        if constexpr (dir == axis::X)
+        if constexpr (alpha == axis::X)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t z = 0; z < mesh.nz(); z++)
+                for (host::label_t z = 0; z < mesh.dimension<axis::Z>(); z++)
                 {
-                    for (std::size_t y = 0; y < mesh.ny(); y++)
+                    for (host::label_t y = 0; y < mesh.dimension<axis::Y>(); y++)
                     {
-                        const scalar_t f0 = fields[field][host::idxScalarGlobal(i_0, y, z, mesh.nx(), mesh.ny())];
-                        const scalar_t f1 = fields[field][host::idxScalarGlobal(i_1, y, z, mesh.nx(), mesh.ny())];
+                        const scalar_t f0 = fields[field][(global::idx(i_0, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
+                        const scalar_t f1 = fields[field][(global::idx(i_1, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
 
-                        cutPlane[field][y + (z * mesh.ny())] = linearInterpolate(f0, f1, weight);
+                        cutPlane[field][y + (z * mesh.dimension<axis::Y>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
             return cutPlane;
         }
-        if constexpr (dir == axis::Y)
+        if constexpr (alpha == axis::Y)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t z = 0; z < mesh.nz(); z++)
+                for (host::label_t z = 0; z < mesh.dimension<axis::Z>(); z++)
                 {
-                    for (std::size_t x = 0; x < mesh.nx(); x++)
+                    for (host::label_t x = 0; x < mesh.dimension<axis::X>(); x++)
                     {
-                        const scalar_t f0 = fields[field][host::idxScalarGlobal(x, i_0, z, mesh.nx(), mesh.ny())];
-                        const scalar_t f1 = fields[field][host::idxScalarGlobal(x, i_1, z, mesh.nx(), mesh.ny())];
-                        cutPlane[field][x + (z * mesh.nx())] = linearInterpolate(f0, f1, weight);
+                        const scalar_t f0 = fields[field][(global::idx(x, i_0, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
+                        const scalar_t f1 = fields[field][(global::idx(x, i_1, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
+                        cutPlane[field][x + (z * mesh.dimension<axis::X>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
             return cutPlane;
         }
-        if constexpr (dir == axis::Z)
+        if constexpr (alpha == axis::Z)
         {
-            for (std::size_t field = 0; field < fields.size(); field++)
+            for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (std::size_t y = 0; y < mesh.ny(); y++)
+                for (host::label_t y = 0; y < mesh.dimension<axis::Y>(); y++)
                 {
-                    for (std::size_t x = 0; x < mesh.nx(); x++)
+                    for (host::label_t x = 0; x < mesh.dimension<axis::X>(); x++)
                     {
-                        const scalar_t f0 = fields[field][host::idxScalarGlobal(x, y, i_0, mesh.nx(), mesh.ny())];
-                        const scalar_t f1 = fields[field][host::idxScalarGlobal(x, y, i_1, mesh.nx(), mesh.ny())];
-                        cutPlane[field][x + (y * mesh.nx())] = linearInterpolate(f0, f1, weight);
+                        const scalar_t f0 = fields[field][(global::idx(x, y, i_0, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
+                        const scalar_t f1 = fields[field][(global::idx(x, y, i_1, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
+                        cutPlane[field][x + (y * mesh.dimension<axis::X>())] = linearInterpolate(f0, f1, weight);
                     }
                 }
             }
@@ -317,10 +293,10 @@ namespace LBM
     __host__ [[nodiscard]] const std::vector<std::vector<scalar_t>> extractCutPlane(
         const std::vector<std::vector<scalar_t>> &fields,
         const host::latticeMesh &mesh,
-        const axis::type dir,
+        const axis::type alpha,
         const scalar_t pointCoordinate)
     {
-        switch (dir)
+        switch (alpha)
         {
         case axis::X:
         {
@@ -349,17 +325,17 @@ namespace LBM
     {
         if (doCutPlane)
         {
-            const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+            const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             // Check that size() - 1 isn't = 2
             const scalar_t planeCoordinate = static_cast<scalar_t>(std::stold(cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1)));
 
-            const axis::type dir = cutPlaneDirection(programCtrl);
+            const axis::type alpha = cutPlaneDirection(programCtrl);
 
             return extractCutPlane(
                 fileIO::deinterleaveAoS(hostMoments.arr(), mesh),
                 mesh,
-                dir,
+                alpha,
                 planeCoordinate);
         }
         else
@@ -375,22 +351,22 @@ namespace LBM
     {
         if (cutPlane)
         {
-            const axis::type dir = cutPlaneDirection(programCtrl);
+            const axis::type alpha = cutPlaneDirection(programCtrl);
 
-            return meshSlice(mesh, dir);
+            return meshSlice(mesh, alpha);
         }
         else
         {
-            return mesh;
+            return host::latticeMesh(programCtrl);
         }
     }
 
-    __host__ [[nodiscard]] const std::string processName(const programControl programCtrl, const std::string &fileNamePrefix, const label_t nameIndex, const bool cutPlane)
+    __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const host::label_t nameIndex, const bool cutPlane)
     {
         // Get the file name at the present time step
         if (cutPlane)
         {
-            const std::string cutPlanePrefix = programCtrl.getArgument("-cutPlane");
+            const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             return fileNamePrefix + "CutPlane_" + cutPlanePrefix + "_" + std::to_string(nameIndex);
         }

@@ -56,17 +56,18 @@ namespace LBM
     {
         namespace Tecplot
         {
-            __host__ [[nodiscard]] inline consteval bool hasFields() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasPoints() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasElements() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasOffsets() { return true; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() { return ".dat"; }
+            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::ASCII; }
+            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".dat"; }
 
             /**
              * @brief Writes solution data to a Tecplot ASCII file in unstructured grid format
              * @param[in] solutionVars Vector of solution variable arrays (Structure of Arrays format)
              * @param[in] fileName Output filename for Tecplot data
-             * @param[in] mesh Lattice mesh providing domain dimensions and structure
+             * @param[in] mesh The lattice mesh
              * @param[in] solutionVarNames Names of the solution variables for Tecplot header
              * @param[in] title Title for the Tecplot file
              * @return None
@@ -90,10 +91,10 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames) noexcept
+                const words_t &solutionVarNames) noexcept
             {
                 // Check input sizes
-                const label_t numNodes = mesh.nx() * mesh.ny() * mesh.nz();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
 
                 // Set high precision output
                 outFile << std::setprecision(std::numeric_limits<scalar_t>::max_digits10);
@@ -108,26 +109,26 @@ namespace LBM
                 outFile << "\n";
 
                 // UNSTRUCTURED GRID FORMAT
-                const label_t numElements = (mesh.nx() - 1) * (mesh.ny() - 1) * (mesh.nz() - 1);
+                const host::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
                 outFile << "ZONE T=\"Hexahedral Zone\", NODES=" << numNodes << ", ELEMENTS=" << numElements << ", DATAPACKING=BLOCK, ZONETYPE=FEBRICK\n";
 
                 const std::vector<scalar_t> coords = meshCoordinates<scalar_t>(mesh);
 
                 // Write node coordinates (X, Y, Z blocks)
                 // Write X
-                for (label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 0] << "\n";
                 }
 
                 // Write Y
-                for (label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 1] << "\n";
                 }
 
                 // Write Z
-                for (label_t n = 0; n < numNodes; ++n)
+                for (host::label_t n = 0; n < numNodes; ++n)
                 {
                     outFile << coords[3 * n + 2] << "\n";
                 }
@@ -141,10 +142,10 @@ namespace LBM
                     }
                 }
 
-                const std::vector<label_t> connectivity = meshConnectivity<true, label_t>(mesh);
-                for (label_t e = 0; e < numElements; ++e)
+                const std::vector<host::label_t> connectivity = meshConnectivity<true, host::label_t>(mesh);
+                for (host::label_t e = 0; e < numElements; ++e)
                 {
-                    for (label_t n = 0; n < 8; ++n)
+                    for (host::label_t n = 0; n < 8; ++n)
                     {
                         outFile << connectivity[e * 8 + n] << (n < 7 ? " " : "\n");
                     }
@@ -155,23 +156,23 @@ namespace LBM
 
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
-                const std::string &fileName,
+                const name_t &fileName,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames)
+                const words_t &solutionVarNames)
             {
-                const uint64_t numNodes = static_cast<uint64_t>(mesh.nx()) * static_cast<uint64_t>(mesh.ny()) * static_cast<uint64_t>(mesh.nz());
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())
                 {
-                    errorHandler(-1, "Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
+                    throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
                 }
 
-                for (std::size_t i = 0; i < numVars; i++)
+                for (host::label_t i = 0; i < numVars; i++)
                 {
                     if (solutionVars[i].size() != numNodes)
                     {
-                        errorHandler(-1, "Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
+                        throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
                     }
                 }
 
@@ -186,7 +187,7 @@ namespace LBM
                         std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
                         std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
                         std::cout << "};" << std::endl;
-                        errorHandler(-1, "Error: unable to create directory" + std::string(directoryPrefix()));
+                        throw std::runtime_error("Error: unable to create directory" + name_t(directoryPrefix()));
                     }
                 }
                 else
@@ -194,25 +195,30 @@ namespace LBM
                     std::cout << "    directoryStatus: OK;" << std::endl;
                 }
 
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+                std::cout << "    fileSize: "
+                          << fileSystem::to_mebibytes<double>(
+                                 fileSystem::expectedDiskUsage<
+                                     format(),
+                                     hasFields(),
+                                     hasPoints(),
+                                     hasElements(),
+                                     hasOffsets()>(
+                                     mesh,
+                                     solutionVars.size()))
+                          << " MiB;" << std::endl;
 
                 // Check if there is enough disk space to store the file
-                if (!fileSystem::diskSpaceCheck<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size()))
-                {
-                    std::cout << "    diskSpace: insufficient (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                    std::cout << "    writeStatus: fail (insufficient disk space)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error: Insufficient disk space on drive " + fileSystem::diskName());
-                }
-                else
-                {
-                    std::cout << "    diskSpace: OK (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                }
+                fileSystem::diskSpaceAssertion<
+                    format(),
+                    hasFields(),
+                    hasPoints(),
+                    hasElements(),
+                    hasOffsets()>(
+                    mesh,
+                    solutionVars.size(),
+                    fileName);
 
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
-
-                const std::string trueFileName(std::string(directoryPrefix()) + "/" + fileName + fileExtension());
+                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 
                 std::ofstream outFile(trueFileName);
                 if (outFile)
@@ -223,14 +229,13 @@ namespace LBM
                 {
                     std::cout << "    ofstreamStatus: Fail" << std::endl;
                     std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error opening file: " + trueFileName);
+                    throw std::runtime_error("Error opening file: " + trueFileName);
                 }
 
                 writeTecplot(solutionVars, outFile, mesh, solutionVarNames);
 
                 std::cout << "    writeStatus: success" << ";" << std::endl;
                 std::cout << "};" << std::endl;
-                std::cout << std::endl;
             }
         }
     }

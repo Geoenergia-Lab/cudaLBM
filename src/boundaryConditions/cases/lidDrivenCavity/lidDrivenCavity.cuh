@@ -50,7 +50,7 @@ SourceFiles
 #ifndef __MBLBM_LIDDRIVENCAVITY_CUH
 #define __MBLBM_LIDDRIVENCAVITY_CUH
 
-__host__ __device__ [[nodiscard]] inline consteval bool check_n_boundaries() noexcept { return false; }
+__device__ __host__ [[nodiscard]] inline consteval bool check_n_boundaries() noexcept { return false; }
 
 namespace LBM
 {
@@ -69,11 +69,18 @@ namespace LBM
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval lidDrivenCavity(){};
+        __device__ __host__ [[nodiscard]] inline consteval lidDrivenCavity() {}
+
+        /**
+         * @brief Periodic boundary definitions
+         **/
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicX() noexcept { return false; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicY() noexcept { return false; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicZ() noexcept { return false; }
 
         /**
          * @brief Calculate moment variables at boundary nodes
-         * @tparam VelocitySet Velocity set configuration defining lattice structure
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          * @param[in] pop Population density array at current lattice node
          * @param[out] moments Moment variables array to be populated
          * @param[in] boundaryNormal Normal vector information at boundary node
@@ -88,15 +95,15 @@ namespace LBM
          * moments from available population information, ensuring mass conservation
          * and appropriate stress conditions at boundaries.
          **/
-        template <class VelocitySet>
+        template <class VelocitySet, class SharedBuffer>
         __device__ static inline constexpr void calculate_moments(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS()> &moments,
             const normalVector &boundaryNormal,
-            [[maybe_unused]] const scalar_t *const ptrRestrict shared_buffer) noexcept
+            [[maybe_unused]] const SharedBuffer &shared_buffer,
+            [[maybe_unused]] const thread::coordinate &Tx,
+            [[maybe_unused]] const device::pointCoordinate &point) noexcept
         {
-            static_assert((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27), "Error: lidDrivenCavity::calculate_moments only supports D3Q19 and D3Q27.");
-
             const scalar_t rho_I = velocitySet::calculate_moment<VelocitySet, axis::NO_DIRECTION, axis::NO_DIRECTION>(pop, boundaryNormal);
             const scalar_t inv_rho_I = static_cast<scalar_t>(1) / rho_I;
 
@@ -536,7 +543,7 @@ namespace LBM
         template <const axis::type alpha>
         __device__ static inline constexpr scalar_t U(const thread::array<scalar_t, 6> &boundarySwitches, const scalar_t n_boundaries) noexcept
         {
-            assertions::axis::validate<alpha, axis::NOT_NULL>();
+            axis::assertions::validate<alpha, axis::NOT_NULL>();
 
             // Calculate the boundary velocity value
             return ((boundarySwitches[0] * device::U_West[alpha]) +

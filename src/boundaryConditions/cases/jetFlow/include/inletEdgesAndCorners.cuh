@@ -58,15 +58,15 @@ case normalVector::SOUTH_WEST_BACK():
     {
         moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -80,15 +80,15 @@ case normalVector::SOUTH_EAST_BACK():
     {
         moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -102,15 +102,15 @@ case normalVector::NORTH_WEST_BACK():
     {
         moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -124,15 +124,15 @@ case normalVector::NORTH_EAST_BACK():
     {
         moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    //  moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -146,15 +146,15 @@ case normalVector::WEST_BACK():
     const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
 
     moments[m_i<0>()] = rho;
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = mxz;                      // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz; // mxz
+                             // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+                             // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+                             //  moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -166,15 +166,15 @@ case normalVector::EAST_BACK():
     const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
 
     moments[m_i<0>()] = rho;
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = mxz;                      // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz; // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -186,15 +186,15 @@ case normalVector::SOUTH_BACK():
     const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
 
     moments[m_i<0>()] = rho;
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = myz;                      // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz; // myz
+                             // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -206,15 +206,15 @@ case normalVector::NORTH_BACK():
     const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
 
     moments[m_i<0>()] = rho;
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<8>()] = myz;                      // myz
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz; // myz
+                             // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }

@@ -51,8 +51,8 @@ SourceFiles
 #define __MBLBM_POSTPROCESS_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
-#include "../fileSystem.cuh"
+#include "../typedefs/typedefs.cuh"
+#include "../fileIO/fileIO.cuh"
 
 namespace LBM
 {
@@ -63,7 +63,7 @@ namespace LBM
         /**
          * @brief Calculates physical coordinates of lattice points
          * @tparam T Coordinate data type (typically scalar_t or double)
-         * @param[in] mesh Lattice mesh providing dimensions and physical size
+         * @param[in] mesh The lattice mesh
          * @return Vector of coordinates in interleaved format [x0, y0, z0, x1, y1, z1, ...]
          *
          * This function converts lattice indices to physical coordinates using
@@ -73,28 +73,19 @@ namespace LBM
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshCoordinates(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const pointVector &L = mesh.L();
+            std::vector<T> coords(mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>() * 3, 0);
 
-            const label_t numNodes = nx * ny * nz;
-            std::vector<T> coords(numNodes * 3);
-
-            for (label_t k = 0; k < nz; ++k)
-            {
-                for (label_t j = 0; j < ny; ++j)
+            global::forAll(
+                mesh.dimensions(),
+                host::blockLabel(0, 0, 0),
+                [&](const host::label_t x, const host::label_t y, const host::label_t z)
                 {
-                    for (label_t i = 0; i < nx; ++i)
-                    {
-                        const label_t idx = k * ny * nx + j * nx + i;
-                        // Do the conversion in double, then cast to the desired type
-                        coords[3 * idx + 0] = static_cast<T>((static_cast<double>(L.x) * static_cast<double>(i * static_cast<label_t>(nx > 1))) / static_cast<double>(nx - static_cast<label_t>(nx > 1)));
-                        coords[3 * idx + 1] = static_cast<T>((static_cast<double>(L.y) * static_cast<double>(j * static_cast<label_t>(ny > 1))) / static_cast<double>(ny - static_cast<label_t>(ny > 1)));
-                        coords[3 * idx + 2] = static_cast<T>((static_cast<double>(L.z) * static_cast<double>(k * static_cast<label_t>(nz > 1))) / static_cast<double>(nz - static_cast<label_t>(nz > 1)));
-                    }
-                }
-            }
+                    const host::label_t idx = global::idx(x, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>());
+                    // Do the conversion in double, then cast to the desired type
+                    coords[3 * idx + 0] = static_cast<T>((static_cast<double>(mesh.L().x) * static_cast<double>(x * static_cast<host::label_t>(mesh.dimension<axis::X>() > 1))) / static_cast<double>(mesh.dimension<axis::X>() - static_cast<host::label_t>(mesh.dimension<axis::X>() > 1)));
+                    coords[3 * idx + 1] = static_cast<T>((static_cast<double>(mesh.L().y) * static_cast<double>(y * static_cast<host::label_t>(mesh.dimension<axis::Y>() > 1))) / static_cast<double>(mesh.dimension<axis::Y>() - static_cast<host::label_t>(mesh.dimension<axis::Y>() > 1)));
+                    coords[3 * idx + 2] = static_cast<T>((static_cast<double>(mesh.L().z) * static_cast<double>(z * static_cast<host::label_t>(mesh.dimension<axis::Z>() > 1))) / static_cast<double>(mesh.dimension<axis::Z>() - static_cast<host::label_t>(mesh.dimension<axis::Z>() > 1)));
+                });
 
             return coords;
         }
@@ -102,67 +93,57 @@ namespace LBM
         /**
          * @brief Calculates the connectivity of the points of a latticeMesh object
          * @tparam one_based If true, indices are 1-based. If false, 0-based.
-         * @tparam IndexType The integer type for the connectivity data (e.g., uint32_t, uint64_t).
-         * @param mesh The mesh
+         * @tparam IndexType The integer type for the connectivity data (e.g., uint32_t, host::label_t).
+         * @param[in] mesh The lattice mesh
          * @return An std::vector of type IndexType containing the latticeMesh object connectivity
          **/
         template <const bool one_based, typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshConnectivity(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
-
-            std::vector<IndexType> connectivity(numElements * 8);
-            label_t cell_idx = 0;
-            constexpr const label_t offset = one_based ? 1 : 0;
-
-            for (label_t k = 0; k < nz - 1; ++k)
-            {
-                for (label_t j = 0; j < ny - 1; ++j)
+            std::vector<IndexType> connectivity((mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1) * 8);
+            constexpr const device::label_t offset = one_based ? 1 : 0;
+            global::forAll(
+                mesh.dimensions(),
+                host::blockLabel(0, 0, 0),
+                [&](const host::label_t x, const host::label_t y, const host::label_t z)
                 {
-                    for (label_t i = 0; i < nx - 1; ++i)
-                    {
-                        const label_t base = k * nx * ny + j * nx + i;
-                        const label_t stride_y = nx;
-                        const label_t stride_z = nx * ny;
+                    const host::label_t base = global::idx(x, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>());
+                    const host::label_t cell_idx = global::idx(x, y, z, mesh.dimension<axis::X>() - 1, mesh.dimension<axis::Y>() - 1);
+                    const host::label_t stride_y = mesh.dimension<axis::X>();
+                    const host::label_t stride_z = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>();
 
-                        connectivity[cell_idx * 8 + 0] = static_cast<IndexType>(base + offset);
-                        connectivity[cell_idx * 8 + 1] = static_cast<IndexType>(base + 1 + offset);
-                        connectivity[cell_idx * 8 + 2] = static_cast<IndexType>(base + stride_y + 1 + offset);
-                        connectivity[cell_idx * 8 + 3] = static_cast<IndexType>(base + stride_y + offset);
-                        connectivity[cell_idx * 8 + 4] = static_cast<IndexType>(base + stride_z + offset);
-                        connectivity[cell_idx * 8 + 5] = static_cast<IndexType>(base + stride_z + 1 + offset);
-                        connectivity[cell_idx * 8 + 6] = static_cast<IndexType>(base + stride_z + stride_y + 1 + offset);
-                        connectivity[cell_idx * 8 + 7] = static_cast<IndexType>(base + stride_z + stride_y + offset);
-                        ++cell_idx;
-                    }
-                }
-            }
+                    connectivity[cell_idx * 8 + 0] = static_cast<IndexType>(base + offset);
+                    connectivity[cell_idx * 8 + 1] = static_cast<IndexType>(base + 1 + offset);
+                    connectivity[cell_idx * 8 + 2] = static_cast<IndexType>(base + stride_y + 1 + offset);
+                    connectivity[cell_idx * 8 + 3] = static_cast<IndexType>(base + stride_y + offset);
+                    connectivity[cell_idx * 8 + 4] = static_cast<IndexType>(base + stride_z + offset);
+                    connectivity[cell_idx * 8 + 5] = static_cast<IndexType>(base + stride_z + 1 + offset);
+                    connectivity[cell_idx * 8 + 6] = static_cast<IndexType>(base + stride_z + stride_y + 1 + offset);
+                    connectivity[cell_idx * 8 + 7] = static_cast<IndexType>(base + stride_z + stride_y + offset);
+                });
 
             return connectivity;
         }
 
         /**
          * @brief Calculates the point offsets of the points of a latticeMesh object
-         * @tparam IndexType The integer type for the offset data (e.g., uint32_t, uint64_t).
-         * @param mesh The mesh
-         * @return An std::vector of type IndexType containing the latticeMesh object point offsets
+         * @tparam T The integer type for the offset data (e.g., uint32_t, host::label_t).
+         * @param[in] mesh The lattice mesh
+         * @return An std::vector of type T containing the latticeMesh object point offsets
          **/
-        template <typename IndexType>
-        __host__ [[nodiscard]] const std::vector<IndexType> meshOffsets(const host::latticeMesh &mesh)
+        template <typename T>
+        __host__ [[nodiscard]] const std::vector<T> meshOffsets(const host::latticeMesh &mesh)
         {
-            const label_t nx = mesh.nx();
-            const label_t ny = mesh.ny();
-            const label_t nz = mesh.nz();
-            const label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            const host::label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
 
-            std::vector<IndexType> offsets(numElements);
+            std::vector<T> offsets(numElements);
 
-            for (label_t i = 0; i < numElements; ++i)
+            for (host::label_t i = 0; i < numElements; ++i)
             {
-                offsets[i] = static_cast<IndexType>((i + 1) * 8);
+                offsets[i] = static_cast<T>((i + 1) * 8);
             }
 
             return offsets;
@@ -218,9 +199,9 @@ namespace LBM
         template <typename T>
         __host__ void writeBinaryBlock(const std::vector<T> vec, std::ofstream &outFile)
         {
-            const uint64_t blockSize = vec.size() * sizeof(T);
+            const host::label_t blockSize = vec.size() * sizeof(T);
 
-            outFile.write(reinterpret_cast<const char *>(&blockSize), sizeof(uint64_t));
+            outFile.write(reinterpret_cast<const char *>(&blockSize), sizeof(host::label_t));
 
             outFile.write(reinterpret_cast<const char *>(vec.data()), static_cast<std::streamsize>(blockSize));
         };

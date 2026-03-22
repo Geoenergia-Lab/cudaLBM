@@ -56,28 +56,28 @@ namespace LBM
     /**
      * @class boundaryRegion
      * @brief Represents a complete set of boundary values for all fields in a specific region
-     * @tparam VelocitySet Velocity set configuration defining lattice structure
+     * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
      *
      * This struct aggregates all field values (density, velocity components, and moments)
      * for a specific boundary region, providing convenient access to individual components.
      **/
-    template <class VelocitySet>
+    template <class VelocitySet, const bool Scaled>
     class boundaryRegion
     {
     public:
         // Need to check that the length of fieldNames is 10
-        __host__ [[nodiscard]] boundaryRegion(const std::string &regionName)
+        __host__ [[nodiscard]] boundaryRegion(const name_t &regionName)
             : values_{
-                  boundaryValue("rho", regionName),
-                  boundaryValue("u", regionName),
-                  boundaryValue("v", regionName),
-                  boundaryValue("w", regionName),
-                  boundaryValue("m_xx", regionName),
-                  boundaryValue("m_xy", regionName),
-                  boundaryValue("m_xz", regionName),
-                  boundaryValue("m_yy", regionName),
-                  boundaryValue("m_yz", regionName),
-                  boundaryValue("m_zz", regionName)}
+                  boundaryValue<VelocitySet, Scaled>("rho", regionName),
+                  boundaryValue<VelocitySet, Scaled>("u", regionName),
+                  boundaryValue<VelocitySet, Scaled>("v", regionName),
+                  boundaryValue<VelocitySet, Scaled>("w", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_xx", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_xy", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_xz", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_yy", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_yz", regionName),
+                  boundaryValue<VelocitySet, Scaled>("m_zz", regionName)}
         {
             if constexpr (verbose())
             {
@@ -92,43 +92,43 @@ namespace LBM
          **/
         __host__ [[nodiscard]] inline constexpr scalar_t rho() const noexcept
         {
-            return values_[index::rho()]();
+            return values_[index::rho]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t u() const noexcept
         {
-            return values_[index::u()]();
+            return values_[index::u]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t v() const noexcept
         {
-            return values_[index::v()]();
+            return values_[index::v]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t w() const noexcept
         {
-            return values_[index::w()]();
+            return values_[index::w]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xx() const noexcept
         {
-            return values_[index::xx()]();
+            return values_[index::xx]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xy() const noexcept
         {
-            return values_[index::xy()]();
+            return values_[index::xy]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xz() const noexcept
         {
-            return values_[index::xz()]();
+            return values_[index::xz]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_yy() const noexcept
         {
-            return values_[index::yy()]();
+            return values_[index::yy]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_yz() const noexcept
         {
-            return values_[index::yz()]();
+            return values_[index::yz]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_zz() const noexcept
         {
-            return values_[index::zz()]();
+            return values_[index::zz]();
         }
 
         /**
@@ -137,8 +137,8 @@ namespace LBM
          **/
         void print() const noexcept
         {
-            const std::vector<std::string> regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
-            for (std::size_t field = 0; field < regionNames.size(); field++)
+            const words_t regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
+            for (host::label_t field = 0; field < regionNames.size(); field++)
             {
                 std::cout << regionNames[field] << ": " << values_[field]() << std::endl;
             }
@@ -148,7 +148,7 @@ namespace LBM
         /**
          * @brief Array of boundary values for all fields
          **/
-        const boundaryValue<VelocitySet> values_[10];
+        const boundaryValue<VelocitySet, Scaled> values_[10];
     };
 }
 

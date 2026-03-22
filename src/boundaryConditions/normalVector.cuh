@@ -51,10 +51,12 @@ SourceFiles
 #define __MBLBM_NORMALVECTOR_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 
 namespace LBM
 {
+    typedef uint8_t nodeType_t;
+
     /**
      * @class normalVector
      * @brief Represents boundary orientation using a bitmask encoding
@@ -76,46 +78,38 @@ namespace LBM
         /**
          * @brief Constructs a normalVector from current thread indices
          * @return normalVector for the current thread's position
+         * @param[in] Tx Three-dimensional thread coordinates
+         * @param[in] Bx Three-dimensional block coordinates
          **/
-        __device__ [[nodiscard]] inline normalVector() noexcept
-            : bitmask_(computeBitmask()){};
-
-        /**
-         * @brief Constructs a normalVector from specific coordinates
-         * @param[in] x X-coordinate in the lattice
-         * @param[in] y Y-coordinate in the lattice
-         * @param[in] z Z-coordinate in the lattice
-         * @return normalVector for the specified position
-         **/
-        __device__ [[nodiscard]] inline normalVector(const label_t x, const label_t y, const label_t z) noexcept
-            : bitmask_(computeBitmask(x, y, z)){};
+        __device__ [[nodiscard]] inline constexpr normalVector(const device::pointCoordinate &point) noexcept
+            : bitmask_(computeBitmask(point)) {}
 
         /**
          * @name Basic Boundary Flags
          * @brief Bitmask values for individual boundary faces
          * @return Bitmask value for the specified boundary face
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t WEST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t WEST() noexcept
         {
             return 0x01;
         } // 1 << 0
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t EAST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t EAST() noexcept
         {
             return 0x02;
         } // 1 << 1
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH() noexcept
         {
             return 0x04;
         } // 1 << 2
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH() noexcept
         {
             return 0x08;
         } // 1 << 3
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t BACK() noexcept
         {
             return 0x10;
         } // 1 << 4
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t FRONT() noexcept
         {
             return 0x20;
         } // 1 << 5
@@ -125,35 +119,35 @@ namespace LBM
          * @brief Bitmask values for corner configurations (8 types)
          * @return Bitmask value for the specified corner configuration
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_WEST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_WEST_BACK() noexcept
         {
             return SOUTH() | WEST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_WEST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_WEST_FRONT() noexcept
         {
             return SOUTH() | WEST() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_EAST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_EAST_BACK() noexcept
         {
             return SOUTH() | EAST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_EAST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_EAST_FRONT() noexcept
         {
             return SOUTH() | EAST() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_WEST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_WEST_BACK() noexcept
         {
             return NORTH() | WEST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_WEST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_WEST_FRONT() noexcept
         {
             return NORTH() | WEST() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_EAST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_EAST_BACK() noexcept
         {
             return NORTH() | EAST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_EAST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_EAST_FRONT() noexcept
         {
             return NORTH() | EAST() | FRONT();
         }
@@ -163,51 +157,51 @@ namespace LBM
          * @brief Bitmask values for edge configurations (12 types)
          * @return Bitmask value for the specified edge configuration
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_WEST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_WEST() noexcept
         {
             return SOUTH() | WEST();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_EAST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_EAST() noexcept
         {
             return SOUTH() | EAST();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_WEST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_WEST() noexcept
         {
             return NORTH() | WEST();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_EAST() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_EAST() noexcept
         {
             return NORTH() | EAST();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t WEST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t WEST_BACK() noexcept
         {
             return WEST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t WEST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t WEST_FRONT() noexcept
         {
             return WEST() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t EAST_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t EAST_BACK() noexcept
         {
             return EAST() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t EAST_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t EAST_FRONT() noexcept
         {
             return EAST() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_BACK() noexcept
         {
             return SOUTH() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t SOUTH_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t SOUTH_FRONT() noexcept
         {
             return SOUTH() | FRONT();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_BACK() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_BACK() noexcept
         {
             return NORTH() | BACK();
         }
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t NORTH_FRONT() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t NORTH_FRONT() noexcept
         {
             return NORTH() | FRONT();
         }
@@ -216,7 +210,7 @@ namespace LBM
          * @brief Special type for interior points
          * @return Bitmask value for interior points (no boundaries)
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval uint8_t INTERIOR() noexcept
+        __device__ __host__ [[nodiscard]] static inline consteval nodeType_t INTERIOR() noexcept
         {
             return 0x00;
         }
@@ -266,12 +260,12 @@ namespace LBM
         {
             return static_cast<T>(!isBoundary<bool>());
         }
-        template <typename T = uint8_t>
+        template <typename T = nodeType_t>
         __device__ __host__ [[nodiscard]] inline T countBoundaries() const noexcept
         {
             // Count set bits in 6-bit value using parallel addition
             // This is known as the "popcount" algorithm for small integers
-            uint8_t x = bitmask_ & 0x3F;
+            nodeType_t x = bitmask_ & 0x3F;
             x = (x & 0x55) + ((x >> 1) & 0x55); // Count bits in pairs
             x = (x & 0x33) + ((x >> 2) & 0x33); // Count bits in nibbles
             x = (x & 0x0F) + ((x >> 4) & 0x0F); // Add the two nibbles
@@ -282,7 +276,7 @@ namespace LBM
          * @brief Get the node type bitmask
          * @return The bitmask representing the node type (bits 0-5)
          **/
-        __device__ [[nodiscard]] inline uint8_t nodeType() const noexcept
+        __device__ [[nodiscard]] inline nodeType_t nodeType() const noexcept
         {
             return bitmask_ & 0x3F;
         }
@@ -291,15 +285,15 @@ namespace LBM
         /**
          * @brief The underlying bit mask
          **/
-        const uint8_t bitmask_;
+        const nodeType_t bitmask_;
 
         /**
          * @brief Compute bitmask from current thread indices
          * @return Bitmask representing boundary configuration
          **/
-        __device__ [[nodiscard]] inline static uint8_t computeBitmask() noexcept
+        __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const device::pointCoordinate &point) noexcept
         {
-            return computeBitmask(threadIdx.x + blockDim.x * blockIdx.x, threadIdx.y + blockDim.y * blockIdx.y, threadIdx.z + blockDim.z * blockIdx.z);
+            return computeBitmask(point.value<axis::X>(), point.value<axis::Y>(), point.value<axis::Z>());
         }
 
         /**
@@ -318,19 +312,20 @@ namespace LBM
          * - Bit 5: Front boundary (z == device::nz - 1)
          * - Bit 6: Any boundary (logical OR of bits 0-5)
          **/
-        __device__ [[nodiscard]] inline static uint8_t computeBitmask(const label_t x, const label_t y, const label_t z) noexcept
+        __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const device::label_t x, const device::label_t y, const device::label_t z) noexcept
         {
-            return static_cast<uint8_t>(
-                (x == 0) << 0 |                      // West (bit0)
-                (x == device::nx - 1) << 1 |         // East (bit1)
-                (y == 0) << 2 |                      // South (bit2)
-                (y == device::ny - 1) << 3 |         // North (bit3)
-                (z == 0) << 4 |                      // Back (bit4)
-                (z == device::nz - 1) << 5 |         // Front (bit5)
-                (!!(x == 0 || x == device::nx - 1 || //
-                    y == 0 || y == device::ny - 1 || //
-                    z == 0 || z == device::nz - 1))  //
-                    << 6);                           // Any boundary (bit6)
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(normalVector::computeBitmask, "Believed correct"));
+            return static_cast<nodeType_t>(
+                (x == 0) << 0 |                                // West (bit0)
+                (x == device::n<axis::X>() - 1) << 1 |         // East (bit1)
+                (y == 0) << 2 |                                // South (bit2)
+                (y == device::n<axis::Y>() - 1) << 3 |         // North (bit3)
+                (z == 0) << 4 |                                // Back (bit4)
+                (z == device::n<axis::Z>() - 1) << 5 |         // Front (bit5)
+                (!!(x == 0 || x == device::n<axis::X>() - 1 || //
+                    y == 0 || y == device::n<axis::Y>() - 1 || //
+                    z == 0 || z == device::n<axis::Z>() - 1))  //
+                    << 6);                                     // Any boundary (bit6)
         }
     };
 }

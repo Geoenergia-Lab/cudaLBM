@@ -56,10 +56,8 @@ namespace LBM
     {
         // Get the time type string
         template <const time::type TimeType>
-        __host__ [[nodiscard]] const std::string timeTypeString() noexcept
+        __host__ [[nodiscard]] const name_t timeTypeString() noexcept
         {
-            static_assert((TimeType == time::instantaneous || (TimeType == time::timeAverage)), "Time type must be either instantaneous or timeAverage");
-
             if constexpr (TimeType == time::instantaneous)
             {
                 return "instantaneous";
@@ -73,41 +71,38 @@ namespace LBM
 
         /**
          * @brief Implementation of the writing of the binary file
-         * @param fileName Name of the file to be written
-         * @param mesh The mesh
-         * @param varNames The names of the solution variables
-         * @param fields The solution variables encoded in interleaved AoS format
-         * @param timeStep The current time step
+         * @param[in] fileName Name of the file to be written
+         * @param[in] mesh The lattice mesh
+         * @param[in] varNames The names of the solution variables
+         * @param[in] fields The solution variables encoded in interleaved AoS format
+         * @param[in] timeStep The current time step
          **/
         template <const time::type TimeType, class LatticeMesh, typename T>
         __host__ void writeFile(
-            const std::string &fileName,
+            const name_t &fileName,
             const LatticeMesh &mesh,
-            const std::vector<std::string> &varNames,
+            const words_t &varNames,
             const T *const ptrRestrict fields,
-            const label_t timeStep)
+            const host::label_t timeStep,
+            const host::label_t meanCount)
         {
-            static_assert(std::is_floating_point<T>::value, "T must be floating point");
+            types::assertions::validate<T>();
+            endian::assertions::validate();
 
-            static_assert(std::endian::native == std::endian::little | std::endian::native == std::endian::big, "File system must be either little or big endian");
-
-            static_assert(sizeof(T) == 4 | sizeof(T) == 8, "Error writing file: T must be either 32 or 64 bit");
-
-            static_assert((TimeType == time::instantaneous || (TimeType == time::timeAverage)), "Time type must be either instantaneous or timeAverage");
-
-            const std::size_t nVars = varNames.size();
-            const std::size_t nPoints = static_cast<std::size_t>(mesh.nx()) * static_cast<std::size_t>(mesh.ny()) * static_cast<std::size_t>(mesh.nz());
-            const std::size_t expectedSize = nPoints * nVars;
+            const host::label_t nVars = varNames.size();
+            const host::label_t nPoints = mesh.size();
+            const host::label_t expectedSize = nPoints * nVars;
 
             // Check if there is enough disk space to store the file
-            {
-                const std::size_t expectedDiskUsage = expectedSize * sizeof(T);
-                if (!fileSystem::hasEnoughSpace(expectedDiskUsage))
-                {
-                    const label_t availableSpace = fileSystem::availableDiskSpace();
-                    throw std::runtime_error("Insufficient disk space to write file " + fileName + "\nRequired: " + std::to_string(expectedDiskUsage) + "\nAvailable: " + std::to_string(availableSpace));
-                }
-            }
+            fileSystem::diskSpaceAssertion<
+                fileSystem::BINARY,
+                fileSystem::fields::Yes,
+                fileSystem::points::No,
+                fileSystem::elements::No,
+                fileSystem::offsets::No>(
+                mesh,
+                varNames.size(),
+                fileName);
 
             std::ofstream out(fileName, std::ios::binary);
             if (!out)
@@ -118,24 +113,17 @@ namespace LBM
             // Write the system information: binary endianness
             out << "systemInformation" << std::endl;
             out << "{" << std::endl;
-            if constexpr (std::endian::native == std::endian::little)
-            {
-                out << "\tbinaryType\tlittleEndian;" << std::endl;
-            }
-            else if constexpr (std::endian::native == std::endian::big)
-            {
-                out << "\tbinaryType\tbigEndian;" << std::endl;
-            }
+            out << "\tbinaryType\t" << endian::nameString() << ";" << std::endl;
             out << std::endl;
-            if constexpr (sizeof(scalar_t) == 4)
-            {
-                out << "\tscalarType\t32 bit;" << std::endl;
-            }
-            else if constexpr (sizeof(scalar_t) == 8)
-            {
-                out << "\tscalarType\t64 bit;" << std::endl;
-            }
+            out << "\tscalarSize\t" << sizeof(scalar_t) * 8 << ";" << std::endl;
             out << "};" << std::endl;
+            out << std::endl;
+
+            // Write the mesh information: number of points, number of devices
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(fileIO::writeFile, "Multi-GPU must write GPU decomposition information to the file"));
+            mesh.dimensions().print("latticeMesh", out);
+            out << std::endl;
+            mesh.nDevices().print("deviceDecomposition", out);
             out << std::endl;
 
             // Write the field information: instantaneous or time-averaged, field names
@@ -145,6 +133,15 @@ namespace LBM
             out << std::endl;
             // For now, only writing instantaneous fields
             out << "\ttimeType\t" << timeTypeString<TimeType>() << ";" << std::endl;
+            out << std::endl;
+
+            if constexpr (TimeType == time::timeAverage)
+            {
+                out << "\tmeanCount\t" << meanCount << ";" << std::endl;
+                out << std::endl;
+            }
+
+            out << "\tnFields\t\t" << nVars << ";" << std::endl;
             out << std::endl;
             out << "\tfieldNames[" << nVars << "]" << std::endl;
             out << "\t{" << std::endl;
@@ -157,9 +154,9 @@ namespace LBM
             out << std::endl;
 
             // Write binary data with safe size conversion
-            const std::size_t byteSize = expectedSize * sizeof(T);
+            const host::label_t byteSize = expectedSize * sizeof(T);
 
-            if (byteSize > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
+            if (byteSize > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
             {
                 throw std::runtime_error("Data size exceeds maximum stream size");
             }
@@ -168,7 +165,7 @@ namespace LBM
             out << "{" << std::endl;
             out << "\tfieldType\tnonUniform;" << std::endl;
             out << std::endl;
-            out << "\tfield[" << expectedSize << "][" << nVars << "][" << mesh.nz() << "][" << mesh.ny() << "][" << mesh.nx() << "]" << std::endl;
+            out << "\tfield[" << expectedSize << "][" << nVars << "][" << mesh.template dimension<axis::Z>() << "][" << mesh.template dimension<axis::Y>() << "][" << mesh.template dimension<axis::X>() << "]" << std::endl;
             out << "\t{" << std::endl;
             // out.flush();
             out.write(reinterpret_cast<const char *>(fields), static_cast<std::streamsize>(byteSize));

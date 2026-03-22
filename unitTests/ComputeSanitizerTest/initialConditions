@@ -56,7 +56,7 @@ field u
 
     North
     {
-        value   0.0064;
+        value   0;
     };
 
     South
@@ -157,7 +157,7 @@ field w
 
     Back
     {
-        value   0;
+        value   0.016;
     };
 };
 
@@ -170,7 +170,7 @@ field m_xx
 
     North
     {
-        value   equilibrium;
+        value   0;
     };
 
     South

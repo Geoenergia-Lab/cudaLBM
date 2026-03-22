@@ -66,37 +66,37 @@ namespace LBM
         public:
             /**
              * @brief Construct from program control and variable names
-             * @param[in] programCtrl Program control parameters
+             * @param[in] programCtrl The program control object
              * @param[in] varNames Names of variables to include in collection
-             * @param[in] mesh Lattice mesh for dimensioning
+             * @param[in] mesh The lattice mesh
              **/
-            __host__ [[nodiscard]] arrayCollection(const programControl &programCtrl, const std::vector<std::string> &varNames, const host::latticeMesh &mesh)
+            __host__ [[nodiscard]] arrayCollection(const programControl &programCtrl, const words_t &varNames, const host::latticeMesh &mesh)
                 : arr_(initialiseVector(programCtrl, mesh)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from specific time index
-             * @param[in] programCtrl Program control parameters
+             * @param[in] programCtrl The program control object
              * @param[in] varNames Names of variables to include
              * @param[in] timeIndex Specific time index to read from
              **/
             __host__ [[nodiscard]] arrayCollection(
                 const programControl &programCtrl,
-                const std::vector<std::string> &varNames,
-                const label_t timeIndex)
+                const words_t &varNames,
+                const host::label_t timeIndex)
                 : arr_(initialiseVector(programCtrl, timeIndex)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from latest available time
-             * @param[in] programCtrl Program control parameters
+             * @param[in] programCtrl The program control object
              * @param[in] varNames Names of variables to include
              **/
             __host__ [[nodiscard]] arrayCollection(
                 const programControl &programCtrl,
-                const std::vector<std::string> &varNames)
+                const words_t &varNames)
                 : arr_(initialiseVector(programCtrl)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Construct from a file prefix
@@ -105,16 +105,16 @@ namespace LBM
              * @param[in] timeIndex Specific time index to read from
              **/
             __host__ [[nodiscard]] arrayCollection(
-                const std::string &fileNamePrefix,
-                const std::vector<std::string> &varNames,
-                const label_t timeIndex)
+                const name_t &fileNamePrefix,
+                const words_t &varNames,
+                const host::label_t timeIndex)
                 : arr_(initialiseVector(fileNamePrefix, timeIndex)),
-                  varNames_(varNames){};
+                  varNames_(varNames) {}
 
             /**
              * @brief Destructor for the host arrayCollection class
              **/
-            ~arrayCollection() {};
+            ~arrayCollection() {}
 
             /**
              * @brief Get read-only access to underlying data
@@ -129,7 +129,7 @@ namespace LBM
              * @brief Get variable names in collection
              * @return Const reference to variable names vector
              **/
-            __host__ [[nodiscard]] inline const std::vector<std::string> &varNames() const noexcept
+            __host__ [[nodiscard]] inline const words_t &varNames() const noexcept
             {
                 return varNames_;
             }
@@ -143,12 +143,12 @@ namespace LBM
             /**
              * @brief Names of the solution variables
              **/
-            const std::vector<std::string> varNames_;
+            const words_t varNames_;
 
             /**
              * @brief Initialize vector from mesh dimensions
-             * @param[in] programCtrl Program control parameters
-             * @param[in] mesh Lattice mesh for dimensioning
+             * @param[in] programCtrl The program control object
+             * @param[in] mesh The lattice mesh
              * @return Initialized data vector
              * @throws std::runtime_error if indexed files not found
              **/
@@ -162,11 +162,11 @@ namespace LBM
                     throw std::runtime_error("Did not find indexed case files");
                 }
 
-                const std::string fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
+                const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
                 return fileIO::readFieldFile<T>(fileName);
             }
 
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const std::string &fileNamePrefix, const label_t timeIndex) const
+            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const name_t &fileNamePrefix, const host::label_t timeIndex) const
             {
                 static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
 
@@ -175,25 +175,25 @@ namespace LBM
                 {
                     throw std::runtime_error("Did not find indexed case files");
                 }
-                const std::string fileName = fileNamePrefix + "_" + std::to_string(fileIO::timeIndices(fileNamePrefix)[timeIndex]) + ".LBMBin";
+                const name_t fileName = fileNamePrefix + "_" + std::to_string(fileIO::timeIndices(fileNamePrefix)[timeIndex]) + ".LBMBin";
                 return fileIO::readFieldFile<T>(fileName);
             }
 
             /**
              * @brief Initialize vector from specific time index
-             * @param[in] programCtrl Program control parameters
+             * @param[in] programCtrl The program control object
              * @param[in] timeIndex Time index to read from
              * @return Initialized data vector
              * @throws std::runtime_error if indexed files not found
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const label_t timeIndex) const
+            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl, const host::label_t timeIndex) const
             {
                 static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
 
                 // Get the correct time index
                 if (fileIO::hasIndexedFiles(programCtrl.caseName()))
                 {
-                    const std::string fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::timeIndices(programCtrl.caseName())[timeIndex]) + ".LBMBin";
+                    const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::timeIndices(programCtrl.caseName())[timeIndex]) + ".LBMBin";
                     return fileIO::readFieldFile<T>(fileName);
                 }
                 else
@@ -204,7 +204,7 @@ namespace LBM
 
             /**
              * @brief Initialize vector from latest time
-             * @param[in] programCtrl Program control parameters
+             * @param[in] programCtrl The program control object
              * @return Initialized data vector
              **/
             __host__ [[nodiscard]] const std::vector<T> initialiseVector(const programControl &programCtrl) const

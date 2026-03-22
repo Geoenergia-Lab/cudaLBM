@@ -78,11 +78,11 @@ int main(const int argc, const char *const argv[])
         return 0;
     }
 
-    const std::string CUDALBM_ARCHITECTURE_DETECTION = getEnvironmentVariable("CUDALBM_ARCHITECTURE_DETECTION", "Automatic");
-    const std::string CUDALBM_ARCHITECTURE_VERSION = getEnvironmentVariable("CUDALBM_ARCHITECTURE_VERSION");
-    const std::string CUDALBM_BUILD_DIR = getEnvironmentVariable("CUDALBM_BUILD_DIR");
-    const std::string CUDALBM_BIN_DIR = getEnvironmentVariable("CUDALBM_BIN_DIR");
-    const std::string CUDALBM_INCLUDE_DIR = getEnvironmentVariable("CUDALBM_INCLUDE_DIR");
+    const name_t CUDALBM_ARCHITECTURE_DETECTION = getEnvironmentVariable("CUDALBM_ARCHITECTURE_DETECTION", "Automatic");
+    const name_t CUDALBM_ARCHITECTURE_VERSION = getEnvironmentVariable("CUDALBM_ARCHITECTURE_VERSION");
+    const name_t CUDALBM_BUILD_DIR = getEnvironmentVariable("CUDALBM_BUILD_DIR");
+    const name_t CUDALBM_BIN_DIR = getEnvironmentVariable("CUDALBM_BIN_DIR");
+    const name_t CUDALBM_INCLUDE_DIR = getEnvironmentVariable("CUDALBM_INCLUDE_DIR");
 
     // Now handle the file path setup
     // If the path doesn't exist, create it
@@ -111,8 +111,8 @@ int main(const int argc, const char *const argv[])
 
     if (CUDALBM_ARCHITECTURE_DETECTION == "Manual")
     {
-        const std::string all_arch_flags = "-gencode arch=compute_" + CUDALBM_ARCHITECTURE_VERSION + ",code=sm_" + CUDALBM_ARCHITECTURE_VERSION;
-        const std::string all_lto_flags = "-gencode arch=compute_" + CUDALBM_ARCHITECTURE_VERSION + ",code=lto_" + CUDALBM_ARCHITECTURE_VERSION;
+        const name_t all_arch_flags = "-gencode arch=compute_" + CUDALBM_ARCHITECTURE_VERSION + ",code=sm_" + CUDALBM_ARCHITECTURE_VERSION;
+        const name_t all_lto_flags = "-gencode arch=compute_" + CUDALBM_ARCHITECTURE_VERSION + ",code=lto_" + CUDALBM_ARCHITECTURE_VERSION;
         outputFile << "# Consolidated architecture flags for all found GPUs (no duplicates)" << std::endl;
         outputFile << "NVCXX_ALL_ARCHFLAGS = " << all_arch_flags << " " << all_lto_flags << std::endl;
     }
@@ -120,13 +120,13 @@ int main(const int argc, const char *const argv[])
     {
         const deviceIndex_t deviceCount = countDevices<false>();
 
-        std::string all_arch_flags = "";
+        name_t all_arch_flags = "";
 
         for (deviceIndex_t i = 0; i < deviceCount; ++i)
         {
-            const cudaDeviceProp props = getDeviceProperties(i);
+            const cudaDeviceProp props = GPU::properties(i);
 
-            const std::string current_arch_flag =
+            const name_t current_arch_flag =
                 "-gencode arch=compute_" +
                 std::to_string(props.major) +
                 std::to_string(props.minor) +
@@ -134,7 +134,7 @@ int main(const int argc, const char *const argv[])
                 std::to_string(props.major) +
                 std::to_string(props.minor);
 
-            const std::string current_lto_flag =
+            const name_t current_lto_flag =
                 " -gencode arch=compute_" +
                 std::to_string(props.major) +
                 std::to_string(props.minor) +
@@ -142,12 +142,12 @@ int main(const int argc, const char *const argv[])
                 std::to_string(props.major) +
                 std::to_string(props.minor);
 
-            if (all_arch_flags.find(current_arch_flag) == std::string::npos)
+            if (all_arch_flags.find(current_arch_flag) == name_t::npos)
             {
                 all_arch_flags += current_arch_flag;
             }
 
-            if (all_arch_flags.find(current_lto_flag) == std::string::npos)
+            if (all_arch_flags.find(current_lto_flag) == name_t::npos)
             {
                 all_arch_flags += current_lto_flag;
             }

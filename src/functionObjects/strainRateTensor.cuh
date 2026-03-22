@@ -58,7 +58,7 @@ namespace LBM
         {
             namespace kernel
             {
-                __host__ [[nodiscard]] inline consteval label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+                __host__ [[nodiscard]] inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
 #define launchBounds __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
                 /**
@@ -68,12 +68,12 @@ namespace LBM
                  * @param[in] mAlphaBeta Second order moment component
                  * @return The calculated strain rate tensor component
                  **/
-                template <const label_t Index, typename T>
+                template <const host::label_t Index, typename T>
                 __device__ [[nodiscard]] inline constexpr T S(const T uAlpha, const T uBeta, const T mAlphaBeta) noexcept
                 {
-                    static_assert((Index == index::xx() || Index == index::yy() || Index == index::zz() || Index == index::xy() || Index == index::xz() || Index == index::yz()), "Invalid index");
+                    static_assert((Index == index::xx || Index == index::yy || Index == index::zz || Index == index::xy || Index == index::xz || Index == index::yz), "Invalid index");
 
-                    if constexpr (Index == index::xx() || Index == index::yy() || Index == index::zz())
+                    if constexpr (Index == index::xx || Index == index::yy || Index == index::zz)
                     {
                         return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ii<scalar_t>() * device::tau);
                     }
@@ -90,12 +90,12 @@ namespace LBM
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
                 launchBounds __global__ void mean(
-                    const device::ptrCollection<10, scalar_t> devPtrs,
+                    const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SMeanPtrs,
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -109,12 +109,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<index::xx>(u, u, mxx);
+                    const scalar_t S_xy = S<index::xy>(u, v, mxy);
+                    const scalar_t S_xz = S<index::xz>(u, w, mxz);
+                    const scalar_t S_yy = S<index::yy>(v, v, myy);
+                    const scalar_t S_yz = S<index::yz>(v, w, myz);
+                    const scalar_t S_zz = S<index::zz>(w, w, mzz);
 
                     // Read the mean values from global memory
                     const scalar_t S_xxMean = SMeanPtrs.ptr<0>()[idx];
@@ -147,13 +147,13 @@ namespace LBM
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
                 launchBounds __global__ void instantaneousAndMean(
-                    const device::ptrCollection<10, scalar_t> devPtrs,
+                    const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SPtrs,
                     const device::ptrCollection<6, scalar_t> SMeanPtrs,
                     const scalar_t invNewCount)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -167,12 +167,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous and write back to global
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<index::xx>(u, u, mxx);
+                    const scalar_t S_xy = S<index::xy>(u, v, mxy);
+                    const scalar_t S_xz = S<index::xz>(u, w, mxz);
+                    const scalar_t S_yy = S<index::yy>(v, v, myy);
+                    const scalar_t S_yz = S<index::yz>(v, w, myz);
+                    const scalar_t S_zz = S<index::zz>(w, w, mzz);
                     SPtrs.ptr<0>()[idx] = S_xx;
                     SPtrs.ptr<1>()[idx] = S_xy;
                     SPtrs.ptr<2>()[idx] = S_xz;
@@ -209,11 +209,11 @@ namespace LBM
                  * @param[in] SPtrs Device pointer collection for instantaneous strain rate tensor components
                  **/
                 launchBounds __global__ void instantaneous(
-                    const device::ptrCollection<10, scalar_t> devPtrs,
+                    const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SPtrs)
                 {
                     // Calculate the index
-                    const label_t idx = device::idx(threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z);
+                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
 
                     // Read from global memory
                     const scalar_t u = devPtrs.ptr<1>()[idx];
@@ -227,12 +227,12 @@ namespace LBM
                     const scalar_t mzz = devPtrs.ptr<9>()[idx];
 
                     // Calculate the instantaneous and write back to global
-                    const scalar_t S_xx = S<index::xx()>(u, u, mxx);
-                    const scalar_t S_xy = S<index::xy()>(u, v, mxy);
-                    const scalar_t S_xz = S<index::xz()>(u, w, mxz);
-                    const scalar_t S_yy = S<index::yy()>(v, v, myy);
-                    const scalar_t S_yz = S<index::yz()>(v, w, myz);
-                    const scalar_t S_zz = S<index::zz()>(w, w, mzz);
+                    const scalar_t S_xx = S<index::xx>(u, u, mxx);
+                    const scalar_t S_xy = S<index::xy>(u, v, mxy);
+                    const scalar_t S_xz = S<index::xz>(u, w, mxz);
+                    const scalar_t S_yy = S<index::yy>(v, v, myy);
+                    const scalar_t S_yz = S<index::yz>(v, w, myz);
+                    const scalar_t S_zz = S<index::zz>(w, w, mzz);
                     SPtrs.ptr<0>()[idx] = S_xx;
                     SPtrs.ptr<1>()[idx] = S_xy;
                     SPtrs.ptr<2>()[idx] = S_xz;
@@ -244,53 +244,78 @@ namespace LBM
 
             /**
              * @brief Class for managing strain rate tensor calculations in LBM simulations
-             * @tparam VelocitySet The velocity set type used in LBM
+             * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
              * @tparam N The number of streams (compile-time constant)
              **/
-            template <class VelocitySet, const label_t N>
+            template <class VelocitySet>
             class tensor
             {
             public:
                 /**
                  * @brief Constructs a strain rate tensor object
-                 * @param[in] mesh Reference to lattice mesh
+                 * @param[in] mesh The lattice mesh
                  * @param[in] devPtrs Device pointer collection for memory access
                  * @param[in] streamsLBM Stream handler for CUDA operations
                  **/
                 __host__ [[nodiscard]] tensor(
                     host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                     const host::latticeMesh &mesh,
-                    const device::ptrCollection<10, scalar_t> &devPtrs,
-                    const streamHandler<N> &streamsLBM) noexcept
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz,
+                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz,
+                    const streamHandler &streamsLBM,
+                    const programControl &programCtrl) noexcept
                     : hostWriteBuffer_(hostWriteBuffer),
                       mesh_(mesh),
-                      devPtrs_(devPtrs),
+                      rho_(rho),
+                      u_(u),
+                      v_(v),
+                      w_(w),
+                      mxx_(mxx),
+                      mxy_(mxy),
+                      mxz_(mxz),
+                      myy_(myy),
+                      myz_(myz),
+                      mzz_(mzz),
                       streamsLBM_(streamsLBM),
                       calculate_(initialiserSwitch(fieldName_)),
                       calculateMean_(initialiserSwitch(fieldNameMean_)),
-                      xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_)),
-                      xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_)),
-                      xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_)),
-                      yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_)),
-                      yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_)),
-                      zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_)),
-                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_)),
-                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_))
+                      xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_, programCtrl)),
+                      xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_, programCtrl)),
+                      xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_, programCtrl)),
+                      yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_, programCtrl)),
+                      yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_, programCtrl)),
+                      zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_, programCtrl)),
+                      xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_, programCtrl)),
+                      xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[1], mesh, calculateMean_, programCtrl)),
+                      xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[2], mesh, calculateMean_, programCtrl)),
+                      yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[3], mesh, calculateMean_, programCtrl)),
+                      yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[4], mesh, calculateMean_, programCtrl)),
+                      zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[5], mesh, calculateMean_, programCtrl))
                 {
                     // Set the cache config to prefer L1
-                    checkCudaErrors(cudaFuncSetCacheConfig(kernel::instantaneous, cudaFuncCachePreferL1));
-                    checkCudaErrors(cudaFuncSetCacheConfig(kernel::instantaneousAndMean, cudaFuncCachePreferL1));
-                    checkCudaErrors(cudaFuncSetCacheConfig(kernel::mean, cudaFuncCachePreferL1));
+                    errorHandler::check(cudaFuncSetCacheConfig(kernel::instantaneous, cudaFuncCachePreferL1));
+                    errorHandler::check(cudaFuncSetCacheConfig(kernel::instantaneousAndMean, cudaFuncCachePreferL1));
+                    errorHandler::check(cudaFuncSetCacheConfig(kernel::mean, cudaFuncCachePreferL1));
                 };
 
                 /**
                  * @brief Default destructor
                  **/
-                ~tensor() {};
+                ~tensor() {}
+
+                /**
+                 * @brief Disable copying
+                 **/
+                __host__ [[nodiscard]] tensor(const tensor &) = delete;
+                __host__ [[nodiscard]] tensor &operator=(const tensor &) = delete;
 
                 /**
                  * @brief Check if instantaneous calculation is enabled
@@ -314,102 +339,149 @@ namespace LBM
                  * @brief Calculate instantaneous strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneous([[maybe_unused]] const label_t timeStep) noexcept
+                __host__ void calculateInstantaneous([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xx_.ptr(), xy_.ptr(), xz_.ptr(), yy_.ptr(), yz_.ptr(), zz_.ptr()});
-                        });
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            {rho_.ptr(stream),
+                             u_.ptr(stream),
+                             v_.ptr(stream),
+                             w_.ptr(stream),
+                             mxx_.ptr(stream),
+                             mxy_.ptr(stream),
+                             mxz_.ptr(stream),
+                             myy_.ptr(stream),
+                             myz_.ptr(stream),
+                             mzz_.ptr(stream)},
+                            {xx_.ptr(stream),
+                             xy_.ptr(stream),
+                             xz_.ptr(stream),
+                             yy_.ptr(stream),
+                             yz_.ptr(stream),
+                             zz_.ptr(stream)});
+                    }
                 }
 
                 /**
                  * @brief Calculate time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean(const label_t timeStep) noexcept
+                __host__ void calculateMean([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    // Calculate the mean
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
-                                invNewCount);
-                        });
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            {rho_.ptr(stream),
+                             u_.ptr(stream),
+                             v_.ptr(stream),
+                             w_.ptr(stream),
+                             mxx_.ptr(stream),
+                             mxy_.ptr(stream),
+                             mxz_.ptr(stream),
+                             myy_.ptr(stream),
+                             myz_.ptr(stream),
+                             mzz_.ptr(stream)},
+                            {xxMean_.ptr(stream),
+                             xyMean_.ptr(stream),
+                             xzMean_.ptr(stream),
+                             yyMean_.ptr(stream),
+                             yzMean_.ptr(stream),
+                             zzMean_.ptr(stream)},
+                            invNewCount);
+                    }
+
+                    xxMean_.meanCountRef()++;
                 }
 
                 /**
                  * @brief Calculate both the instantaneous and time-averaged strain rate tensor components
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneousAndMean(const label_t timeStep) noexcept
+                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const host::label_t timeStep) noexcept
                 {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(timeStep + 1);
+                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
 
-                    host::constexpr_for<0, N>(
-                        [&](const auto stream)
-                        {
-                            strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                                devPtrs_,
-                                {xx_.ptr(), xy_.ptr(), xz_.ptr(), yy_.ptr(), yz_.ptr(), zz_.ptr()},
-                                {xxMean_.ptr(), xyMean_.ptr(), xzMean_.ptr(), yyMean_.ptr(), yzMean_.ptr(), zzMean_.ptr()},
-                                invNewCount);
-                        });
+                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                    {
+                        strainRate::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                            {rho_.ptr(stream),
+                             u_.ptr(stream),
+                             v_.ptr(stream),
+                             w_.ptr(stream),
+                             mxx_.ptr(stream),
+                             mxy_.ptr(stream),
+                             mxz_.ptr(stream),
+                             myy_.ptr(stream),
+                             myz_.ptr(stream),
+                             mzz_.ptr(stream)},
+                            {xx_.ptr(stream), xy_.ptr(stream), xz_.ptr(stream), yy_.ptr(stream), yz_.ptr(stream), zz_.ptr(stream)},
+                            {xxMean_.ptr(stream), xyMean_.ptr(stream), xzMean_.ptr(stream), yyMean_.ptr(stream), yzMean_.ptr(stream), zzMean_.ptr(stream)},
+                            invNewCount);
+                    }
+
+                    xxMean_.meanCountRef()++;
                 }
 
                 /**
                  * @brief Saves the instantaneous strain rate tensor components to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveInstantaneous(const label_t timeStep) noexcept
+                __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
                 {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<6, scalar_t>(
-                            xx_.ptr(), xy_.ptr(),
-                            xz_.ptr(), yy_.ptr(),
-                            yz_.ptr(), zz_.ptr()),
-                        mesh_);
+                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xx_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    {
+                        hostWriteBuffer_.copy_from_device(
+                            device::ptrCollection<6, scalar_t>(
+                                xx_.ptr(virtualDeviceIndex), xy_.ptr(virtualDeviceIndex),
+                                xz_.ptr(virtualDeviceIndex), yy_.ptr(virtualDeviceIndex),
+                                yz_.ptr(virtualDeviceIndex), zz_.ptr(virtualDeviceIndex)),
+                            mesh_,
+                            virtualDeviceIndex);
+                    }
 
                     fileIO::writeFile<time::instantaneous>(
                         fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNames_,
                         hostWriteBuffer_.data(),
-                        timeStep);
+                        timeStep,
+                        0);
                 }
 
                 /**
                  * @brief Saves the mean strain rate tensor components to file
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void saveMean(const label_t timeStep) noexcept
+                __host__ void saveMean(const host::label_t timeStep) noexcept
                 {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<6, scalar_t>(
-                            xx_.ptr(), xy_.ptr(),
-                            xz_.ptr(), yy_.ptr(),
-                            yz_.ptr(), zz_.ptr()),
-                        mesh_);
+                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xxMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                    {
+                        hostWriteBuffer_.copy_from_device(
+                            device::ptrCollection<6, scalar_t>(
+                                xxMean_.ptr(virtualDeviceIndex), xyMean_.ptr(virtualDeviceIndex),
+                                xzMean_.ptr(virtualDeviceIndex), yyMean_.ptr(virtualDeviceIndex),
+                                yzMean_.ptr(virtualDeviceIndex), zzMean_.ptr(virtualDeviceIndex)),
+                            mesh_,
+                            virtualDeviceIndex);
+                    }
 
                     fileIO::writeFile<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,
                         hostWriteBuffer_.data(),
-                        timeStep);
+                        timeStep,
+                        xxMean_.meanCount());
                 }
 
                 /**
                  * @brief Get the field name for instantaneous components
                  * @return Field name string
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::string &fieldName() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldName() const noexcept
                 {
                     return fieldName_;
                 }
@@ -418,7 +490,7 @@ namespace LBM
                  * @brief Get the field name for mean components
                  * @return Field name string
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::string &fieldNameMean() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldNameMean() const noexcept
                 {
                     return fieldNameMean_;
                 }
@@ -427,7 +499,7 @@ namespace LBM
                  * @brief Get the component names for instantaneous tensor
                  * @return Vector of component names
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &componentNames() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNames() const noexcept
                 {
                     return componentNames_;
                 }
@@ -436,7 +508,7 @@ namespace LBM
                  * @brief Get the component names for mean tensor
                  * @return Vector of component names
                  **/
-                __device__ __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &componentNamesMean() const noexcept
+                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNamesMean() const noexcept
                 {
                     return componentNamesMean_;
                 }
@@ -447,22 +519,22 @@ namespace LBM
                 /**
                  * @brief Field name for instantaneous components
                  **/
-                const std::string fieldName_ = "S";
+                const name_t fieldName_ = "S";
 
                 /**
                  * @brief Field name for mean components
                  **/
-                const std::string fieldNameMean_ = fieldName_ + "Mean";
+                const name_t fieldNameMean_ = fieldName_ + "Mean";
 
                 /**
                  * @brief Instantaneous component names
                  **/
-                const std::vector<std::string> componentNames_ = {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"};
+                const words_t componentNames_ = {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"};
 
                 /**
                  * @brief Mean component names
                  **/
-                const std::vector<std::string> componentNamesMean_ = string::catenate(componentNames_, "Mean");
+                const words_t componentNamesMean_ = string::catenate(componentNames_, "Mean");
 
                 /**
                  * @brief Reference to lattice mesh
@@ -472,12 +544,21 @@ namespace LBM
                 /**
                  * @brief Device pointer collection
                  **/
-                const device::ptrCollection<10, scalar_t> &devPtrs_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz_;
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz_;
 
                 /**
                  * @brief Stream handler for CUDA operations
                  **/
-                const streamHandler<N> &streamsLBM_;
+                const streamHandler &streamsLBM_;
 
                 /**
                  * @brief Flag for instantaneous calculation

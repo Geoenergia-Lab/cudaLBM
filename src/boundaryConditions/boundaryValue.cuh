@@ -56,13 +56,13 @@ namespace LBM
     /**
      * @class boundaryValue
      * @brief Represents a single boundary value for a specific field and region
-     * @tparam VelocitySet Velocity set configuration defining lattice structure
+     * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
      *
      * This struct reads and stores boundary condition values from configuration files,
      * handling both direct numerical values and equilibrium-based calculations.
      * It automatically applies appropriate scaling based on field type.
      **/
-    template <class VelocitySet>
+    template <class VelocitySet, const bool Scaled>
     class boundaryValue
     {
     public:
@@ -72,8 +72,8 @@ namespace LBM
          * @param[in] regionName Name of the boundary region (e.g., "North", "West")
          * @throws std::runtime_error if field name is invalid or configuration is malformed
          **/
-        __host__ [[nodiscard]] boundaryValue(const std::string &fieldName, const std::string &regionName)
-            : value(initialiseValue(fieldName, regionName)){};
+        __host__ [[nodiscard]] boundaryValue(const name_t &fieldName, const name_t &regionName)
+            : value(initialiseValue(fieldName, regionName)) {}
 
         /**
          * @brief Access the stored boundary value
@@ -99,19 +99,19 @@ namespace LBM
          * @return The extracted parameter value
          * @throws std::runtime_error if the parameter is not found or is invalid
          * @note This function is used to extract values that MUST be numeric
-         */
+         **/
         template <const bool safety_check>
-        __host__ [[nodiscard]] static scalar_t extractParameter(const std::string &fieldName, const std::string &regionName, const std::string &initialConditionsName)
+        __host__ [[nodiscard]] static scalar_t extractParameter(const name_t &fieldName, const name_t &regionName, const name_t &initialConditionsName)
         {
-            const std::vector<std::string> boundaryLines = string::readFile(initialConditionsName);
+            const words_t boundaryLines = string::readFile(initialConditionsName);
 
             // Extracts the entire block of text corresponding to currentField
-            const std::vector<std::string> fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
+            const words_t fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
 
             // Extracts the block of text corresponding to internalField within the current field block
-            const std::vector<std::string> regionFieldBlock = string::extractBlock(fieldBlock, regionName);
+            const words_t regionFieldBlock = string::extractBlock(fieldBlock, regionName);
 
-            const std::string valueString = string::extractParameterLine(regionFieldBlock, "value");
+            const name_t valueString = string::extractParameterLine(regionFieldBlock, "value");
 
             if constexpr (safety_check)
             {
@@ -144,23 +144,23 @@ namespace LBM
          * - Equilibrium-based calculations for moment fields
          * - Validation of field names and region names
          **/
-        __host__ [[nodiscard]] static scalar_t initialiseValue(const std::string &fieldName, const std::string &regionName, const std::string &initialConditionsName = "initialConditions")
+        __host__ [[nodiscard]] static scalar_t initialiseValue(const name_t &fieldName, const name_t &regionName, const name_t &initialConditionsName = "initialConditions")
         {
-            const std::vector<std::string> boundaryLines = string::readFile(initialConditionsName);
+            const words_t boundaryLines = string::readFile(initialConditionsName);
 
             // Extracts the entire block of text corresponding to currentField
-            const std::vector<std::string> fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
+            const words_t fieldBlock = string::extractBlock(boundaryLines, fieldName, "field");
 
             // Extracts the block of text corresponding to internalField within the current field block
-            const std::vector<std::string> regionFieldBlock = string::extractBlock(fieldBlock, regionName);
+            const words_t regionFieldBlock = string::extractBlock(fieldBlock, regionName);
 
             // Now read the value line
-            const std::string value_ = string::extractParameterLine(regionFieldBlock, "value");
+            const name_t value_ = string::extractParameterLine(regionFieldBlock, "value");
 
             // Try fixing its value
             if (string::isNumber(value_))
             {
-                const std::unordered_set<std::string> allowed = {"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
+                const std::unordered_set<name_t> allowed = {"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
 
                 const bool isMember = allowed.find(fieldName) != allowed.end();
 
@@ -172,15 +172,36 @@ namespace LBM
                     }
                     if ((fieldName == "u") | (fieldName == "v") | (fieldName == "w"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_i<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_i<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                     if ((fieldName == "m_xx") | (fieldName == "m_yy") | (fieldName == "m_zz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ii<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ii<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                     if ((fieldName == "m_xy") | (fieldName == "m_xz") | (fieldName == "m_yz"))
                     {
-                        return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ij<scalar_t>();
+                        if constexpr (Scaled)
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value") * velocitySet::scale_ij<scalar_t>();
+                        }
+                        else
+                        {
+                            return string::extractParameter<scalar_t>(regionFieldBlock, "value");
+                        }
                     }
                 }
 
@@ -190,7 +211,7 @@ namespace LBM
             else if (value_ == "equilibrium")
             {
                 // Check to see if the variable is one of the moments
-                const std::unordered_set<std::string> allowed = {"m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
+                const std::unordered_set<name_t> allowed = {"m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
                 const bool isMember = allowed.find(fieldName) != allowed.end();
 
                 // It is an equilibrium moment
@@ -200,35 +221,35 @@ namespace LBM
                     if (fieldName == "m_xx")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * u)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * u)) / rho0();
                     }
                     else if (fieldName == "m_xy")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * v)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * v)) / rho0();
                     }
                     else if (fieldName == "m_xz")
                     {
                         const scalar_t u = extractParameter<true>("u", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((u * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((u * w)) / rho0();
                     }
                     else if (fieldName == "m_yy")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * v)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((v * v)) / rho0();
                     }
                     else if (fieldName == "m_yz")
                     {
                         const scalar_t v = extractParameter<true>("v", regionName, initialConditionsName);
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((v * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((v * w)) / rho0();
                     }
                     else if (fieldName == "m_zz")
                     {
                         const scalar_t w = extractParameter<true>("w", regionName, initialConditionsName);
-                        return velocitySet::scale_ii<scalar_t>() * ((w * w)) / rho0<scalar_t>();
+                        return velocitySet::scale_ii<scalar_t>() * ((w * w)) / rho0();
                     }
                     return 0; // Should never get here
                 }

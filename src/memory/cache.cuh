@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_CACHE_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 
 namespace LBM
 {
@@ -67,7 +67,7 @@ namespace LBM
              * @enum Enum
              * @brief Cache eviction policy options
              **/
-            typedef enum Enum : label_t
+            typedef enum Enum : device::label_t
             {
                 evict_first = 0,
                 evict_last = 1
@@ -84,7 +84,7 @@ namespace LBM
              * @enum Enum
              * @brief Cache level options
              **/
-            typedef enum Enum : label_t
+            typedef enum Enum : device::label_t
             {
                 L1 = 0,
                 L2 = 1

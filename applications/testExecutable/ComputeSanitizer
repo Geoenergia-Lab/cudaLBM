@@ -1,0 +1,190 @@
+#!/bin/bash
+
+# Unset all variables at the beginning
+unset DEVICES_OUTPUT CLEAN_DEVICES GPUS COMMON_FLAGS TOOLS TIMESTAMP LOG_DIR
+unset RESULTS FAILED_TESTS SKIPPED_TESTS GPU TOOL TEST_NAME LOG_FILE EXIT_CODE
+unset TOTAL_TESTS FAILED_COUNT SKIPPED_COUNT PASSED_COUNT EXIT_STATUS
+
+# Check if computeVersion exists - exit if not found
+if ! command -v computeVersion >/dev/null 2>&1; then
+    printf "CUDALBM_CUDA_DIR is not set. Please run \"source bashrc\" in the project directory first\n" >&2
+    unset DEVICES_OUTPUT CLEAN_DEVICES GPUS COMMON_FLAGS TOOLS TIMESTAMP LOG_DIR
+    unset RESULTS FAILED_TESTS SKIPPED_TESTS GPU TOOL TEST_NAME LOG_FILE EXIT_CODE
+    unset TOTAL_TESTS FAILED_COUNT SKIPPED_COUNT PASSED_COUNT EXIT_STATUS
+    return 1 2>/dev/null || exit 1
+fi
+
+# Run computeVersion and capture its output
+DEVICES_OUTPUT=$(computeVersion -countDevices)
+
+# Remove parentheses and convert to array
+if [ "$DEVICES_OUTPUT" = "()" ]; then
+    GPUS=()
+    printf "No GPUs detected by computeVersion. Test execution aborted.\n" >&2
+    unset DEVICES_OUTPUT CLEAN_DEVICES GPUS COMMON_FLAGS TOOLS TIMESTAMP LOG_DIR
+    unset RESULTS FAILED_TESTS SKIPPED_TESTS GPU TOOL TEST_NAME LOG_FILE EXIT_CODE
+    unset TOTAL_TESTS FAILED_COUNT SKIPPED_COUNT PASSED_COUNT EXIT_STATUS
+    return 1 2>/dev/null || exit 1
+else
+    # Remove parentheses and convert to array
+    CLEAN_DEVICES="${DEVICES_OUTPUT//[()]/}"
+    GPUS=($CLEAN_DEVICES)
+fi
+
+# Safe to go into directory now
+cd D3Q27
+rm -rf logs
+
+# ------------------------------------------------------------------------------
+# Common flags for all tools (general + output verbosity + error exit code)
+COMMON_FLAGS="--print-limit=0 --print-level=info --num-callers-device=0 \
+              --num-callers-host=0 --strip-paths=no --backtrace-short=no \
+              --show-backtrace=yes --destroy-on-device-error=kernel \
+              --error-exitcode=1"
+
+# Tool-specific flags
+MEMCHECK_FLAGS="--check-cache-control --leak-check=full --padding=32 \
+                --report-api-errors=all --track-stream-ordered-races=all"
+
+RACECHECK_FLAGS="--racecheck-detect-level=error --racecheck-memcpy-async=yes \
+                 --racecheck-trace-sync=yes --racecheck-deadlock-timeout=5000 \
+                 --racecheck-report=all --racecheck-num-workers=0"
+
+INITCHECK_FLAGS="--check-api-memory-access=yes --check-optix \
+                 --track-unused-memory --unused-memory-threshold=0"
+
+SYNCCHECK_FLAGS="--missing-barrier-init-is-fatal=yes"
+
+# ------------------------------------------------------------------------------
+
+# Define tools to test
+TOOLS=("memcheck" "initcheck" "synccheck")
+
+# Create a timestamp for log files
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG_DIR="logs/log_$TIMESTAMP"
+mkdir -p "$LOG_DIR"
+
+# Arrays to store results
+RESULTS=()
+FAILED_TESTS=()
+SKIPPED_TESTS=()
+
+# Build a comma‑separated list of GPUs for the executable
+GPU_LIST=$(IFS=,; echo "${GPUS[*]}")
+
+# Print header
+printf "/*---------------------------------------------------------------------------*\\ \n"
+printf "|                                                                             |\n"
+printf "| cudaLBM: CUDA-based moment representation Lattice Boltzmann Method          |\n"
+printf "| Developed at UDESC - State University of Santa Catarina                     |\n"
+printf "| Website: https://www.udesc.br                                               |\n"
+printf "| Github: https://github.com/geoenergiaUDESC/cudaLBM                          |\n"
+printf "|                                                                             |\n"
+printf "\\*---------------------------------------------------------------------------*/\n"
+printf "\n"
+printf "ComputeSanitizer:\n"
+printf "{\n"
+printf "    deviceList: [%s];\n" "${GPUS[*]}"
+printf "    Log directory: %s\n" "$LOG_DIR"
+printf "\n"
+printf "    Running tests on all GPUs (list: %s):\n" "$GPU_LIST"
+printf "    {\n"
+
+# Run tests
+for TOOL in "${TOOLS[@]}"; do
+    TEST_NAME="$TOOL"
+    LOG_FILE="$LOG_DIR/${TEST_NAME}_allGPUs.log"
+    
+    # Select the appropriate extra flags
+    case $TOOL in
+        memcheck)   EXTRA_FLAGS="$MEMCHECK_FLAGS" ;;
+        initcheck)  EXTRA_FLAGS="$INITCHECK_FLAGS" ;;
+        synccheck)  EXTRA_FLAGS="$SYNCCHECK_FLAGS" ;;
+        racecheck)  EXTRA_FLAGS="$RACECHECK_FLAGS" ;;
+        *)          EXTRA_FLAGS="" ;;
+    esac
+    
+    printf "        %s:" "$TEST_NAME"
+    
+    # Clean case and run test
+    source cleanCase.sh
+    compute-sanitizer --tool="$TOOL" $COMMON_FLAGS $EXTRA_FLAGS \
+        testExecutable -GPU "$GPU_LIST" > "$LOG_FILE" 2>&1
+    EXIT_CODE=$?
+    
+    # Store result based on exit code
+    case $EXIT_CODE in
+        0)
+            RESULTS+=("$TEST_NAME on all GPUs: PASS")
+            echo " PASS"
+            ;;
+        101)
+            RESULTS+=("$TEST_NAME on all GPUs: SKIPPED (NO GPU)")
+            SKIPPED_TESTS+=("$TEST_NAME on all GPUs")
+            echo " SKIPPED (NO GPU)"
+            ;;
+        *)
+            RESULTS+=("$TEST_NAME on all GPUs: FAIL (exit code: $EXIT_CODE)")
+            FAILED_TESTS+=("$TEST_NAME on all GPUs")
+            echo " FAIL (exit code: $EXIT_CODE)"
+            ;;
+    esac
+done
+
+printf "    };\n"
+printf "\n"
+
+# Clean up and exit directory
+source cleanCase.sh
+cd ../
+
+# Print summary
+TOTAL_TESTS=${#RESULTS[@]}
+FAILED_COUNT=${#FAILED_TESTS[@]}
+SKIPPED_COUNT=${#SKIPPED_TESTS[@]}
+PASSED_COUNT=$((TOTAL_TESTS - FAILED_COUNT - SKIPPED_COUNT))
+
+# Only show detailed results if there are failures
+if [ $FAILED_COUNT -gt 0 ]; then
+    for result in "${RESULTS[@]}"; do
+        printf "%s\n" "$result"
+    done
+    printf "\n"
+fi
+
+# Final status
+if [ $FAILED_COUNT -eq 0 ]; then
+    if [ $SKIPPED_COUNT -eq 0 ]; then
+        printf "    All unit tests passed (%d/%d)\n" "$PASSED_COUNT" "$TOTAL_TESTS"
+    else
+        printf "    All unit tests passed (%d/%d), %d skipped\n" "$PASSED_COUNT" "$TOTAL_TESTS" "$SKIPPED_COUNT"
+    fi
+    EXIT_STATUS=0
+else
+    printf "    Some unit tests failed (%d/%d passed, %d skipped)\n" "$PASSED_COUNT" "$TOTAL_TESTS" "$SKIPPED_COUNT"
+    printf "\n"
+    printf "    Failed tests:\n"
+    for test in "${FAILED_TESTS[@]}"; do
+        printf "      - %s\n" "$test"
+    done
+    if [ $SKIPPED_COUNT -gt 0 ]; then
+        printf "\n"
+        printf "    Skipped tests (no GPU available):\n"
+        for test in "${SKIPPED_TESTS[@]}"; do
+            printf "      - %s\n" "$test"
+        done
+    fi
+    printf "\n"
+    printf "    Check individual log files in: ComputeSanitizerTest/%s\n" "$LOG_DIR"
+    EXIT_STATUS=1
+fi
+printf "};\n"
+
+# Clean up all variables at the end
+unset DEVICES_OUTPUT CLEAN_DEVICES GPUS COMMON_FLAGS TOOLS TIMESTAMP LOG_DIR
+unset RESULTS FAILED_TESTS SKIPPED_TESTS GPU TOOL TEST_NAME LOG_FILE EXIT_CODE
+unset TOTAL_TESTS FAILED_COUNT SKIPPED_COUNT PASSED_COUNT EXIT_STATUS
+
+# Use return instead of exit to avoid closing the terminal
+return $EXIT_STATUS 2>/dev/null || exit $EXIT_STATUS

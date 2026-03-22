@@ -54,15 +54,17 @@ namespace LBM
 {
     namespace functionObjects
     {
+        using save_function_signature = std::function<void(const host::label_t)>;
+
         /**
          * @brief The names of the 10 solution variables of the moment representation
          **/
-        const std::vector<std::string> solutionVariableNames{"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
+        const words_t solutionVariableNames{"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"};
 
         /**
          * @brief Maps the name of function objects to lists of the names of their individual components
          **/
-        const std::unordered_map<std::string, std::vector<std::string>> fieldComponentsMap = {
+        const std::unordered_map<name_t, words_t> fieldComponentsMap = {
             {"momentsMean", {"rhoMean", "uMean", "vMean", "wMean", "m_xxMean", "m_xyMean", "m_xzMean", "m_yyMean", "m_yzMean", "m_zzMean"}},
             {"S", {"S_xx", "S_xy", "S_xz", "S_yy", "S_yz", "S_zz"}},
             {"SMean", {"S_xxMean", "S_xyMean", "S_xzMean", "S_yyMean", "S_yzMean", "S_zzMean"}},
@@ -82,7 +84,7 @@ namespace LBM
             return fMean + (f - fMean) * invNewCount;
         }
 
-        template <typename T, const label_t N>
+        template <typename T, const host::label_t N>
         __device__ [[nodiscard]] inline constexpr const thread::array<T, N> timeAverage(const thread::array<T, N> &fMean, const thread::array<T, N> &f, const T invNewCount) noexcept
         {
             thread::array<T, N> newMean;
@@ -101,7 +103,7 @@ namespace LBM
          * @param[in] objectName Name of the function object to check
          * @return True if the object is enabled in configuration
          **/
-        __host__ [[nodiscard]] bool initialiserSwitch(const std::string &objectName)
+        __host__ [[nodiscard]] bool initialiserSwitch(const name_t &objectName) noexcept
         {
             return std::filesystem::exists("functionObjects") ? string::containsString(string::trim<true>(string::eraseBraces(string::extractBlock(string::readFile("functionObjects"), "functionObjectList"))), objectName) : false;
         }
@@ -115,37 +117,21 @@ namespace LBM
          **/
         template <class VelocitySet, const time::type TimeType>
         __host__ [[nodiscard]] device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType> objectAllocator(
-            const std::string &name,
-            const host::latticeMesh &mesh)
+            const name_t &name,
+            const host::latticeMesh &mesh,
+            const programControl &programCtrl)
         {
-            // If we wish to allocate the array, do so
-            if (initialiserSwitch(name))
-            {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0);
-            }
-            // Otherwise, just create the array without initializing it
-            else
-            {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh);
-            }
+            return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0, programCtrl, initialiserSwitch(name));
         }
 
         template <class VelocitySet, const time::type TimeType>
         __host__ [[nodiscard]] device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType> objectAllocator(
-            const std::string &name,
+            const name_t &name,
             const host::latticeMesh &mesh,
-            const bool allocate)
+            const bool allocate,
+            const programControl &programCtrl)
         {
-            // If we wish to allocate the array, do so
-            if (allocate)
-            {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0);
-            }
-            // Otherwise, just create the array without initializing it
-            else
-            {
-                return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh);
-            }
+            return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0, programCtrl, allocate);
         }
     }
 }
