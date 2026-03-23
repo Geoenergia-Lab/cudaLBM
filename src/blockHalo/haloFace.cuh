@@ -203,7 +203,7 @@ namespace LBM
 
             /**
              * @brief Initialize population data for a specific halo face
-             * @tparam alpha Direction index (x, y, or z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff Face coeff (-1 for min, 1 for max)
              * @param[in] fMom Moment representation of distribution functions
              * @param[in] mesh The lattice mesh
@@ -253,7 +253,7 @@ namespace LBM
 
             /**
              * @brief Populate halo face with population data from boundary cells
-             * @tparam alpha Direction index (x, y, or z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff Face coeff (-1 for min, 1 for max)
              * @param[out] face Halo face data to populate
              * @param[in] pop Population density values for current cell

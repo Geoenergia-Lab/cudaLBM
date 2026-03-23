@@ -80,7 +80,7 @@ namespace LBM
 
         /**
          * @brief Access the data by axis
-         * @tparam alpha The axis (X, Y or Z)
+         * @tparam alpha The axis direction (X, Y or Z)
          */
         template <axis::type alpha, typename ValueType = value_type>
         __host__ __device__ [[nodiscard]] constexpr ValueType value() const noexcept

@@ -80,7 +80,7 @@ namespace LBM
 
         /**
          * @brief Returns axis directions orthogonal to alpha
-         * @tparam alpha The axis direction
+         * @tparam alpha The axis direction (X, Y or Z)
          * @tparam i The index of the orthogonal axis (must be 0 or 1)
          * @returns One of two axis directions orthogonal to alpha
          **/
@@ -139,7 +139,7 @@ namespace LBM
         {
             /**
              * @brief Asserts that the direction alpha is a valid axis direction
-             * @tparam alpha The axis direction
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam potentialNull Switch that determines whether alpha is allowed to be NO_DIRECTION or not
              **/
             template <const LBM::axis::type alpha, const LBM::axis::null null>

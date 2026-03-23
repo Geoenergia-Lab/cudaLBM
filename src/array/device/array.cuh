@@ -123,7 +123,6 @@ namespace LBM
 
             /**
              * @brief Allocate and copy one GPU segment of the skeleton array.
-             * @tparam alpha Axis direction (used to compute number of faces).
              * @param[in] mesh The lattice mesh
              * @param[in] hostArrayGlobal Pointer to full host array.
              * @param[in] GPU_x, GPU_y, GPU_z GPU grid coordinates.
@@ -152,7 +151,6 @@ namespace LBM
 
             /**
              * @brief Allocate all GPU segments for a skeleton array from a raw host pointer.
-             * @tparam alpha Axis direction.
              * @param[in] mesh The lattice mesh
              * @param[in] hostArrayGlobal Raw pointer to host data.
              * @param[in] programCtrl The program control object

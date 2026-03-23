@@ -261,6 +261,7 @@ namespace LBM
 
         /**
          * @brief Get alpha-components for all directions
+         * @tparam alpha The axis direction (X, Y, Z or NULL)
          * @return Thread array of 19 alpha-velocity components
          **/
         template <typename T, const axis::type alpha>

@@ -133,7 +133,7 @@ namespace LBM
 
             /**
              * @brief Number of points in the mesh in a specific direction
-             * @tparam alpha The axis type (X, Y or Z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam T The size type
              **/
             template <axis::type alpha>
@@ -152,7 +152,7 @@ namespace LBM
 
             /**
              * @brief Number of blocks in the mesh in a specific direction
-             * @tparam alpha The axis type (X, Y or Z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam ValueType The size type
              * @return The number of blocks in the specified direction
              **/
@@ -230,7 +230,7 @@ namespace LBM
 
             /**
              * @brief Returns the number of devices
-             * @tparam alpha The axis (X, Y or Z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam T The return type
              **/
             __host__ [[nodiscard]] inline constexpr const host::blockLabel &nDevices() const noexcept
@@ -253,7 +253,7 @@ namespace LBM
 
             /**
              * @brief Computes the allocation size along a block face for a given QF
-             * @tparam alpha The axis (X, Y or Z)
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam T The return type
              **/
             template <const axis::type alpha, const host::label_t QF>
