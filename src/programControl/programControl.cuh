@@ -104,10 +104,19 @@ namespace LBM
             {
                 std::cout << "    deviceList: [";
 
-                for (host::label_t i = 0; i < deviceList().size() - 1; i++)
+                if (deviceList().size() == 1)
                 {
-                    std::cout << deviceList()[i] << ", ";
+                    std::cout << deviceList()[0];
                 }
+                {
+                    for (host::label_t i = 0; i < deviceList().size() - 1; i++)
+                    {
+                        std::cout << deviceList()[i] << ", ";
+                    }
+                    std::cout << deviceList()[deviceList().size() - 1];
+                }
+
+                std::cout << "];" << std::endl;
             }
             std::cout << "    caseName: " << caseName_ << ";" << std::endl;
             std::cout << "    Re = " << Re_ << ";" << std::endl;
@@ -128,8 +137,8 @@ namespace LBM
 
                     // Allocate symbols on the GPU
                     const scalar_t viscosityTemp = u_inf() * L_char() / Re();
-                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
-                    const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
+                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3) * viscosityTemp;
+                    const scalar_t omegaTemp = static_cast<scalar_t>(1) / tauTemp;
                     const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
                     const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
 
