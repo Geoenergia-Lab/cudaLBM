@@ -1,7 +1,7 @@
-include ../../common.mk
+include $(CUDALBM_PROJECT_DIR)/common.mk
 
-EXECUTABLE = fieldCalculate
-SOURCE = fieldCalculate.cu
+EXECUTABLE = fieldConvert
+SOURCE = fieldConvert.cu
 
 default: clean $(EXECUTABLE)
 

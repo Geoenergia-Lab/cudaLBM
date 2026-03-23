@@ -50,17 +50,17 @@ SourceFiles
 #ifndef __MBLBM_FIELDCONVERT_CUH
 #define __MBLBM_FIELDCONVERT_CUH
 
-#include "../../src/LBMIncludes.cuh"
-#include "../../src/typedefs/typedefs.cuh"
-#include "../../src/strings.cuh"
-#include "../../src/array/array.cuh"
-#include "../../src/collision/collision.cuh"
-#include "../../src/blockHalo/blockHalo.cuh"
-#include "../../src/fileIO/fileIO.cuh"
-#include "../../src/runTimeIO/runTimeIO.cuh"
-#include "../../src/postProcess/postProcess.cuh"
-#include "../../src/programControl/programControl.cuh"
-#include "../../src/functionObjects/functionObjects.cuh"
+#include "../../../src/LBMIncludes.cuh"
+#include "../../../src/typedefs/typedefs.cuh"
+#include "../../../src/strings.cuh"
+#include "../../../src/array/array.cuh"
+#include "../../../src/collision/collision.cuh"
+#include "../../../src/blockHalo/blockHalo.cuh"
+#include "../../../src/fileIO/fileIO.cuh"
+#include "../../../src/runTimeIO/runTimeIO.cuh"
+#include "../../../src/postProcess/postProcess.cuh"
+#include "../../../src/programControl/programControl.cuh"
+#include "../../../src/functionObjects/functionObjects.cuh"
 
 namespace LBM
 {
@@ -102,7 +102,7 @@ namespace LBM
      * @return A reference to a vector of field names
      * @throws std::runtime_error if an invalid field name is provided
      **/
-    __host__ [[nodiscard]] host::arrayCollection<scalar_t, ctorType::MUST_READ> initialiseArrays(
+    __host__ [[nodiscard]] inline host::arrayCollection<scalar_t, ctorType::MUST_READ> initialiseArrays(
         const name_t &fileNamePrefix,
         const programControl &programCtrl,
         const words_t &fieldNames,
@@ -127,7 +127,7 @@ namespace LBM
      * @return A reference to a vector of field names
      * @throws std::runtime_error if an invalid field name is provided
      **/
-    __host__ [[nodiscard]] const words_t &getFieldNames(
+    __host__ [[nodiscard]] inline const words_t &getFieldNames(
         const name_t &fileNamePrefix,
         const bool doCustomField)
     {
@@ -200,7 +200,7 @@ namespace LBM
     }
 
     template <const axis::type alpha>
-    __host__ [[nodiscard]] std::vector<std::vector<scalar_t>> initialiseSlice(
+    __host__ [[nodiscard]] inline constexpr std::vector<std::vector<scalar_t>> initialiseSlice(
         const host::latticeMesh &mesh,
         const host::label_t nFields)
     {
@@ -210,15 +210,15 @@ namespace LBM
     }
 
     template <const axis::type alpha>
-    __host__ [[nodiscard]] scalar_t indexCoordinate(const host::latticeMesh &mesh, const scalar_t pointCoordinate)
+    __host__ [[nodiscard]] inline constexpr scalar_t indexCoordinate(const host::latticeMesh &mesh, const scalar_t pointCoordinate)
     {
         axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-        return static_cast<scalar_t>(mesh.dimension<alpha>() - 1) * (pointCoordinate * mesh.L().value<alpha>());
+        return (static_cast<scalar_t>(mesh.dimension<alpha>()) * (pointCoordinate / mesh.L().value<alpha>())) - static_cast<scalar_t>(1);
     }
 
     template <typename T>
-    __host__ [[nodiscard]] T linearInterpolate(const T f0, const T f1, const T weight) noexcept
+    __host__ [[nodiscard]] inline constexpr T linearInterpolate(const T f0, const T f1, const T weight) noexcept
     {
         return ((static_cast<T>(1) - weight) * f0) + (weight * f1);
     }
@@ -232,65 +232,61 @@ namespace LBM
         axis::assertions::validate<alpha, axis::NOT_NULL>();
 
         // Get the "index" coordinate
-        const scalar_t i = indexCoordinate<alpha>(mesh, pointCoordinate);
-        const host::label_t i_0 = static_cast<host::label_t>(std::floor(i));
-        const host::label_t i_1 = static_cast<host::label_t>(std::ceil(i));
-        const scalar_t weight = pointCoordinate - static_cast<scalar_t>(i_0);
+        const scalar_t index = indexCoordinate<alpha>(mesh, pointCoordinate);
+        const host::label_t index_0 = static_cast<host::label_t>(std::floor(index));
+        const host::label_t index_1 = static_cast<host::label_t>(std::ceil(index));
+        const scalar_t weight = pointCoordinate - static_cast<scalar_t>(index_0);
 
         std::vector<std::vector<scalar_t>> cutPlane = initialiseSlice<alpha>(mesh, fields.size());
 
-        if constexpr (alpha == axis::X)
+        // If the points are coincident, no need to interpolate
+        if (index_0 == index_1)
         {
             for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (host::label_t z = 0; z < mesh.dimension<axis::Z>(); z++)
-                {
-                    for (host::label_t y = 0; y < mesh.dimension<axis::Y>(); y++)
+                global::forAllInPlane<alpha>(
+                    mesh.dimensions(),
+                    [&](const host::label_t i, const host::label_t j)
                     {
-                        const scalar_t f0 = fields[field][(global::idx(i_0, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
-                        const scalar_t f1 = fields[field][(global::idx(i_1, y, z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
+                        const host::blockLabel Tx = axis::to_3d<alpha>(i, j, index_0);
 
-                        cutPlane[field][y + (z * mesh.dimension<axis::Y>())] = linearInterpolate(f0, f1, weight);
-                    }
-                }
+                        const host::label_t idx = global::idx(Tx.x, Tx.y, Tx.z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>());
+
+                        const host::label_t id = i + (j * mesh.dimension<axis ::orthogonal<alpha, 0>()>());
+
+                        cutPlane[field][id] = fields[field][idx];
+                    });
             }
-            return cutPlane;
         }
-        if constexpr (alpha == axis::Y)
+        // Otherwise we will need to interpolate between the two points
+        else
         {
             for (host::label_t field = 0; field < fields.size(); field++)
             {
-                for (host::label_t z = 0; z < mesh.dimension<axis::Z>(); z++)
-                {
-                    for (host::label_t x = 0; x < mesh.dimension<axis::X>(); x++)
+                global::forAllInPlane<alpha>(
+                    mesh.dimensions(),
+                    [&](const host::label_t i, const host::label_t j)
                     {
-                        const scalar_t f0 = fields[field][(global::idx(x, i_0, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
-                        const scalar_t f1 = fields[field][(global::idx(x, i_1, z, (mesh.dimension<axis::X>()), (mesh.dimension<axis::Y>())))];
-                        cutPlane[field][x + (z * mesh.dimension<axis::X>())] = linearInterpolate(f0, f1, weight);
-                    }
-                }
+                        const host::blockLabel Tx_0 = axis::to_3d<alpha>(i, j, index_0);
+                        const host::blockLabel Tx_1 = axis::to_3d<alpha>(i, j, index_1);
+
+                        const host::label_t idx_0 = global::idx(Tx_0.x, Tx_0.y, Tx_0.z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>());
+                        const host::label_t idx_1 = global::idx(Tx_1.x, Tx_1.y, Tx_1.z, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>());
+
+                        const scalar_t f0 = fields[field][idx_0];
+                        const scalar_t f1 = fields[field][idx_1];
+
+                        const host::label_t id = i + (j * mesh.dimension<axis ::orthogonal<alpha, 0>()>());
+
+                        cutPlane[field][id] = linearInterpolate(f0, f1, weight);
+                    });
             }
-            return cutPlane;
         }
-        if constexpr (alpha == axis::Z)
-        {
-            for (host::label_t field = 0; field < fields.size(); field++)
-            {
-                for (host::label_t y = 0; y < mesh.dimension<axis::Y>(); y++)
-                {
-                    for (host::label_t x = 0; x < mesh.dimension<axis::X>(); x++)
-                    {
-                        const scalar_t f0 = fields[field][(global::idx(x, y, i_0, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
-                        const scalar_t f1 = fields[field][(global::idx(x, y, i_1, mesh.dimension<axis::X>(), mesh.dimension<axis::Y>()))];
-                        cutPlane[field][x + (y * mesh.dimension<axis::X>())] = linearInterpolate(f0, f1, weight);
-                    }
-                }
-            }
-            return cutPlane;
-        }
+
+        return cutPlane;
     }
 
-    __host__ [[nodiscard]] const std::vector<std::vector<scalar_t>> extractCutPlane(
+    __host__ [[nodiscard]] inline constexpr const std::vector<std::vector<scalar_t>> extractCutPlane(
         const std::vector<std::vector<scalar_t>> &fields,
         const host::latticeMesh &mesh,
         const axis::type alpha,
@@ -317,7 +313,7 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const std::vector<std::vector<scalar_t>> processFields(
+    __host__ [[nodiscard]] inline const std::vector<std::vector<scalar_t>> processFields(
         const host::arrayCollection<scalar_t, ctorType::MUST_READ> &hostMoments,
         const host::latticeMesh &mesh,
         const programControl &programCtrl,
@@ -328,6 +324,7 @@ namespace LBM
             const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             // Check that size() - 1 isn't = 2
+            std::cout << "Doing cut plane at " << cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1) << std::endl;
             const scalar_t planeCoordinate = static_cast<scalar_t>(std::stold(cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1)));
 
             const axis::type alpha = cutPlaneDirection(programCtrl);
@@ -344,7 +341,7 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const host::latticeMesh processMesh(
+    __host__ [[nodiscard]] inline const host::latticeMesh processMesh(
         const host::latticeMesh &mesh,
         const programControl &programCtrl,
         const bool cutPlane)
@@ -361,7 +358,7 @@ namespace LBM
         }
     }
 
-    __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const host::label_t nameIndex, const bool cutPlane)
+    __host__ [[nodiscard]] inline const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const host::label_t nameIndex, const bool cutPlane)
     {
         // Get the file name at the present time step
         if (cutPlane)

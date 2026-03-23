@@ -1,7 +1,7 @@
-include ../../common.mk
+include $(CUDALBM_PROJECT_DIR)/common.mk
 
-EXECUTABLE = isothermalD3Q27
-SOURCE = isothermalD3Q27.cu
+EXECUTABLE = isothermalD3Q19
+SOURCE = isothermalD3Q19.cu
 
 default: clean $(EXECUTABLE)
 

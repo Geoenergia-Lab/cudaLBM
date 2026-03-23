@@ -92,7 +92,7 @@ namespace LBM
      * - Methods for moment calculation and population reconstruction
      * - Equilibrium distribution functions
      **/
-    template <const thermalModel_t IsothermalModel>
+    template <const thermalModel_t ThermalModel>
     class D3Q19 : private velocitySet
     {
     public:
@@ -102,6 +102,14 @@ namespace LBM
          * @brief Default constructor (consteval)
          **/
         __device__ __host__ [[nodiscard]] inline consteval D3Q19() {}
+
+        /**
+         * @brief Get the thermal model of the velocity set
+         **/
+        __device__ __host__ [[nodiscard]] static inline consteval thermalModel_t thermalModel() noexcept
+        {
+            return ThermalModel;
+        }
 
         /**
          * @brief Get number of discrete velocity directions
@@ -277,14 +285,14 @@ namespace LBM
         /**
          * @brief Reconstruct population distribution from moments (in-place)
          * @param[out] pop Population array to be filled
-         * @param[in] moments Moment array (10 components)
+         * @param[in] moments Moment array (rho, U, Pi)
          **/
         template <const bool CalculateRest = true>
         __device__ __host__ static inline void reconstruct(
             thread::array<scalar_t, vs::Q()> &pop,
             const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
         {
-            if constexpr (IsothermalModel)
+            if constexpr (ThermalModel)
             {
                 const thread::array<scalar_t, 3> diagonalTerm = velocitySet::diagonal_term(moments);
 
@@ -355,7 +363,7 @@ namespace LBM
 
         /**
          * @brief Reconstruct population distribution from moments (return)
-         * @param[in] moments Moment array (10 components)
+         * @param[in] moments Moment array (rho, U, Pi)
          * @return Population array with 19 components
          **/
         __device__ __host__ [[nodiscard]] static inline thread::array<scalar_t, vs::Q()> reconstruct(const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept

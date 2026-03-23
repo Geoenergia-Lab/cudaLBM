@@ -1,7 +1,7 @@
-include ../../common.mk
+include $(CUDALBM_PROJECT_DIR)/common.mk
 
-EXECUTABLE = momentBasedD3Q27
-SOURCE = momentBasedD3Q27.cu
+EXECUTABLE = fieldCalculate
+SOURCE = fieldCalculate.cu
 
 default: clean $(EXECUTABLE)
 

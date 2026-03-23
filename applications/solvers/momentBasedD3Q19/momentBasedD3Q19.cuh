@@ -37,58 +37,38 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Aliases and kernel definitions for the thermal D3Q27 moment representation
+    Aliases and kernel definitions for the thermal D3Q19 moment representation
     lattice Boltzmann model
 
 Namespace
     LBM
 
 SourceFiles
-    momentBasedD3Q27.cuh
+    momentBasedD3Q19.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_MOMENTBASEDD3Q27_CUH
-#define __MBLBM_MOMENTBASEDD3Q27_CUH
+#ifndef __MBLBM_MOMENTBASEDD3Q19_CUH
+#define __MBLBM_MOMENTBASEDD3Q19_CUH
 
-#include "../../src/LBMIncludes.cuh"
-#include "../../src/typedefs/typedefs.cuh"
-#include "../../src/streaming/streaming.cuh"
-#include "../../src/collision/collision.cuh"
-#include "../../src/blockHalo/blockHalo.cuh"
-#include "../../src/fileIO/fileIO.cuh"
-#include "../../src/runTimeIO/runTimeIO.cuh"
-#include "../../src/functionObjects/objectRegistry.cuh"
-#include "../../src/array/array.cuh"
-#include "../../src/boundaryConditions/boundaryConditions.cuh"
-#include "../../src/momentBasedLBM/kernel.cuh"
+#include "../../../src/LBMIncludes.cuh"
+#include "../../../src/typedefs/typedefs.cuh"
+#include "../../../src/streaming/streaming.cuh"
+#include "../../../src/collision/collision.cuh"
+#include "../../../src/blockHalo/blockHalo.cuh"
+#include "../../../src/fileIO/fileIO.cuh"
+#include "../../../src/runTimeIO/runTimeIO.cuh"
+#include "../../../src/functionObjects/objectRegistry.cuh"
+#include "../../../src/array/array.cuh"
+#include "../../../src/boundaryConditions/boundaryConditions.cuh"
 
 namespace LBM
 {
     using BoundaryConditions = boundaryConditions::traits<boundaryConditions::caseName()>::type;
-    using VelocitySet = D3Q27<Thermal>;
+    using VelocitySet = D3Q19<Thermal>;
     using Collision = secondOrder;
-    using BlockHalo = device::halo<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>;
-
-#ifndef launchBoundsD3Q27
-#define launchBoundsD3Q27 __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
-#endif
-
-    /**
-     * @brief Implements solution of the lattice Boltzmann method using the moment representation and the D3Q27 velocity set
-     * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
-     * @param[in] readBuffer Collection of read-only pointers to the block halo faces used during streaming
-     * @param[in] writeBuffer Collection of mutable pointers to the block halo faces used after streaming
-     **/
-    launchBoundsD3Q27 __global__ void momentBasedD3Q27(
-        const device::ptrCollection<10, scalar_t> devPtrs,
-        const device::ptrCollection<6, const scalar_t> readBuffer,
-        const device::ptrCollection<6, scalar_t> writeBuffer)
-    {
-        extern __shared__ scalar_t shared_buffer[];
-
-        momentBasedLBM<BoundaryConditions, VelocitySet, Collision, BlockHalo>(devPtrs, readBuffer, writeBuffer, shared_buffer);
-    }
 }
+
+#include "../../../src/momentBasedLBM/kernel.cuh"
 
 #endif

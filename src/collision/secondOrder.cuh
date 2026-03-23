@@ -78,7 +78,7 @@ namespace LBM
 
         /**
          * @brief Perform second-order collision operation on moments
-         * @param[in,out] moments Array of 10 solution moments to be updated
+         * @param[out] moments Moment array (rho, U, Pi)
          *
          * This method updates the second-order moments (both diagonal and off-diagonal)
          * using the BGK collision model with the following operations:

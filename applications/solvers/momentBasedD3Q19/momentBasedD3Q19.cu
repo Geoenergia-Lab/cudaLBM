@@ -37,76 +37,16 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    A list of header files necessary for compilation
+    Implementation of the moment representation with the D3Q19 velocity set
 
 Namespace
     LBM
 
 SourceFiles
-    LBMIncludes.cuh
+    momentBasedD3Q19.cu
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_INCLUDES_CUH
-#define __MBLBM_INCLUDES_CUH
+#include "momentBasedD3Q19.cuh"
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <bit>
-#include <cctype>
-#include <charconv>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <cuda.h>
-#include <cuda_runtime_api.h>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <locale>
-#include <memory>
-#include <nvrtc.h>
-// #include <mpi.h>
-#include <source_location>
-#include <sstream>
-#include <stdexcept>
-#include <stdint.h>
-#include <string>
-#include <string_view>
-#include <typeinfo>
-#include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
-#define MULTI_GPU_MSG_NOTE(func, note) #func " not implemented for multi GPU yet: " note
-
-#define MULTI_GPU_MSG(func) #func " not implemented for multi GPU yet"
-
-namespace LBM
-{
-    __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return true; }
-
-    /**
-     * @brief Verbose logging
-     **/
-    __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
-    {
-#ifdef VERBOSE
-        return true;
-#else
-        return false;
-#endif
-    }
-}
-
-#endif
+#include "../main.cuh"

@@ -164,8 +164,9 @@ namespace LBM
 
             /**
              * @brief Saves population data to halo regions for neighboring blocks
-             * @param[in] pop Array containing population values to save
-             * @param[out] writeBuffer Collection of pointers to the halo faces
+             * @param[out] pop Array containing population values to save
+             * @param[in] moments Moment array (rho, U, Pi)
+             * @param[in] writeBuffer Collection of pointers to the halo faces
              *
              * This device function saves population values to halo regions for
              * neighboring blocks to read.

@@ -43,188 +43,209 @@ Namespace
     LBM::host, LBM::device
 
 SourceFiles
-    momentBasedLBM.cuh
+    kernel.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_MOMENTBASEDLBM_CUH
-#define __MBLBM_MOMENTBASEDLBM_CUH
+#ifndef __MBLBM_MOMENTBASEDLBM_KERNEL_CUH
+#define __MBLBM_MOMENTBASEDLBM_KERNEL_CUH
+
+#include "launchConfig.cuh"
 
 namespace LBM
 {
-    /**
-     * @brief Determines the amount of shared memory required for a kernel based on the velocity set
-     **/
-    template <class VelocitySet>
-    __device__ __host__ [[nodiscard]] inline consteval device::label_t smem_alloc_size() noexcept
+    namespace detail
     {
-        if constexpr (true)
+        /**
+         * @brief Implements solution of the lattice Boltzmann method using the moment representation and a chosen velocity set
+         * @tparam BoundaryConditions The boundary conditions of the solver
+         * @tparam VelocitySet The velocity set to use for streaming
+         * @tparam Collision The collision model
+         * @tparam BlockHalo The class handling inter-block streaming
+         * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
+         * @param[in] readBuffer Collection of read-only pointers to the block halo faces used during streaming
+         * @param[in] writeBuffer Collection of mutable pointers to the block halo faces used after streaming
+         * @param[in] sharedBuffer Inline or externally stored shared memory buffer
+         **/
+        template <class BoundaryConditions, class VelocitySet, class Collision, class BlockHalo, class SharedBuffer>
+        __device__ inline void momentBasedLBM(
+            const device::ptrCollection<10, scalar_t> &devPtrs,
+            const device::ptrCollection<6, const scalar_t> &readBuffer,
+            const device::ptrCollection<6, scalar_t> &writeBuffer,
+            SharedBuffer &sharedBuffer)
         {
-            return block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<host::label_t>()>(sizeof(scalar_t));
+            static_assert(std::is_same_v<BlockHalo, device::halo<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>>);
+
+            const thread::coordinate Tx;
+
+            const block::coordinate Bx;
+
+            const device::pointCoordinate point(Tx, Bx);
+
+            // Index into global arrays
+            const device::label_t idx = device::idx(Tx, Bx);
+
+            // Into block arrays
+            const device::label_t tid = block::idx(Tx);
+
+            // Always a multiple of 32, so no need to check this(I think)
+            if constexpr (out_of_bounds_check())
+            {
+                if (device::out_of_bounds(point))
+                {
+                    return;
+                }
+            }
+
+            // Prefetch devPtrs into L2
+            device::constexpr_for<0, NUMBER_MOMENTS()>(
+                [&](const auto moment)
+                {
+                    cache::prefetch<cache::Level::L2, cache::Policy::evict_last>(&(devPtrs.ptr<moment>()[idx]));
+                });
+
+            // Coalesced read from global memory
+            thread::array<scalar_t, NUMBER_MOMENTS()> moments;
+            device::constexpr_for<0, NUMBER_MOMENTS()>(
+                [&](const auto moment)
+                {
+                    const device::label_t ID = tid * m_i<NUMBER_MOMENTS() + 1>() + m_i<moment>();
+                    sharedBuffer[ID] = devPtrs.ptr<moment>()[idx];
+                    if constexpr (moment == index::rho)
+                    {
+                        moments[moment] = sharedBuffer[ID] + rho0();
+                    }
+                    else
+                    {
+                        moments[moment] = sharedBuffer[ID];
+                    }
+                });
+
+            block::sync();
+
+            // Reconstruct the population from the moments
+            thread::array<scalar_t, VelocitySet::Q()> pop = VelocitySet::reconstruct(moments);
+
+            // Save/pull from shared memory
+            {
+                // Save populations in shared memory
+                streaming::save<VelocitySet>(pop, sharedBuffer, tid);
+
+                block::sync();
+
+                // Pull from shared memory
+                streaming::pull<VelocitySet>(pop, sharedBuffer, Tx);
+
+                // Pull pop from global memory in cover nodes
+                BlockHalo::pull(pop, readBuffer, Tx, Bx, point);
+
+                block::sync();
+            }
+
+            if constexpr (std::is_same_v<BoundaryConditions, lidDrivenCavity>)
+            {
+                // Calculate the moments either at the boundary or interior
+                {
+                    const normalVector boundaryNormal(point);
+
+                    if (boundaryNormal.isBoundary())
+                    {
+                        BoundaryConditions::template calculate_moments<VelocitySet>(pop, moments, boundaryNormal, sharedBuffer, Tx, point);
+                    }
+                    else
+                    {
+                        velocitySet::calculate_moments<VelocitySet>(pop, moments);
+                    }
+                }
+            }
+
+            if constexpr (std::is_same_v<BoundaryConditions, jetFlow>)
+            {
+                // Compute post-stream moments
+                velocitySet::calculate_moments<VelocitySet>(pop, moments);
+                {
+                    // Update the shared buffer with the refreshed moments
+                    device::constexpr_for<0, NUMBER_MOMENTS()>(
+                        [&](const auto moment)
+                        {
+                            const device::label_t ID = tid * label_constant<NUMBER_MOMENTS() + 1>() + label_constant<moment>();
+                            sharedBuffer[ID] = moments[moment];
+                        });
+                }
+
+                block::sync();
+
+                // Calculate the moments at the boundary
+                {
+                    const normalVector boundaryNormal(point);
+
+                    if (boundaryNormal.isBoundary())
+                    {
+                        BoundaryConditions::template calculate_moments<VelocitySet>(pop, moments, boundaryNormal, sharedBuffer, Tx, point);
+                    }
+                }
+            }
+
+            // Scale the moments correctly
+            velocitySet::scale(moments);
+
+            // Collide
+            Collision::collide(moments);
+
+            // Coalesced write to global memory
+            device::constexpr_for<0, NUMBER_MOMENTS()>(
+                [&](const auto moment)
+                {
+                    if constexpr (moment == index::rho)
+                    {
+                        devPtrs.ptr<moment>()[idx] = moments[moment] - rho0();
+                    }
+                    else
+                    {
+                        devPtrs.ptr<moment>()[idx] = moments[moment];
+                    }
+                });
+
+            // Save the populations to the block halo
+            if constexpr (use_cooperative_halo() && ((std::is_same_v<VelocitySet, D3Q19<Thermal>>) || (std::is_same_v<VelocitySet, D3Q19<Isothermal>>)))
+            {
+                BlockHalo::transpose_to_shared(pop, sharedBuffer, Tx, point);
+                BlockHalo::save_from_shared(sharedBuffer, writeBuffer);
+            }
+            else
+            {
+                BlockHalo::save(pop, moments, writeBuffer, Tx, Bx, point);
+            }
         }
-        else
-        {
-            return 0;
-        };
     }
 
-    /**
-     * @brief Minimum number of blocks per streaming microprocessor
-     **/
-    __host__ [[nodiscard]] inline consteval device::label_t MIN_BLOCKS_PER_MP() noexcept { return 1; }
-
-    /**
-     * @brief Implements solution of the lattice Boltzmann method using the moment representation and a chosen velocity set
-     * @tparam BoundaryConditions The boundary conditions of the solver
-     * @tparam VelocitySet The velocity set to use for streaming
-     * @tparam Collision The collision model
-     * @tparam BlockHalo The class handling inter-block streaming
-     * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
-     * @param[in] readBuffer Collection of read-only pointers to the block halo faces used during streaming
-     * @param[in] writeBuffer Collection of mutable pointers to the block halo faces used after streaming
-     * @param[in] sharedBuffer Inline or externally stored shared memory buffer
-     **/
-    template <class BoundaryConditions, class VelocitySet, class Collision, class BlockHalo, class SharedBuffer>
-    __device__ inline void momentBasedLBM(
-        const device::ptrCollection<10, scalar_t> &devPtrs,
-        const device::ptrCollection<6, const scalar_t> &readBuffer,
-        const device::ptrCollection<6, scalar_t> &writeBuffer,
-        SharedBuffer &sharedBuffer)
+    namespace kernel
     {
-        static_assert(std::is_same_v<BlockHalo, device::halo<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>>);
-
-        const thread::coordinate Tx;
-
-        const block::coordinate Bx;
-
-        const device::pointCoordinate point(Tx, Bx);
-
-        // Index into global arrays
-        const device::label_t idx = device::idx(Tx, Bx);
-
-        // Into block arrays
-        const device::label_t tid = block::idx(Tx);
-
-        // Always a multiple of 32, so no need to check this(I think)
-        if constexpr (out_of_bounds_check())
+        /**
+         * @brief Implements solution of the lattice Boltzmann method using the moment representation and the D3Q19 velocity set
+         * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
+         * @param[in] readBuffer Collection of read-only pointers to the block halo faces used during streaming
+         * @param[in] writeBuffer Collection of mutable pointers to the block halo faces used after streaming
+         **/
+        __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP<VelocitySet>())
+            __global__ void momentBasedLBM(
+                const device::ptrCollection<10, scalar_t> devPtrs,
+                const device::ptrCollection<6, const scalar_t> readBuffer,
+                const device::ptrCollection<6, scalar_t> writeBuffer)
         {
-            if (device::out_of_bounds(point))
+            if constexpr ((std::is_same_v<VelocitySet, D3Q19<Thermal>>) || (std::is_same_v<VelocitySet, D3Q19<Isothermal>>))
             {
-                return;
+                __shared__ thread::array<scalar_t, block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<host::label_t>()>()> shared_buffer;
+
+                detail::momentBasedLBM<BoundaryConditions, VelocitySet, Collision, BlockHalo>(devPtrs, readBuffer, writeBuffer, shared_buffer);
+            }
+            else
+            {
+                extern __shared__ scalar_t shared_buffer[];
+
+                detail::momentBasedLBM<BoundaryConditions, VelocitySet, Collision, BlockHalo>(devPtrs, readBuffer, writeBuffer, shared_buffer);
             }
         }
-
-        // Prefetch devPtrs into L2
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
-            [&](const auto moment)
-            {
-                cache::prefetch<cache::Level::L2, cache::Policy::evict_last>(&(devPtrs.ptr<moment>()[idx]));
-            });
-
-        // Coalesced read from global memory
-        thread::array<scalar_t, NUMBER_MOMENTS()> moments;
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
-            [&](const auto moment)
-            {
-                const device::label_t ID = tid * m_i<NUMBER_MOMENTS() + 1>() + m_i<moment>();
-                sharedBuffer[ID] = devPtrs.ptr<moment>()[idx];
-                if constexpr (moment == index::rho)
-                {
-                    moments[moment] = sharedBuffer[ID] + rho0();
-                }
-                else
-                {
-                    moments[moment] = sharedBuffer[ID];
-                }
-            });
-
-        block::sync();
-
-        // Reconstruct the population from the moments
-        thread::array<scalar_t, VelocitySet::Q()> pop = VelocitySet::reconstruct(moments);
-
-        // Save/pull from shared memory
-        {
-            // Save populations in shared memory
-            streaming::save<VelocitySet>(pop, sharedBuffer, tid);
-
-            block::sync();
-
-            // Pull from shared memory
-            streaming::pull<VelocitySet>(pop, sharedBuffer, Tx);
-
-            // Pull pop from global memory in cover nodes
-            BlockHalo::pull(pop, readBuffer, Tx, Bx, point);
-
-            block::sync();
-        }
-
-        if constexpr (std::is_same<BoundaryConditions, lidDrivenCavity>::value)
-        {
-            // Calculate the moments either at the boundary or interior
-            {
-                const normalVector boundaryNormal(point);
-
-                if (boundaryNormal.isBoundary())
-                {
-                    BoundaryConditions::template calculate_moments<VelocitySet>(pop, moments, boundaryNormal, sharedBuffer, Tx, point);
-                }
-                else
-                {
-                    velocitySet::calculate_moments<VelocitySet>(pop, moments);
-                }
-            }
-        }
-
-        if constexpr (std::is_same<BoundaryConditions, jetFlow>::value)
-        {
-            // Compute post-stream moments
-            velocitySet::calculate_moments<VelocitySet>(pop, moments);
-            {
-                // Update the shared buffer with the refreshed moments
-                device::constexpr_for<0, NUMBER_MOMENTS()>(
-                    [&](const auto moment)
-                    {
-                        const device::label_t ID = tid * label_constant<NUMBER_MOMENTS() + 1>() + label_constant<moment>();
-                        sharedBuffer[ID] = moments[moment];
-                    });
-            }
-
-            block::sync();
-
-            // Calculate the moments at the boundary
-            {
-                const normalVector boundaryNormal(point);
-
-                if (boundaryNormal.isBoundary())
-                {
-                    BoundaryConditions::template calculate_moments<VelocitySet>(pop, moments, boundaryNormal, sharedBuffer, Tx, point);
-                }
-            }
-        }
-
-        // Scale the moments correctly
-        velocitySet::scale(moments);
-
-        // Collide
-        Collision::collide(moments);
-
-        // Coalesced write to global memory
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
-            [&](const auto moment)
-            {
-                if constexpr (moment == index::rho)
-                {
-                    devPtrs.ptr<moment>()[idx] = moments[moment] - rho0();
-                }
-                else
-                {
-                    devPtrs.ptr<moment>()[idx] = moments[moment];
-                }
-            });
-
-        // Save the populations to the block halo
-        BlockHalo::save(pop, moments, writeBuffer, Tx, Bx, point);
     }
 }
 
