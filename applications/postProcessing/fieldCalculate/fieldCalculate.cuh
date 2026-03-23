@@ -50,16 +50,16 @@ SourceFiles
 #ifndef __MBLBM_FIELDCALCULATE_CUH
 #define __MBLBM_FIELDCALCULATE_CUH
 
-#include "../../src/LBMIncludes.cuh"
-#include "../../src/typedefs/typedefs.cuh"
-#include "../../src/array/threadArray.cuh"
-#include "../../src/collision/collision.cuh"
-#include "../../src/blockHalo/blockHalo.cuh"
-#include "../../src/fileIO/fileIO.cuh"
-#include "../../src/runTimeIO/runTimeIO.cuh"
-#include "../../src/postProcess/postProcess.cuh"
-#include "../../src/programControl/programControl.cuh"
-#include "../../src/numericalSchemes/numericalSchemes.cuh"
+#include "../../../src/LBMIncludes.cuh"
+#include "../../../src/typedefs/typedefs.cuh"
+#include "../../../src/array/threadArray.cuh"
+#include "../../../src/collision/collision.cuh"
+#include "../../../src/blockHalo/blockHalo.cuh"
+#include "../../../src/fileIO/fileIO.cuh"
+#include "../../../src/runTimeIO/runTimeIO.cuh"
+#include "../../../src/postProcess/postProcess.cuh"
+#include "../../../src/programControl/programControl.cuh"
+#include "../../../src/numericalSchemes/numericalSchemes.cuh"
 #include "../fieldConvert/fieldConvert.cuh"
 
 namespace LBM

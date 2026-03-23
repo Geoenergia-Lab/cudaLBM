@@ -79,6 +79,11 @@ int main(const int argc, const char *const argv[])
                 timeStep);
 
             containsNaN(hostMoments, mesh, fileNameIndices[timeStep]);
+
+            if (timeStep < fileNameIndices.size() - 1)
+            {
+                std::cout << std::endl;
+            }
         }
     }
 
@@ -96,6 +101,11 @@ int main(const int argc, const char *const argv[])
                 timeStep);
 
             spatialMean(hostMoments, mesh, fileNameIndices[timeStep]);
+
+            if (timeStep < fileNameIndices.size() - 1)
+            {
+                std::cout << std::endl;
+            }
         }
     }
 
@@ -130,6 +140,11 @@ int main(const int argc, const char *const argv[])
                 const postProcess::writerFunction writer = it->second;
 
                 writer({omega[0], omega[1], omega[2], magomega}, fileName, mesh, {"omega_x", "omega_y", "omega_z", "mag[omega]"});
+
+                if (timeStep < fileNameIndices.size() - 1)
+                {
+                    std::cout << std::endl;
+                }
             }
         }
     }
@@ -164,26 +179,14 @@ int main(const int argc, const char *const argv[])
                 const postProcess::writerFunction writer = it->second;
 
                 writer({divu}, fileName, mesh, {"div[U]"});
+
+                if (timeStep < fileNameIndices.size() - 1)
+                {
+                    std::cout << std::endl;
+                }
             }
         }
     }
-
-    // constexpr host::label_t IntegrationOrder = 2;
-
-    // // Integrate the vorticity in all axes
-    // const std::vector<scalar_t> int_omega_x = integral(integrate_x<IntegrationOrder, scalar_t>(omega[0], mesh));
-    // const std::vector<scalar_t> int_omega_y = integral(integrate_y<IntegrationOrder, scalar_t>(omega[1], mesh));
-    // const std::vector<scalar_t> int_omega_z = integral(integrate_z<IntegrationOrder, scalar_t>(omega[2], mesh));
-
-    // const std::vector<std::vector<scalar_t>> integratedOmega = {int_omega_x, int_omega_y, int_omega_z};
-
-    // // Write the files
-    // // postProcess::writeVTU({magu}, "mag[u].vtu", mesh, {"mag[u]"});
-    // // postProcess::writeVTU({divu}, "div[u].vtu", mesh, {"div[u]"});
-    // // postProcess::writeVTU(omega, "curl[u].vtu", mesh, {"curl_x[u]", "curl_y[u]", "curl_z[u]"});
-    // // postProcess::writeVTU({magomega}, "mag[curl[u]].vtu", mesh, {"mag[curl[u]]"});
-
-    // postProcess::writeVTU(integratedOmega, "integrated_omega.vtu", mesh, {"int_omega_x", "int_omega_y", "int_omega_z"});
 
     return 0;
 }

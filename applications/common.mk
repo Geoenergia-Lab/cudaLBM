@@ -1,8 +1,3 @@
-include ../../common.mk
-
-EXECUTABLE = isothermalD3Q19
-SOURCE = isothermalD3Q19.cu
-
 default: clean $(EXECUTABLE)
 
 $(EXECUTABLE):

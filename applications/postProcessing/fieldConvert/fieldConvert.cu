@@ -102,6 +102,11 @@ int main(const int argc, const char *const argv[])
                 fileName,
                 newMesh,
                 fieldNames);
+
+            if (timeStep < fileNameIndices.size() - 1)
+            {
+                std::cout << std::endl;
+            }
         }
     }
     else

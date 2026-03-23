@@ -235,7 +235,7 @@ namespace LBM
          *
          * Example:
          * @code
-         * global::forAll<Indent>(dimensions, [&](device::label_t x, y, z) {
+         * global::forAll(dimensions, indent, [&](device::label_t x, y, z) {
          *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
          * });
          * @endcode
@@ -251,6 +251,30 @@ namespace LBM
                     {
                         f(x, y, z);
                     }
+                }
+            }
+        }
+
+        /**
+         * @brief Nested loop over indices in a plane
+         * @param[in] dimensions Number of points in the X, Y and Z directions
+         * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
+         *
+         * Example:
+         * @code
+         * global::forAllInPlane(dimensions, [&](device::label_t x, y, z) {
+         *     data[compute_index(bx, by, bz, tx, ty, tz)] = value;
+         * });
+         * @endcode
+         **/
+        template <const axis::type alpha, typename F>
+        __host__ void forAllInPlane(const host::blockLabel &dimensions, const F &&f) noexcept
+        {
+            for (host::label_t j = 0; j < dimensions.value<axis::orthogonal<alpha, 1>()>(); j++)
+            {
+                for (host::label_t i = 0; i < dimensions.value<axis::orthogonal<alpha, 0>()>(); i++)
+                {
+                    f(i, j);
                 }
             }
         }
