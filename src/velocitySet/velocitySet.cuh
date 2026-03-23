@@ -289,7 +289,7 @@ namespace LBM
         /**
          * @brief Returns the indices of the distribution functions on a specific face
          * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
-         * @tparam alpha The axis direction (X, Y, or Z)
+         * @tparam alpha The axis direction (X, Y or Z)
          * @tparam coeff The value of the coordinate along the axis (-1 or 1)
          * @return Indices of the distribution on a specific face
          **/
@@ -358,6 +358,7 @@ namespace LBM
 
         /**
          * @brief Returns the product of the c values for two directions
+         * @tparam alpha The axis direction (X, Y, Z or NULL)
          **/
         template <class VelocitySet, const axis::type alpha, const axis::type beta>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<int, VelocitySet::Q()> c_AlphaBeta() noexcept
@@ -425,7 +426,7 @@ namespace LBM
         /**
          * @brief Determines whether or not a particular lattice coefficient is negative
          * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
-         * @tparam alpha The axis direction (X, Y, or Z)
+         * @tparam alpha The axis direction (X, Y or Z)
          * @param[in] q The lattice index
          * @return True if the lattice coefficient is negative, false otherwise
          **/

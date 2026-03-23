@@ -155,11 +155,11 @@ namespace LBM
             {
                 static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::pull, "Potential issue with condition checking (e.g. West, East, etc)."));
 
-                pull_direction<axis::X, x_periodic>(pop, readBuffer, Tx, Bx, point);
+                pull_direction<axis::X>(pop, readBuffer, Tx, Bx, point);
 
-                pull_direction<axis::Y, y_periodic>(pop, readBuffer, Tx, Bx, point);
+                pull_direction<axis::Y>(pop, readBuffer, Tx, Bx, point);
 
-                pull_direction<axis::Z, z_periodic>(pop, readBuffer, Tx, Bx, point);
+                pull_direction<axis::Z>(pop, readBuffer, Tx, Bx, point);
             }
 
             /**
@@ -183,11 +183,11 @@ namespace LBM
 
                 VelocitySet::reconstruct<false>(pop, moments);
 
-                save_direction<axis::X, x_periodic>(pop, writeBuffer, Tx, Bx, point);
+                save_direction<axis::X>(pop, writeBuffer, Tx, Bx, point);
 
-                save_direction<axis::Y, y_periodic>(pop, writeBuffer, Tx, Bx, point);
+                save_direction<axis::Y>(pop, writeBuffer, Tx, Bx, point);
 
-                save_direction<axis::Z, z_periodic>(pop, writeBuffer, Tx, Bx, point);
+                save_direction<axis::Z>(pop, writeBuffer, Tx, Bx, point);
             }
 
 #include "haloSharedMemoryOperations.cuh"
@@ -198,6 +198,29 @@ namespace LBM
              **/
             haloFace<VelocitySet> readBuffer_;
             haloFace<VelocitySet> writeBuffer_;
+
+            /**
+             * @brief Determines whether the boundary halo is periodic along a particular axis
+             * @tparam alpha
+             **/
+            template <const axis::type alpha>
+            __device__ __host__ [[nodiscard]] static inline consteval bool is_periodic() noexcept
+            {
+                if constexpr (alpha == axis::X)
+                {
+                    return x_periodic;
+                }
+
+                if constexpr (alpha == axis::Y)
+                {
+                    return y_periodic;
+                }
+
+                if constexpr (alpha == axis::Z)
+                {
+                    return z_periodic;
+                }
+            }
 
             /**
              * @brief Returns the streaming index for a given axis and velocity
@@ -281,7 +304,7 @@ namespace LBM
 
             /**
              * @brief Selects between shifted or central block coordinates based upon a coefficient
-             * @tparam alpha The axis (X, Y or Z)
+             * @tparam alpha The axis direction (X, Y, Z or NULL)
              * @tparam coeff The velocity set coefficient (-1, 0, +1)
              * @param[in] t The thread coordinate
              * @param[in] b_shifted The shifted block
@@ -312,7 +335,7 @@ namespace LBM
 
             /**
              * @brief Loads the populations from the halo into the pop array for a particular face
-             * @tparam alpha The axis direction
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam PtrIndex The index of the pointer corresponding to the halo face
              * @tparam coeff The normal direction; -1 or +1
              * @param[out] pop Array to store loaded population values
@@ -430,7 +453,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
              **/
-            template <const axis::type alpha, const bool isPeriodic>
+            template <const axis::type alpha>
             __device__ static inline constexpr void pull_direction(
                 thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, const scalar_t> &readBuffer,
@@ -438,11 +461,11 @@ namespace LBM
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
-                if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
+                if (boundaryCheck<alpha, -1, is_periodic<alpha>()>(point.value<alpha>(), Tx))
                 {
                     pull_face<alpha, +1>(pop, readBuffer, Tx, Bx);
                 }
-                else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
+                else if (boundaryCheck<alpha, +1, is_periodic<alpha>()>(point.value<alpha>(), Tx))
                 {
                     pull_face<alpha, -1>(pop, readBuffer, Tx, Bx);
                 }
@@ -450,7 +473,7 @@ namespace LBM
 
             /**
              * @brief Saves population data to halo regions for neighboring blocks
-             * @tparam alpha The axis direction
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam PtrIndex The index of the pointer corresponding to the halo face
              * @tparam coeff The normal direction; -1 or +1
              * @param[out] pop Array to store loaded population values
@@ -493,7 +516,7 @@ namespace LBM
              * @param[in] Bx Three-dimensional block coordinates
              * @param[in] point The global point coordinate
              **/
-            template <const axis::type alpha, const bool isPeriodic>
+            template <const axis::type alpha>
             __device__ static inline constexpr void save_direction(
                 const thread::array<scalar_t, VelocitySet::Q()> &pop,
                 const device::ptrCollection<6, scalar_t> &writeBuffer,
@@ -501,11 +524,11 @@ namespace LBM
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
-                if (boundaryCheck<alpha, -1, isPeriodic>(point.value<alpha>(), Tx))
+                if (boundaryCheck<alpha, -1, is_periodic<alpha>()>(point.value<alpha>(), Tx))
                 {
                     save_face<alpha, -1>(pop, writeBuffer, Tx, Bx);
                 }
-                else if (boundaryCheck<alpha, +1, isPeriodic>(point.value<alpha>(), Tx))
+                else if (boundaryCheck<alpha, +1, is_periodic<alpha>()>(point.value<alpha>(), Tx))
                 {
                     save_face<alpha, +1>(pop, writeBuffer, Tx, Bx);
                 }
@@ -513,7 +536,7 @@ namespace LBM
 
             /**
              * @brief Returns the pointer index corresponding to the axis direction alpha and coefficient coeff (must be -1 or 1)
-             * @tparam alpha The axis direction
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The coefficient indicating the direction along the axis (must be -1 or 1)
              * @returns The pointer index corresponding to the axis direction alpha and coefficient coeff
              **/

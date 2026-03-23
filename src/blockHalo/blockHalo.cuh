@@ -64,7 +64,7 @@ namespace LBM
         /**
          * @brief Index for arbitrarily aligned population arrays
          * @tparam QF Number of populations
-         * @tparam alpha The axis direction
+         * @tparam alpha The axis direction (X, Y or Z)
          * @param[in] pop Population index
          * @param[in] Tx Three-dimensional thread coordinates
          * @param[in] Bx Three-dimensional block coordinates
@@ -83,7 +83,7 @@ namespace LBM
     {
         /**
          * @brief Population index for alpha-aligned arrays (device version)
-         * @tparam alpha The axis on which the face lies
+         * @tparam alpha The axis direction (X, Y or Z)
          * @tparam pop Population index
          * @tparam QF Number of populations
          * @param[in] ta,tb Thread-local y/z coordinates

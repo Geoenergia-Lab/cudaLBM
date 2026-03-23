@@ -59,7 +59,7 @@ namespace LBM
     {
         /**
          * @brief Returns the global mesh size in a particular axis direction
-         * @tparam alpha The axis
+         * @tparam alpha The axis direction (X, Y or Z)
          **/
         template <axis::type alpha>
         __device__ [[nodiscard]] inline constexpr device::label_t n() noexcept
@@ -84,7 +84,7 @@ namespace LBM
 
         /**
          * @brief Returns the number of mesh blocks per GPU in a particular axis direction
-         * @tparam alpha The axis
+         * @tparam alpha The axis direction (X, Y or Z)
          **/
         template <axis::type alpha>
         __device__ [[nodiscard]] inline constexpr device::label_t NUM_BLOCK() noexcept
@@ -112,7 +112,7 @@ namespace LBM
     {
         /**
          * @brief Returns the thread that lies on a particular boundary
-         * @tparam alpha The axis direction
+         * @tparam alpha The axis direction (X, Y or Z)
          * @tparam coeff The axis normal coefficient
          * @tparam ValueType The return type (defualt device::label_t)
          * @returns One of two thread coordinates that lie on the extremities of alpha within the block
@@ -151,7 +151,7 @@ namespace LBM
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
-             * @tparam alpha The axis
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The coefficient to shift by (-1, 0 or +1)
              **/
             template <axis::type alpha, const int coeff>
@@ -200,7 +200,7 @@ namespace LBM
 
             /**
              * @brief Shifts the coordinate along a particular axis by a coefficient
-             * @tparam alpha The axis
+             * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The coefficient to shift by (-1, 0 or +1)
              **/
             template <axis::type alpha, const int coeff>

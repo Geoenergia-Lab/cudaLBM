@@ -286,7 +286,7 @@ namespace LBM
 
             /**
              * @brief Allocate all GPU segments for a skeleton array from a std::vector.
-             * @tparam alpha Axis direction.
+             * @tparam alpha The axis direction (X, Y or Z)
              * @param[in] mesh The lattice mesh
              * @param[in] hostArrayGlobal Source vector.
              * @param[in] programCtrl The program control object
