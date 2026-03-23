@@ -324,7 +324,6 @@ namespace LBM
             const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
             // Check that size() - 1 isn't = 2
-            std::cout << "Doing cut plane at " << cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1) << std::endl;
             const scalar_t planeCoordinate = static_cast<scalar_t>(std::stold(cutPlanePrefix.substr(2, cutPlanePrefix.size() - 1)));
 
             const axis::type alpha = cutPlaneDirection(programCtrl);
