@@ -58,8 +58,6 @@ namespace LBM
 {
     namespace postProcess
     {
-        __host__ [[nodiscard]] inline consteval const char *directoryPrefix() { return "postProcess"; }
-
         /**
          * @brief Calculates physical coordinates of lattice points
          * @tparam T Coordinate data type (typically scalar_t or double)
@@ -206,11 +204,106 @@ namespace LBM
             outFile.write(reinterpret_cast<const char *>(vec.data()), static_cast<std::streamsize>(blockSize));
         };
     }
+
+    class writer
+    {
+    public:
+        __host__ [[nodiscard]] static inline consteval const char *directoryPrefix() noexcept { return "postProcess"; }
+
+        template <class Writer>
+        static inline void diskSpaceAssertion(const host::latticeMesh &mesh, const words_t &varNames, const name_t &fileName)
+        {
+            fileSystem::diskSpaceAssertion<
+                Writer::format(),
+                Writer::hasFields(),
+                Writer::hasPoints(),
+                Writer::hasElements(),
+                Writer::hasOffsets()>(
+                mesh,
+                varNames.size(),
+                fileName);
+        }
+
+        template <class Writer>
+        __host__ static void write(
+            const std::vector<std::vector<scalar_t>> &solutionVars,
+            const name_t &fileName,
+            const host::latticeMesh &mesh,
+            const words_t &varNames)
+        {
+            const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+            const host::label_t numVars = solutionVars.size();
+
+            if (numVars != varNames.size())
+            {
+                throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(varNames.size()));
+            }
+
+            for (host::label_t i = 0; i < numVars; i++)
+            {
+                if (solutionVars[i].size() != numNodes)
+                {
+                    throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
+                }
+            }
+
+            const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + Writer::fileExtension());
+
+            std::cout << Writer::name() << std::endl;
+            std::cout << "{" << std::endl;
+            std::cout << "    fileName: " << trueFileName << ";" << std::endl;
+
+            if (!std::filesystem::is_directory(directoryPrefix()))
+            {
+                if (!std::filesystem::create_directory(directoryPrefix()))
+                {
+                    std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
+                    std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
+                    std::cout << "};" << std::endl;
+                    throw std::runtime_error("Error: unable to create directory" + name_t(directoryPrefix()));
+                }
+            }
+            else
+            {
+                std::cout << "    directoryStatus: OK;" << std::endl;
+            }
+
+            std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<Writer::format(), Writer::hasFields(), Writer::hasPoints(), Writer::hasElements(), Writer::hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+
+            // Check if there is enough disk space to store the file
+            writer::diskSpaceAssertion<Writer>(mesh, varNames, fileName);
+
+            std::ofstream outFile(trueFileName);
+            if (outFile)
+            {
+                std::cout << "    ofstreamStatus: OK;" << std::endl;
+            }
+            else
+            {
+                std::cout << "    ofstreamStatus: Fail" << std::endl;
+                std::cout << "};" << std::endl;
+                throw std::runtime_error("Error opening file: " + trueFileName);
+            }
+
+            const bool writeStatus = Writer::write(solutionVars, outFile, mesh, varNames);
+
+            if (!writeStatus)
+            {
+                std::cout << "    writeStatus: fail" << ";" << std::endl;
+            }
+            else
+            {
+                std::cout << "    writeStatus: success" << ";" << std::endl;
+            }
+            std::cout << "};" << std::endl;
+        }
+    };
 }
 
 #include "Tecplot.cuh"
 #include "VTU.cuh"
 #include "VTS.cuh"
+#include "LBMBin.cuh"
 #include "writerFunction.cuh"
 
 #endif

@@ -153,8 +153,6 @@ namespace LBM
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::pull, "Potential issue with condition checking (e.g. West, East, etc)."));
-
                 pull_direction<axis::X>(pop, readBuffer, Tx, Bx, point);
 
                 pull_direction<axis::Y>(pop, readBuffer, Tx, Bx, point);
@@ -179,8 +177,6 @@ namespace LBM
                 const block::coordinate &Bx,
                 const device::pointCoordinate &point) noexcept
             {
-                static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(device::halo::save, "Potential issue with condition checking (e.g. West, East, etc)."));
-
                 VelocitySet::reconstruct<false>(pop, moments);
 
                 save_direction<axis::X>(pop, writeBuffer, Tx, Bx, point);

@@ -54,21 +54,25 @@ namespace LBM
 {
     namespace postProcess
     {
-        namespace Tecplot
+        class Tecplot : public writer
         {
-            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::ASCII; }
-            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".dat"; }
+        public:
+            __host__ [[nodiscard]] static inline consteval fileSystem::format format() noexcept { return fileSystem::ASCII; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] static inline consteval const char *fileExtension() noexcept { return ".dat"; }
+            __host__ [[nodiscard]] static inline consteval const char *name() noexcept { return "Tecplot"; }
+
+            __host__ [[nodiscard]] inline consteval Tecplot(){};
 
             /**
              * @brief Writes solution data to a Tecplot ASCII file in unstructured grid format
              * @param[in] solutionVars Vector of solution variable arrays (Structure of Arrays format)
              * @param[in] fileName Output filename for Tecplot data
              * @param[in] mesh The lattice mesh
-             * @param[in] solutionVarNames Names of the solution variables for Tecplot header
+             * @param[in] varNames Names of the solution variables for Tecplot header
              * @param[in] title Title for the Tecplot file
              * @return None
              * @note Uses 1-based indexing for element connectivity (Tecplot convention)
@@ -87,11 +91,12 @@ namespace LBM
              * - Node count consistency across all arrays
              * - File accessibility checks
              **/
-            __host__ void writeTecplot(
+
+            __host__ static bool write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const words_t &solutionVarNames) noexcept
+                const words_t &varNames) noexcept
             {
                 // Check input sizes
                 const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
@@ -102,7 +107,7 @@ namespace LBM
                 // Write Tecplot header
                 // outFile << "TITLE = \"" << title << "\"\n";
                 outFile << "VARIABLES = \"X\" \"Y\" \"Z\" ";
-                for (auto &name : solutionVarNames)
+                for (auto &name : varNames)
                 {
                     outFile << "\"" << name << "\" ";
                 }
@@ -152,92 +157,10 @@ namespace LBM
                 }
 
                 outFile.close();
+
+                return outFile.good();
             }
-
-            __host__ void write(
-                const std::vector<std::vector<scalar_t>> &solutionVars,
-                const name_t &fileName,
-                const host::latticeMesh &mesh,
-                const words_t &solutionVarNames)
-            {
-                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
-                const host::label_t numVars = solutionVars.size();
-
-                if (numVars != solutionVarNames.size())
-                {
-                    throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
-                }
-
-                for (host::label_t i = 0; i < numVars; i++)
-                {
-                    if (solutionVars[i].size() != numNodes)
-                    {
-                        throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
-                    }
-                }
-
-                std::cout << "TecplotWriter:" << std::endl;
-                std::cout << "{" << std::endl;
-                std::cout << "    fileName: " << directoryPrefix() << "/" << fileName << fileExtension() << ";" << std::endl;
-
-                if (!std::filesystem::is_directory(directoryPrefix()))
-                {
-                    if (!std::filesystem::create_directory(directoryPrefix()))
-                    {
-                        std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
-                        std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
-                        std::cout << "};" << std::endl;
-                        throw std::runtime_error("Error: unable to create directory" + name_t(directoryPrefix()));
-                    }
-                }
-                else
-                {
-                    std::cout << "    directoryStatus: OK;" << std::endl;
-                }
-
-                std::cout << "    fileSize: "
-                          << fileSystem::to_mebibytes<double>(
-                                 fileSystem::expectedDiskUsage<
-                                     format(),
-                                     hasFields(),
-                                     hasPoints(),
-                                     hasElements(),
-                                     hasOffsets()>(
-                                     mesh,
-                                     solutionVars.size()))
-                          << " MiB;" << std::endl;
-
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<
-                    format(),
-                    hasFields(),
-                    hasPoints(),
-                    hasElements(),
-                    hasOffsets()>(
-                    mesh,
-                    solutionVars.size(),
-                    fileName);
-
-                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
-
-                std::ofstream outFile(trueFileName);
-                if (outFile)
-                {
-                    std::cout << "    ofstreamStatus: OK;" << std::endl;
-                }
-                else
-                {
-                    std::cout << "    ofstreamStatus: Fail" << std::endl;
-                    std::cout << "};" << std::endl;
-                    throw std::runtime_error("Error opening file: " + trueFileName);
-                }
-
-                writeTecplot(solutionVars, outFile, mesh, solutionVarNames);
-
-                std::cout << "    writeStatus: success" << ";" << std::endl;
-                std::cout << "};" << std::endl;
-            }
-        }
+        };
     }
 }
 

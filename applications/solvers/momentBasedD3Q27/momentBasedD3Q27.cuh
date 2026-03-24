@@ -61,6 +61,7 @@ SourceFiles
 #include "../../../src/functionObjects/objectRegistry.cuh"
 #include "../../../src/array/array.cuh"
 #include "../../../src/boundaryConditions/boundaryConditions.cuh"
+#include "../../../src/postProcess/postProcess.cuh"
 
 namespace LBM
 {

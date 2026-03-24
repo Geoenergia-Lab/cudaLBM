@@ -241,7 +241,7 @@ namespace LBM
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
         __host__ [[nodiscard]] inline constexpr host::label_t expectedDiskUsage(const LatticeMesh &mesh, const host::label_t nVars) noexcept
         {
-            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<host::label_t>(mesh.template dimension<axis::X>()), static_cast<host::label_t>(mesh.template dimension<axis::Y>()), static_cast<host::label_t>(mesh.template dimension<axis::Z>()), nVars);
+            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh.template dimension<axis::X>(), mesh.template dimension<axis::Y>(), mesh.template dimension<axis::Z>(), nVars);
         }
 
         /**

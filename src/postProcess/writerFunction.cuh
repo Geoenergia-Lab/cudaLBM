@@ -64,9 +64,9 @@ namespace LBM
          * @brief Unordered map of the writer types to the appropriate functions
          **/
         const std::unordered_map<name_t, writerFunction> writers = {
-            {"vtu", VTU::write},
-            {"vts", VTS::write},
-            {"tecplot", Tecplot::write}};
+            {"vtu", writer::write<VTU>},
+            {"vts", writer::write<VTS>},
+            {"tecplot", writer::write<Tecplot>}};
     }
 }
 

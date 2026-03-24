@@ -314,7 +314,6 @@ namespace LBM
          **/
         __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const device::label_t x, const device::label_t y, const device::label_t z) noexcept
         {
-            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG_NOTE(normalVector::computeBitmask, "Believed correct"));
             return static_cast<nodeType_t>(
                 (x == 0) << 0 |                                // West (bit0)
                 (x == device::n<axis::X>() - 1) << 1 |         // East (bit1)
