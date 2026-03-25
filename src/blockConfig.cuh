@@ -144,7 +144,7 @@ namespace LBM
         /**
          * @brief Linear stride in the z-direction for global x-major memory layout
          **/
-        __device__ __host__ [[nodiscard]] inline consteval label_t stride_z() noexcept
+        __device__ __host__ [[nodiscard]] inline consteval device::label_t stride_z() noexcept
         {
             return nx() * ny();
         }

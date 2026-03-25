@@ -55,12 +55,12 @@ SourceFiles
 namespace LBM
 {
     /**
-     * @brief Number of hydrodynamic moments
+     * @brief Number of moments
      **/
-    template <typename T = device::label_t>
+    template <bool isMultiphase, typename T = device::label_t>
     __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() noexcept
     {
-        return 10;
+        return isMultiphase ? 11 : 10;
     }
 
     /**
@@ -93,6 +93,16 @@ namespace LBM
         __device__ __constant__ scalar_t U_West[3];
         __device__ __constant__ scalar_t U_Back[3];
         __device__ __constant__ scalar_t U_Front[3];
+
+        // Extra for multiphase
+        __device__ __constant__ scalar_t L_char_A;
+        __device__ __constant__ scalar_t L_char_B;
+        __device__ __constant__ scalar_t tau_A;
+        __device__ __constant__ scalar_t tau_B;
+        __device__ __constant__ scalar_t sigma;
+        __device__ __constant__ scalar_t gamma;
+        __device__ __constant__ scalar_t nozzleScale_A;
+        __device__ __constant__ scalar_t nozzleScale_B;
 
         /**
          * @brief Mesh constant variables

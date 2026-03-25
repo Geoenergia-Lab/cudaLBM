@@ -49,10 +49,11 @@ Notes
 \*---------------------------------------------------------------------------*/
 
 assertions::velocitySet::validate<VelocitySet>();
+assertions::velocitySet::validate<PhaseVelocitySet>();
 
 if (!(boundaryNormal.isBack() || boundaryNormal.isFront()))
 {
-    // moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+    // moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
     moments[m_i<0>()] = rho0();
     return;
 }
@@ -65,10 +66,10 @@ const scalar_t is_jet = static_cast<scalar_t>(boundaryNormal.isBack() && rms_sq(
 
 const scalar_t is_outlet = static_cast<scalar_t>(boundaryNormal.isFront());
 
-moments[m_i<0>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()]);
-moments[m_i<1>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()]) + (is_jet * device::U_Back[0]);
-moments[m_i<2>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<2>()]) + (is_jet * device::U_Back[1]);
-moments[m_i<3>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<3>()]) + (is_jet * device::U_Back[2]);
+moments[m_i<0>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()]);
+moments[m_i<1>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<1>()]) + (is_jet * device::U_Back[0]);
+moments[m_i<2>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<2>()]) + (is_jet * device::U_Back[1]);
+moments[m_i<3>()] = (is_outlet * shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<3>()]) + (is_jet * device::U_Back[2]);
 
 // Set equilibrium velocities
 moments[m_i<4>()] = moments[m_i<1>()] * moments[m_i<1>()];
@@ -77,6 +78,9 @@ moments[m_i<6>()] = moments[m_i<1>()] * moments[m_i<3>()];
 moments[m_i<7>()] = moments[m_i<2>()] * moments[m_i<2>()];
 moments[m_i<8>()] = moments[m_i<2>()] * moments[m_i<3>()];
 moments[m_i<9>()] = moments[m_i<3>()] * moments[m_i<3>()];
+
+// Set equilibrium phase field
+moments[m_i<10>()] = static_cast<scalar_t>(0);
 
 switch (boundaryNormal.nodeType())
 {
@@ -98,7 +102,7 @@ case normalVector::BACK():
         // moments[m_i<0>()] = rho0() + ((static_cast<scalar_t>(6) * rho_I) / (static_cast<scalar_t>(-5) + (A * is_jet))); // rho
 
         // Now try this if stable
-        moments[m_i<0>()] = shared_buffer[block::idx(Tx.value<axis::X>(), Tx.value<axis::Y>(), 1) * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()];
+        moments[m_i<0>()] = shared_buffer[block::idx(Tx.value<axis::X>(), Tx.value<axis::Y>(), 1) * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];
 
         // Velocity
         // moments[m_i<1>()] = is_jet * device::U_Back[0]; // ux
@@ -114,6 +118,8 @@ case normalVector::BACK():
         moments[m_i<8>()] = ((static_cast<scalar_t>(5) * myz_I) - (A * myz_I)) / static_cast<scalar_t>(3);
         moments[m_i<8>()] = static_cast<scalar_t>(2) * myz_I * rho_I / moments[m_i<0>()];
         // moments[m_i<9>()] = is_jet * (moments[m_i<0>()] * device::U_Back[2] * device::U_Back[2]);
+
+        moments[m_i<10>()] = static_cast<scalar_t>(1);
     }
     else
     {
@@ -135,6 +141,8 @@ case normalVector::BACK():
         // moments[m_i<7>()] = static_cast<scalar_t>(0);                               // myy
         // moments[m_i<8>()] = myz;                                                    // myz
         // moments[m_i<9>()] = is_jet * (rho * device::U_Back[2] * device::U_Back[2]); // mzz
+
+        moments[m_i<10>()] = static_cast<scalar_t>(1);
     }
 
     return;

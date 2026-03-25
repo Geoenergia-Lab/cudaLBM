@@ -573,20 +573,13 @@ namespace LBM
 
         __host__ [[nodiscard]] const name_t extractParameterLine(const words_t &S, const name_t &name)
         {
-            // Loop over S
-            for (device::label_t i = 0; i < S.size(); i++)
+            for (const auto &line : S)
             {
-                // Check if S[i] contains a substring of name
-                if (S[i].find(name) != name_t::npos)
+                // Trim leading whitespace
+                const auto first = line.find_first_not_of(" \t");
+                if (first == std::string::npos)
                 {
-                    // Split by space and remove whitespace
-                    const words_t s = splitByWhitespace(S[i]);
-                    // const words_t s = split<" "[0], true>(S[i]);
-
-                    // Check that the last char is ;
-                    // Perform the exit here if the above string is not equal to ;
-
-                    return name_t(s[1].begin(), s[1].end() - 1);
+                    continue;
                 }
 
                 // Key must match at start of line

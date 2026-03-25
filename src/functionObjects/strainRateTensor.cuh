@@ -75,11 +75,11 @@ namespace LBM
 
                     if constexpr (Index == index::xx || Index == index::yy || Index == index::zz)
                     {
-                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ii<scalar_t>() * device::tau);
+                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ii<scalar_t>() * device::tau); // CHECKPOINT
                     }
                     else
                     {
-                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ij<scalar_t>() * device::tau);
+                        return velocitySet::as2<T>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<T>(2) * velocitySet::scale_ij<scalar_t>() * device::tau); // CHECKPOINT
                     }
                 }
 

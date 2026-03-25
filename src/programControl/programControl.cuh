@@ -90,7 +90,7 @@ namespace LBM
                 // Require full A/B set
                 if (!(hasUinfA && hasUinfB && hasLcharA && hasLcharB))
                 {
-                    errorHandler(-1, "Dual-characteristic requires all of: u_inf_A, u_inf_B, L_char_A, L_char_B.");
+                    [[maybe_unused]] const errorHandler err(-1, "Dual-characteristic requires all of: u_inf_A, u_inf_B, L_char_A, L_char_B.");
                 }
 
                 u_inf_A_ = string::extractParameter<scalar_t>(file, "u_inf_A");
@@ -109,7 +109,7 @@ namespace LBM
 
                 if (!hasUinf || !hasLchar)
                 {
-                    errorHandler(-1, "Single-characteristic requires both 'u_inf' and 'L_char'.");
+                    [[maybe_unused]] const errorHandler err(-1, "Single-characteristic requires both 'u_inf' and 'L_char'.");
                 }
 
                 u_inf_single_ = string::extractParameter<scalar_t>(file, "u_inf");
@@ -128,12 +128,12 @@ namespace LBM
 
             if ((hasNozzleScaleA || hasNozzleScaleB) && (!multiphase_ || !dualCharacteristic_))
             {
-                errorHandler(-1, "nozzleScale_* only allowed for multiphase dual-characteristic cases (SSMD).");
+                [[maybe_unused]] const errorHandler err(-1, "nozzleScale_* only allowed for multiphase dual-characteristic cases (SSMD).");
             }
 
             if (hasNozzleScaleA != hasNozzleScaleB)
             {
-                errorHandler(-1, "Nozzle scaling requires both 'nozzleScale_A' and 'nozzleScale_B' (either specify both or neither).");
+                [[maybe_unused]] const errorHandler err(-1, "Nozzle scaling requires both 'nozzleScale_A' and 'nozzleScale_B' (either specify both or neither).");
             }
 
             if (hasNozzleScaleA) // implies hasNozzleScaleB
@@ -156,7 +156,7 @@ namespace LBM
             {
                 if (!hasRe)
                 {
-                    errorHandler(-1, "Single-phase simulation requires 'Re'.");
+                    [[maybe_unused]] const errorHandler err(-1, "Single-phase simulation requires 'Re'.");
                 }
 
                 Re_ = string::extractParameter<scalar_t>(file, "Re");
@@ -170,7 +170,7 @@ namespace LBM
             {
                 if (!(hasReA && hasReB))
                 {
-                    errorHandler(-1, "Multiphase requires both 'Re_A' and 'Re_B'.");
+                    [[maybe_unused]] const errorHandler err(-1, "Multiphase requires both 'Re_A' and 'Re_B'.");
                 }
 
                 Re_ = static_cast<scalar_t>(0);
@@ -181,9 +181,9 @@ namespace LBM
                 interfaceWidth_ = string::extractParameter<scalar_t>(file, "interfaceWidth");
             }
 
-            nTimeSteps_ = string::extractParameter<label_t>(file, "nTimeSteps");
-            saveInterval_ = string::extractParameter<label_t>(file, "saveInterval");
-            infoInterval_ = string::extractParameter<label_t>(file, "infoInterval");
+            nTimeSteps_ = string::extractParameter<host::label_t>(file, "nTimeSteps");
+            saveInterval_ = string::extractParameter<host::label_t>(file, "saveInterval");
+            infoInterval_ = string::extractParameter<host::label_t>(file, "infoInterval");
             latestTime_ = fileIO::latestTime(caseName_);
 
             // Get the launch time
@@ -261,19 +261,63 @@ namespace LBM
                 {
                     errorHandler::check(cudaSetDevice(deviceList()[virtualDeviceIndex]));
 
-                    // Allocate symbols on the GPU
-                    const scalar_t viscosityTemp = u_inf() * L_char() / Re();
-                    const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
-                    const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
-                    const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
-                    const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
+                    if (!isMultiphase())
+                    {
+                        // Allocate symbols on the GPU
+                        const scalar_t viscosityTemp = u_inf() * L_char() / Re();
+                        const scalar_t tauTemp = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTemp;
+                        const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTemp;
+                        const scalar_t t_omegaVarTemp = static_cast<scalar_t>(1) - omegaTemp;
+                        const scalar_t omegaVar_d2Temp = omegaTemp * static_cast<scalar_t>(0.5);
 
-                    device::copyToSymbol(device::L_char, L_char());
-                    device::copyToSymbol(device::Re, Re());
-                    device::copyToSymbol(device::tau, tauTemp);
-                    device::copyToSymbol(device::omega, omegaTemp);
-                    device::copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
-                    device::copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+                        device::copyToSymbol(device::L_char, L_char());
+                        device::copyToSymbol(device::Re, Re());
+                        device::copyToSymbol(device::tau, tauTemp);
+                        device::copyToSymbol(device::omega, omegaTemp);
+                        device::copyToSymbol(device::t_omegaVar, t_omegaVarTemp);
+                        device::copyToSymbol(device::omegaVar_d2, omegaVar_d2Temp);
+                    }
+                    else
+                    {
+                        device::copyToSymbol(device::nozzleScale_A, nozzleScale_A());
+                        device::copyToSymbol(device::nozzleScale_B, nozzleScale_B());
+
+                        scalar_t tauTempA;
+                        scalar_t tauTempB;
+
+                        if (dualCharacteristic())
+                        {
+                            const scalar_t viscosityTempA = u_inf_A() * L_char_A() / Re_A();
+                            const scalar_t viscosityTempB = u_inf_B() * L_char_B() / Re_B();
+                            tauTempA = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempA;
+                            tauTempB = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempB;
+                            const scalar_t sigmaTemp = (u_inf_B() * u_inf_B() * L_char_B()) / We();
+
+                            device::copyToSymbol(device::L_char_A, L_char_A());
+                            device::copyToSymbol(device::L_char_B, L_char_B());
+                            device::copyToSymbol(device::sigma, sigmaTemp);
+                        }
+                        else
+                        {
+                            const scalar_t viscosityTempA = u_inf() * L_char() / Re_A();
+                            const scalar_t viscosityTempB = u_inf() * L_char() / Re_B();
+                            tauTempA = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempA;
+                            tauTempB = static_cast<scalar_t>(0.5) + static_cast<scalar_t>(3.0) * viscosityTempB;
+                            const scalar_t sigmaTemp = (u_inf() * u_inf() * L_char()) / We();
+
+                            device::copyToSymbol(device::L_char, L_char());
+                            device::copyToSymbol(device::sigma, sigmaTemp);
+                        }
+
+                        const scalar_t omegaTemp = static_cast<scalar_t>(1.0) / tauTempA;
+                        const scalar_t gammaTemp = static_cast<scalar_t>(2.0) / interfaceWidth();
+
+                        device::copyToSymbol(device::tau, tauTempA); // For compatibility. Ctrl+Shift+F -> CHECKPOINT to find place of future fix
+                        device::copyToSymbol(device::tau_A, tauTempA);
+                        device::copyToSymbol(device::tau_B, tauTempB);
+                        device::copyToSymbol(device::omega, omegaTemp);
+                        device::copyToSymbol(device::gamma, gammaTemp);
+                    }
                 }
             }
 
@@ -568,7 +612,7 @@ namespace LBM
         /**
          * @brief The name of the simulation case
          **/
-        name caseName_;
+        name_t caseName_;
 
         /**
          * @brief Whether the simulation is multiphase

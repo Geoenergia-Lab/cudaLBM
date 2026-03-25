@@ -34,7 +34,7 @@ namespace LBM
             const scalar_t invCount = static_cast<scalar_t>(1.0) / (meanCounter + static_cast<scalar_t>(1.0));
 
             // Load the instantaneous moments
-            const thread::array<scalar_t, NUMBER_MOMENTS()> moments = {
+            const thread::array<scalar_t, NUMBER_MOMENTS<false>()> moments = {
                 fMom[device::idxMom<index::rho>(threadIdx, blockIdx)],
                 fMom[device::idxMom<index::u>(threadIdx, blockIdx)],
                 fMom[device::idxMom<index::v>(threadIdx, blockIdx)],
@@ -47,7 +47,7 @@ namespace LBM
                 fMom[device::idxMom<index::zz>(threadIdx, blockIdx)]};
 
             // Load the mean moments
-            const thread::array<scalar_t, NUMBER_MOMENTS()> meanMoments = {
+            const thread::array<scalar_t, NUMBER_MOMENTS<false>()> meanMoments = {
                 fMomMean[device::idxMom<index::rho>(threadIdx, blockIdx)],
                 fMomMean[device::idxMom<index::u>(threadIdx, blockIdx)],
                 fMomMean[device::idxMom<index::v>(threadIdx, blockIdx)],

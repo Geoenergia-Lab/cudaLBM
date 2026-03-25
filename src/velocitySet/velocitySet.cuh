@@ -183,14 +183,6 @@ namespace LBM
             moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
         }
 
-        __device__ __host__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, 3> diagonal_term(
-            const thread::array<scalar_t, NUMBER_MOMENTS()> &moments) noexcept
-        {
-            const scalar_t Delta_m = (moments[q_i<1>()] * moments[q_i<1>()] + moments[q_i<2>()] * moments[q_i<2>()] + moments[q_i<3>()] * moments[q_i<3>()] - moments[q_i<4>()] - moments[q_i<7>()] - moments[q_i<9>()]) / static_cast<scalar_t>(3);
-
-            return {moments[q_i<4>()] + Delta_m, moments[q_i<7>()] + Delta_m, moments[q_i<9>()] + Delta_m};
-        }
-
         /**
          * @brief Apply velocity set scaling factors to moment array
          * @param[in,out] moments Array of 11 moment variables to be scaled
@@ -214,6 +206,22 @@ namespace LBM
             moments[m_i<7>()] = scale_ii<scalar_t>() * (moments[m_i<7>()]);
             moments[m_i<8>()] = scale_ij<scalar_t>() * (moments[m_i<8>()]);
             moments[m_i<9>()] = scale_ii<scalar_t>() * (moments[m_i<9>()]);
+        }
+
+        __device__ __host__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, 3> diagonal_term(
+            const thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments) noexcept
+        {
+            const scalar_t Delta_m = (moments[q_i<1>()] * moments[q_i<1>()] + moments[q_i<2>()] * moments[q_i<2>()] + moments[q_i<3>()] * moments[q_i<3>()] - moments[q_i<4>()] - moments[q_i<7>()] - moments[q_i<9>()]) / static_cast<scalar_t>(3);
+
+            return {moments[q_i<4>()] + Delta_m, moments[q_i<7>()] + Delta_m, moments[q_i<9>()] + Delta_m};
+        }
+
+        __device__ __host__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, 3> diagonal_term(
+            const thread::array<scalar_t, NUMBER_MOMENTS<true>()> &moments) noexcept
+        {
+            const scalar_t Delta_m = (moments[q_i<1>()] * moments[q_i<1>()] + moments[q_i<2>()] * moments[q_i<2>()] + moments[q_i<3>()] * moments[q_i<3>()] - moments[q_i<4>()] - moments[q_i<7>()] - moments[q_i<9>()]) / static_cast<scalar_t>(3);
+
+            return {moments[q_i<4>()] + Delta_m, moments[q_i<7>()] + Delta_m, moments[q_i<9>()] + Delta_m};
         }
 
         __device__ __host__ [[nodiscard]] static inline scalar_t delta_m(const thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments) noexcept

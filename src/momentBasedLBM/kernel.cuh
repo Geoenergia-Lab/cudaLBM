@@ -115,18 +115,18 @@ namespace LBM
         }
 
         // Prefetch devPtrs into L2
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
+        device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
             [&](const auto moment)
             {
                 cache::prefetch<cache::Level::L2, cache::Policy::evict_last>(&(devPtrs.ptr<moment>()[idx]));
             });
 
         // Coalesced read from global memory
-        thread::array<scalar_t, NUMBER_MOMENTS()> moments;
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
+        thread::array<scalar_t, NUMBER_MOMENTS<false>()> moments;
+        device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
             [&](const auto moment)
             {
-                const device::label_t ID = tid * m_i<NUMBER_MOMENTS() + 1>() + m_i<moment>();
+                const device::label_t ID = tid * m_i<NUMBER_MOMENTS<false>() + 1>() + m_i<moment>();
                 sharedBuffer[ID] = devPtrs.ptr<moment>()[idx];
                 if constexpr (moment == index::rho)
                 {
@@ -182,10 +182,10 @@ namespace LBM
             velocitySet::calculate_moments<VelocitySet>(pop, moments);
             {
                 // Update the shared buffer with the refreshed moments
-                device::constexpr_for<0, NUMBER_MOMENTS()>(
+                device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
                     [&](const auto moment)
                     {
-                        const device::label_t ID = tid * label_constant<NUMBER_MOMENTS() + 1>() + label_constant<moment>();
+                        const device::label_t ID = tid * label_constant<NUMBER_MOMENTS<false>() + 1>() + label_constant<moment>();
                         sharedBuffer[ID] = moments[moment];
                     });
             }
@@ -210,7 +210,7 @@ namespace LBM
         Collision::collide(moments);
 
         // Coalesced write to global memory
-        device::constexpr_for<0, NUMBER_MOMENTS()>(
+        device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
             [&](const auto moment)
             {
                 if constexpr (moment == index::rho)

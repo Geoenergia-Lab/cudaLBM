@@ -47,15 +47,16 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-case normalVector::WEST_SOUTH_BACK():
+// Static corners
+case normalVector::SOUTH_WEST_BACK():
 {
     if constexpr (VelocitySet::Q() == 19)
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(12) * rho_I) / (static_cast<scalar_t>(7)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
     }
     else
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
     //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
     //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
@@ -69,16 +70,15 @@ case normalVector::WEST_SOUTH_BACK():
 
     return;
 }
-
-case normalVector::EAST_SOUTH_BACK():
+case normalVector::SOUTH_EAST_BACK():
 {
     if constexpr (VelocitySet::Q() == 19)
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(12) * rho_I) / (static_cast<scalar_t>(7)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
     }
     else
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
     // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
     // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
@@ -92,16 +92,15 @@ case normalVector::EAST_SOUTH_BACK():
 
     return;
 }
-
-case normalVector::WEST_NORTH_BACK():
+case normalVector::NORTH_WEST_BACK():
 {
     if constexpr (VelocitySet::Q() == 19)
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(12) * rho_I) / (static_cast<scalar_t>(7)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
     }
     else
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
     // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
     // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
@@ -115,16 +114,15 @@ case normalVector::WEST_NORTH_BACK():
 
     return;
 }
-
-case normalVector::EAST_NORTH_BACK():
+case normalVector::NORTH_EAST_BACK():
 {
     if constexpr (VelocitySet::Q() == 19)
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(12) * rho_I) / (static_cast<scalar_t>(7)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(12) * rho_I / static_cast<scalar_t>(7);
     }
     else
     {
-        moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
+        moments[m_i<0>()] = static_cast<scalar_t>(216) * rho_I / static_cast<scalar_t>(125);
     }
     //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
     //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
@@ -139,9 +137,9 @@ case normalVector::EAST_NORTH_BACK():
     return;
 }
 
+// Static edges
 case normalVector::WEST_BACK():
 {
-    // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
@@ -160,10 +158,8 @@ case normalVector::WEST_BACK():
 
     return;
 }
-
 case normalVector::EAST_BACK():
 {
-    // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
@@ -182,10 +178,8 @@ case normalVector::EAST_BACK():
 
     return;
 }
-
 case normalVector::SOUTH_BACK():
 {
-    // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
@@ -204,10 +198,8 @@ case normalVector::SOUTH_BACK():
 
     return;
 }
-
 case normalVector::NORTH_BACK():
 {
-    // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
     const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
