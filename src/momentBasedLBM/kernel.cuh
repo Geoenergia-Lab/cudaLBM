@@ -60,7 +60,7 @@ namespace LBM
     {
         if constexpr (true)
         {
-            return block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<host::label_t>()>(sizeof(scalar_t));
+            return block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<false, host::label_t>()>(sizeof(scalar_t));
         }
         else
         {

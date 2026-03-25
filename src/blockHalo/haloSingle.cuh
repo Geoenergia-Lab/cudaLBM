@@ -75,7 +75,7 @@ namespace LBM
             __host__ [[nodiscard]] haloSingle(
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl) noexcept
-                : ghost_(
+                : buffer_(
                       [](const host::latticeMesh &m, const programControl &p)
                       {
                           if constexpr (VelocitySet::Q() == 7)
@@ -97,25 +97,25 @@ namespace LBM
              * @brief Read-only access to halo faces
              * @return Collection of const pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> ghostConst() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> readBuffer(const host::label_t i) const noexcept
             {
-                return {ghost_.x0Const(), ghost_.x1Const(), ghost_.y0Const(), ghost_.y1Const(), ghost_.z0Const(), ghost_.z1Const()};
+                return {buffer_.x0Const(i), buffer_.x1Const(i), buffer_.y0Const(i), buffer_.y1Const(i), buffer_.z0Const(i), buffer_.z1Const(i)};
             }
 
             /**
              * @brief Mutable access to halo faces
              * @return Collection of mutable pointers to halo faces (x0, x1, y0, y1, z0, z1)
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> ghost() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> writeBuffer(const host::label_t i) noexcept
             {
-                return {ghost_.x0(), ghost_.x1(), ghost_.y0(), ghost_.y1(), ghost_.z0(), ghost_.z1()};
+                return {buffer_.x0(i), buffer_.x1(i), buffer_.y0(i), buffer_.y1(i), buffer_.z0(i), buffer_.z1(i)};
             }
 
         private:
             /**
              * @brief The single halo face-set
              **/
-            haloFace<VelocitySet> ghost_;
+            haloFace<VelocitySet> buffer_;
 
             /**
              * @brief Construct halo regions from hydrodynamic moments only

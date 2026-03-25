@@ -48,28 +48,22 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-// #define PHASEFIELD_GLOBAL
-
-#if defined(PHASEFIELD_GLOBAL)
-#include "phaseFieldD3Q27global.cuh" // Uses four extra global pointers
-#else
-#include "phaseFieldD3Q27shared.cuh" // Reduced global memory footprint
-#endif
+#include "phaseFieldD3Q27.cuh"
 
 using namespace LBM;
 
 __host__ [[nodiscard]] inline consteval label_t NStreams() noexcept { return 1; }
 
+constexpr const device::label_t VirtualDeviceIndex = 0;
+
 int main(const int argc, const char *const argv[])
 {
-    static_assert((std::is_same<BoundaryConditions, multiphaseJet>::value) || std::is_same<BoundaryConditions, subseaMechanicalDispersion>::value);
-
     const programControl programCtrl(argc, argv);
 
     // Set cuda device
-    checkCudaErrors(cudaDeviceSynchronize());
-    checkCudaErrors(cudaSetDevice(programCtrl.deviceList()[0]));
-    checkCudaErrors(cudaDeviceSynchronize());
+    errorHandler::check(cudaDeviceSynchronize());
+    errorHandler::check(cudaSetDevice(programCtrl.deviceList()[0]));
+    errorHandler::check(cudaDeviceSynchronize());
 
     const host::latticeMesh mesh(programCtrl);
 
@@ -89,66 +83,84 @@ int main(const int argc, const char *const argv[])
 
     // Phase field arrays
     device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> phi("phi", mesh, programCtrl);
-#if defined(PHASEFIELD_GLOBAL)
-    device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normx("normx", mesh, programCtrl);
-    device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normy("normy", mesh, programCtrl);
-    device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> normz("normz", mesh, programCtrl);
-    device::array<field::FULL_FIELD, scalar_t, PhaseVelocitySet, time::instantaneous> ind("ind", mesh, programCtrl);
-#endif
 
     const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs(
-        rho.ptr(),
-        u.ptr(),
-        v.ptr(),
-        w.ptr(),
-        mxx.ptr(),
-        mxy.ptr(),
-        mxz.ptr(),
-        myy.ptr(),
-        myz.ptr(),
-        mzz.ptr(),
-        phi.ptr());
+        rho.ptr(VirtualDeviceIndex),
+        u.ptr(VirtualDeviceIndex),
+        v.ptr(VirtualDeviceIndex),
+        w.ptr(VirtualDeviceIndex),
+        mxx.ptr(VirtualDeviceIndex),
+        mxy.ptr(VirtualDeviceIndex),
+        mxz.ptr(VirtualDeviceIndex),
+        myy.ptr(VirtualDeviceIndex),
+        myz.ptr(VirtualDeviceIndex),
+        mzz.ptr(VirtualDeviceIndex),
+        phi.ptr(VirtualDeviceIndex));
 
     const device::ptrCollection<NUMBER_MOMENTS<false>(), scalar_t> hydroPtrs(
-        rho.ptr(),
-        u.ptr(),
-        v.ptr(),
-        w.ptr(),
-        mxx.ptr(),
-        mxy.ptr(),
-        mxz.ptr(),
-        myy.ptr(),
-        myz.ptr(),
-        mzz.ptr());
+        rho.ptr(VirtualDeviceIndex),
+        u.ptr(VirtualDeviceIndex),
+        v.ptr(VirtualDeviceIndex),
+        w.ptr(VirtualDeviceIndex),
+        mxx.ptr(VirtualDeviceIndex),
+        mxy.ptr(VirtualDeviceIndex),
+        mxz.ptr(VirtualDeviceIndex),
+        myy.ptr(VirtualDeviceIndex),
+        myz.ptr(VirtualDeviceIndex),
+        mzz.ptr(VirtualDeviceIndex));
 
     // Setup Streams
-    const streamHandler<NStreams()> streamsLBM;
+    const streamHandler streamsLBM(programCtrl);
 
     // Allocate a buffer of pinned memory on the host for writing
-    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.nPoints() * NUMBER_MOMENTS<true>());
+    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS<true>(), mesh);
 
-    objectRegistry<VelocitySet, NStreams()> runTimeObjects(hostWriteBuffer, mesh, hydroPtrs, streamsLBM);
+    objectRegistry<VelocitySet> runTimeObjects(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl);
 
-    device::haloSingle<VelocitySet, periodicX(), periodicY(), periodicZ()> fBlockHalo(mesh, programCtrl);      // Hydrodynamic halo
-    device::haloSingle<PhaseVelocitySet, periodicX(), periodicY(), periodicZ()> gBlockHalo(mesh, programCtrl); // Phase field halo
+    device::haloSingle<VelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()> fBlockHalo(mesh, programCtrl);      // Hydrodynamic halo
+    device::haloSingle<PhaseVelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()> gBlockHalo(mesh, programCtrl); // Phase field halo
 
-    kernelSetup<smem_alloc_size()>(phaseFieldStream);
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(phaseFieldStream);
 
     const runTimeIO IO(mesh, programCtrl);
 
-    for (label_t timeStep = programCtrl.latestTime(); timeStep < programCtrl.nt(); timeStep++)
+    for (host::label_t timeStep = programCtrl.latestTime(); timeStep < programCtrl.nt(); timeStep++)
     {
+        // Do the run-time IO
+        if (programCtrl.print(timeStep))
+        {
+            std::cout << "Time: " << timeStep << std::endl;
+        }
+
         // Checkpoint
         if (programCtrl.save(timeStep))
         {
-            hostWriteBuffer.copy_from_device(devPtrs, mesh);
+            // Do this in a loop
+            {
+                hostWriteBuffer.copy_from_device(
+                    device::ptrCollection<11, scalar_t>{
+                        rho.ptr(VirtualDeviceIndex),
+                        u.ptr(VirtualDeviceIndex),
+                        v.ptr(VirtualDeviceIndex),
+                        w.ptr(VirtualDeviceIndex),
+                        mxx.ptr(VirtualDeviceIndex),
+                        mxy.ptr(VirtualDeviceIndex),
+                        mxz.ptr(VirtualDeviceIndex),
+                        myy.ptr(VirtualDeviceIndex),
+                        myz.ptr(VirtualDeviceIndex),
+                        mzz.ptr(VirtualDeviceIndex),
+                        phi.ptr(VirtualDeviceIndex)},
+                    mesh,
+                    VirtualDeviceIndex);
+            }
 
             fileIO::writeFile<time::instantaneous>(
                 programCtrl.caseName() + "_" + std::to_string(timeStep) + ".LBMBin",
                 mesh,
                 functionObjects::solutionVariableNames(true),
                 hostWriteBuffer.data(),
-                timeStep);
+                timeStep,
+                rho.meanCount());
 
             runTimeObjects.save(timeStep);
         }
@@ -157,42 +169,19 @@ int main(const int argc, const char *const argv[])
         host::constexpr_for<0, NStreams()>(
             [&](const auto stream)
             {
-#if defined(PHASEFIELD_GLOBAL)
-                phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
-                    devPtrs, normx.ptr(), normy.ptr(), normz.ptr(),
-                    fBlockHalo.ghostConst(),
-                    gBlockHalo.ghostConst(),
-                    timeStep);
-
-                phaseFieldNormals<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
-                    phi.ptr(), normx.ptr(), normy.ptr(), normz.ptr(), ind.ptr());
-
-                phaseFieldCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
-                    devPtrs, normx.ptr(), normy.ptr(), normz.ptr(), ind.ptr(), phi.ptr(),
-                    fBlockHalo.ghost(),
-                    gBlockHalo.ghost());
-#else
-                phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size(), streamsLBM.streams()[stream]>>>(
+                phaseFieldStream<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[stream]>>>(
                     devPtrs,
-                    fBlockHalo.ghostConst(),
-                    gBlockHalo.ghostConst(),
-                    timeStep);
+                    fBlockHalo.buffer(VirtualDeviceIndex),
+                    gBlockHalo.buffer(VirtualDeviceIndex));
 
                 phaseFieldCollide<<<mesh.gridBlock(), mesh.threadBlock(), 0, streamsLBM.streams()[stream]>>>(
                     devPtrs,
-                    fBlockHalo.ghost(),
-                    gBlockHalo.ghost());
-#endif
+                    fBlockHalo.buffer(),
+                    gBlockHalo.buffer());
             });
 
         // Calculate S kernel
         runTimeObjects.calculate(timeStep);
-
-        // Do the run-time IO
-        if (programCtrl.print(timeStep))
-        {
-            std::cout << "Time: " << timeStep << std::endl;
-        }
     }
 
     return 0;
