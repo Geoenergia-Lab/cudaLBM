@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_COLLISION_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 #include "../velocitySet/velocitySet.cuh"
 #include "../globalFunctions.cuh"
 
@@ -65,7 +65,7 @@ namespace LBM
          * @return A collision object
          * @note This constructor is consteval
          **/
-        __device__ __host__ [[nodiscard]] inline consteval collision() noexcept {};
+        __device__ __host__ [[nodiscard]] inline consteval collision() noexcept {}
 
     private:
     };

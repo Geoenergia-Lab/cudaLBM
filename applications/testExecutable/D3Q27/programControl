@@ -11,11 +11,11 @@
 
 caseName        jetFlow;
 
-Re              1000;
+Re              10000;
 
 u_inf           0.016;
 
-L_char          8;
+L_char          16;
 
 startFrom       latestTime;
 

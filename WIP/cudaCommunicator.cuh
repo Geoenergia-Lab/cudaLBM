@@ -7,7 +7,7 @@ Contents: A class handling parallel execution
 #define __MBLBM_CUDACOMMUNICATOR_CUH
 
 #include "LBMIncludes.cuh"
-#include "LBMTypedefs.cuh"
+#include "typedefs/typedefs.cuh"
 
 namespace LBM
 {
@@ -25,7 +25,7 @@ namespace LBM
             std::cout << "Total rank: " << totalRank_ << std::endl;
         };
 
-        ~cudaCommunicator() noexcept {};
+        ~cudaCommunicator() noexcept {}
 
         /**
          * @brief Returns the process MPI rank

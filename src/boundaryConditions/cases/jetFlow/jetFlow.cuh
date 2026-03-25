@@ -53,6 +53,11 @@ SourceFiles
 namespace LBM
 {
     /**
+     * @brief New definition of the inlet plane
+     * **/
+    __device__ __host__ [[nodiscard]] inline consteval bool new_inlet() noexcept { return true; }
+
+    /**
      * @class jetFlow
      *
      * @brief Applies boundary conditions for jet flow simulations using moment representation
@@ -67,11 +72,18 @@ namespace LBM
         /**
          * @brief Default constructor (constexpr)
          **/
-        __device__ __host__ [[nodiscard]] inline consteval jetFlow(){};
+        __device__ __host__ [[nodiscard]] inline consteval jetFlow() {}
+
+        /**
+         * @brief Periodic boundary definitions
+         **/
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicX() noexcept { return true; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicY() noexcept { return true; }
+        __device__ __host__ [[nodiscard]] static inline consteval bool periodicZ() noexcept { return false; }
 
         /**
          * @brief Calculate moment variables at boundary nodes
-         * @tparam VelocitySet Velocity set configuration defining lattice structure
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          * @param[in] pop Population density array at current lattice node
          * @param[out] moments Moment variables array to be populated
          * @param[in] boundaryNormal Normal vector information at boundary node
@@ -84,22 +96,14 @@ namespace LBM
          * moments from available population information, ensuring mass conservation
          * and appropriate stress conditions at boundaries.
          **/
-        template <class VelocitySet>
+        template <class VelocitySet, class SharedBuffer>
         __device__ static inline constexpr void calculate_moments(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments,
             const normalVector &boundaryNormal,
-            const scalar_t *const ptrRestrict shared_buffer) noexcept
-        {
-#include "jetBoundaryCondition.cuh"
-        }
-
-        template <class VelocitySet, const label_t N>
-        __device__ static inline constexpr void calculate_moments(
-            const thread::array<scalar_t, VelocitySet::Q()> &pop,
-            thread::array<scalar_t, NUMBER_MOMENTS<false>()> &moments,
-            const normalVector &boundaryNormal,
-            const thread::array<scalar_t, N> &shared_buffer) noexcept
+            const SharedBuffer &shared_buffer,
+            const thread::coordinate &Tx,
+            const device::pointCoordinate &point) noexcept
         {
 #include "jetBoundaryCondition.cuh"
         }
@@ -107,12 +111,12 @@ namespace LBM
     private:
         __device__ [[nodiscard]] static inline scalar_t center_x() noexcept
         {
-            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::nx - 1);
+            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::n<axis::X>() - 1);
         }
 
         __device__ [[nodiscard]] static inline scalar_t center_y() noexcept
         {
-            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::ny - 1);
+            return static_cast<scalar_t>(0.5) * static_cast<scalar_t>(device::n<axis::Y>() - 1);
         }
 
         __device__ [[nodiscard]] static inline scalar_t radius() noexcept

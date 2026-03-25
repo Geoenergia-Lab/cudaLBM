@@ -46,7 +46,7 @@ if command -v nvcc > /dev/null 2>&1; then
     export CUDALBM_CUDA_DIR=$(dirname "$(dirname "$RESOLVED_NVCC_PATH")")
 else
     echo "Error: nvcc not found. Ensure CUDA is installed and in your PATH." >&2
-    exit 1
+    return 1
 fi
 
 export PATH=$CUDALBM_CUDA_DIR/bin:$PATH

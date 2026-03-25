@@ -7,7 +7,7 @@ Contents: A class handling the initialisation of CUDA-aware MPI
 #define __MBLBM_MPISTATUS_CUH
 
 #include "LBMIncludes.cuh"
-#include "LBMTypedefs.cuh"
+#include "typedefs/typedefs.cuh"
 
 namespace LBM
 {

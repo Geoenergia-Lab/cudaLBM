@@ -52,146 +52,131 @@ SourceFiles
 
 namespace LBM
 {
-    /**
-     * @brief Calculates the integral of a scalar field along the x-axis.
-     * @tparam order_ The order of the integration scheme. Currently, only 2nd order is implemented.
-     * @return The integrated field of f with respect to x.
-     * @param f The field to be integrated.
-     * @param mesh The lattice mesh.
-     * @note This function uses the cumulative trapezoidal rule. The integration constant is set by
-     * assuming the integral is zero at x=0 for each (y, z) line.
-     **/
-    template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
-    __host__ [[nodiscard]] const std::vector<TReturn> integrate_x(
-        const std::vector<T> &f,
-        const LatticeMesh &mesh)
+    namespace integral
     {
-        static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
-
-#ifdef MULTI_GPU
-
-        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-#else
-
-        const std::size_t nx = mesh.template nx<std::size_t>();
-        const std::size_t ny = mesh.template ny<std::size_t>();
-        const std::size_t nz = mesh.template nz<std::size_t>();
-        constexpr const double dx = 1.0;
-
-        std::vector<TReturn> integral_f(f.size(), 0);
-
-        for (std::size_t z = 0; z < nz; ++z)
+        /**
+         * @brief Calculates the integral of a scalar field along the x-axis.
+         * @tparam SchemeOrder The order of the integration scheme. Currently, only 2nd order is implemented.
+         * @return The integrated field of f with respect to x.
+         * @param[in] f The field to be integrated.
+         * @param[in] mesh The lattice mesh.
+         * @note This function uses the cumulative trapezoidal rule. The integration constant is set by
+         * assuming the integral is zero at x=0 for each (y, z) line.
+         **/
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
+        __host__ [[nodiscard]] const std::vector<TReturn> integrate_x(
+            const std::vector<T> &f,
+            const host::latticeMesh &mesh)
         {
-            for (std::size_t y = 0; y < ny; ++y)
+            LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
+
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_x));
+
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            constexpr const double dx = 1.0;
+
+            std::vector<TReturn> integral_f(f.size(), 0);
+
+            for (host::label_t z = 0; z < nz; ++z)
             {
-                // Initial condition for integration along this x-line
-                integral_f[host::idxScalarGlobal<std::size_t>(0, y, z, nx, ny)] = 0;
-
-                // Cumulative integration using the trapezoidal rule
-                for (std::size_t x = 1; x < nx; ++x)
+                for (host::label_t y = 0; y < ny; ++y)
                 {
-                    const std::size_t current_idx = host::idxScalarGlobal<std::size_t>(x, y, z, nx, ny);
-                    const std::size_t prev_idx = host::idxScalarGlobal<std::size_t>(x - 1, y, z, nx, ny);
+                    // Initial condition for integration along this x-line
+                    integral_f[global::idx(0, y, z, nx, ny)] = 0;
 
-                    integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dx * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    // Cumulative integration using the trapezoidal rule
+                    for (host::label_t x = 1; x < nx; ++x)
+                    {
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x - 1, y, z, nx, ny);
+
+                        integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dx * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    }
                 }
             }
+            return integral_f;
         }
-        return integral_f;
 
-#endif
-    }
-
-    /**
-     * @brief Calculates the integral of a scalar field along the y-axis.
-     **/
-    template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
-    __host__ [[nodiscard]] const std::vector<TReturn> integrate_y(
-        const std::vector<T> &f,
-        const LatticeMesh &mesh)
-    {
-        static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
-
-#ifdef MULTI_GPU
-
-        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-#else
-
-        const std::size_t nx = mesh.template nx<std::size_t>();
-        const std::size_t ny = mesh.template ny<std::size_t>();
-        const std::size_t nz = mesh.template nz<std::size_t>();
-        constexpr const double dy = 1.0;
-
-        std::vector<TReturn> integral_f(f.size(), 0);
-
-        for (std::size_t z = 0; z < nz; ++z)
+        /**
+         * @brief Calculates the integral of a scalar field along the y-axis.
+         **/
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
+        __host__ [[nodiscard]] const std::vector<TReturn> integrate_y(
+            const std::vector<T> &f,
+            const host::latticeMesh &mesh)
         {
-            for (std::size_t x = 0; x < nx; ++x)
+            LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
+
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_y));
+
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            constexpr const double dy = 1.0;
+
+            std::vector<TReturn> integral_f(f.size(), 0);
+
+            for (host::label_t z = 0; z < nz; ++z)
             {
-                // Initial condition for integration along this y-line
-                integral_f[host::idxScalarGlobal<std::size_t>(x, 0, z, nx, ny)] = 0;
-
-                // Cumulative integration using the trapezoidal rule
-                for (std::size_t y = 1; y < ny; ++y)
+                for (host::label_t x = 0; x < nx; ++x)
                 {
-                    const std::size_t current_idx = host::idxScalarGlobal<std::size_t>(x, y, z, nx, ny);
-                    const std::size_t prev_idx = host::idxScalarGlobal<std::size_t>(x, y - 1, z, nx, ny);
+                    // Initial condition for integration along this y-line
+                    integral_f[global::idx(x, 0, z, nx, ny)] = 0;
 
-                    integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dy * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    // Cumulative integration using the trapezoidal rule
+                    for (host::label_t y = 1; y < ny; ++y)
+                    {
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x, y - 1, z, nx, ny);
+
+                        integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dy * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    }
                 }
             }
+            return integral_f;
         }
-        return integral_f;
 
-#endif
-    }
-
-    /**
-     * @brief Calculates the integral of a scalar field along the z-axis.
-     **/
-    template <const label_t order_, typename TReturn, typename T, class LatticeMesh>
-    __host__ [[nodiscard]] const std::vector<TReturn> integrate_z(
-        const std::vector<T> &f,
-        const LatticeMesh &mesh)
-    {
-        static_assert(order_ == 2, "Invalid integration scheme order: only 2nd order (Trapezoidal Rule) is currently implemented.");
-
-#ifdef MULTI_GPU
-
-        static_assert(false, "fieldIntegrate not implemented for multi GPU yet");
-
-#else
-
-        const std::size_t nx = mesh.template nx<std::size_t>();
-        const std::size_t ny = mesh.template ny<std::size_t>();
-        const std::size_t nz = mesh.template nz<std::size_t>();
-        constexpr const double dz = 1.0;
-
-        std::vector<TReturn> integral_f(f.size(), 0);
-
-        for (std::size_t y = 0; y < ny; ++y)
+        /**
+         * @brief Calculates the integral of a scalar field along the z-axis.
+         **/
+        template <const host::label_t SchemeOrder, typename TReturn, typename T>
+        __host__ [[nodiscard]] const std::vector<TReturn> integrate_z(
+            const std::vector<T> &f,
+            const host::latticeMesh &mesh)
         {
-            for (std::size_t x = 0; x < nx; ++x)
+            LBM::numericalSchemes::assertions::validate<SchemeOrder, 2>();
+
+            static_assert(MULTI_GPU_ASSERTION(), MULTI_GPU_MSG(integrate_z));
+
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            constexpr const double dz = 1.0;
+
+            std::vector<TReturn> integral_f(f.size(), 0);
+
+            for (host::label_t y = 0; y < ny; ++y)
             {
-                // Initial condition for integration along this z-line
-                integral_f[host::idxScalarGlobal<std::size_t>(x, y, 0, nx, ny)] = 0;
-
-                // Cumulative integration using the trapezoidal rule
-                for (std::size_t z = 1; z < nz; ++z)
+                for (host::label_t x = 0; x < nx; ++x)
                 {
-                    const std::size_t current_idx = host::idxScalarGlobal<std::size_t>(x, y, z, nx, ny);
-                    const std::size_t prev_idx = host::idxScalarGlobal<std::size_t>(x, y, z - 1, nx, ny);
+                    // Initial condition for integration along this z-line
+                    integral_f[global::idx(x, y, 0, nx, ny)] = 0;
 
-                    integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dz * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    // Cumulative integration using the trapezoidal rule
+                    for (host::label_t z = 1; z < nz; ++z)
+                    {
+                        const host::label_t current_idx = global::idx(x, y, z, nx, ny);
+                        const host::label_t prev_idx = global::idx(x, y, z - 1, nx, ny);
+
+                        integral_f[current_idx] = integral_f[prev_idx] + static_cast<TReturn>(0.5 * dz * (static_cast<double>(f[prev_idx]) + static_cast<double>(f[current_idx])));
+                    }
                 }
             }
+            return integral_f;
         }
-        return integral_f;
-
-#endif
     }
 }
 
-#endif // __MBLBM_FIELDINTEGRATE_CUH
+#endif

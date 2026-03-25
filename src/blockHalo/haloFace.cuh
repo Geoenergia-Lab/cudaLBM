@@ -57,7 +57,7 @@ namespace LBM
         /**
          * @class haloFace
          * @brief Manages individual halo faces for inter-block communication in CUDA LBM
-         * @tparam VelocitySet Velocity set configuration defining lattice structure
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          *
          * This class handles the storage and management of distribution functions
          * at block boundaries for all six faces (x0, x1, y0, y1, z0, z1). It provides
@@ -71,7 +71,7 @@ namespace LBM
             /**
              * @brief Constructs halo faces from moment data and mesh
              * @param[in] fMom Moment representation of distribution functions (NUMBER_MOMENTS interlaced moments)
-             * @param[in] mesh Lattice mesh defining simulation domain
+             * @param[in] mesh The lattice mesh
              * @post All six halo faces are allocated and initialized with population data
              **/
             __host__ [[nodiscard]] haloFace(
@@ -87,46 +87,46 @@ namespace LBM
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh,
                 const host::array<host::PAGED, scalar_t, D3Q7, time::instantaneous> *phi = nullptr) noexcept
-                : x0_(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)),
-                  x1_(initialise_pop<axis::X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)),
-                  y0_(initialise_pop<axis::Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)),
-                  y1_(initialise_pop<axis::Y, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)),
-                  z0_(initialise_pop<axis::Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)),
-                  z1_(initialise_pop<axis::Z, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh)){};
+                : West_(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, -1>()),
+                  East_(initialise_pop<axis::X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, +1>()),
+                  South_(initialise_pop<axis::Y, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, -1>()),
+                  North_(initialise_pop<axis::Y, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Y>(), integralConstant<int, +1>()),
+                  Back_(initialise_pop<axis::Z, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, -1>()),
+                  Front_(initialise_pop<axis::Z, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::Z>(), integralConstant<int, +1>()){};
 
             /**
              * @brief Destructor - releases all allocated device memory
              **/
-            ~haloFace() noexcept {}
+            __host__ ~haloFace() noexcept {}
 
             /**
              * @name Read-only Accessors
              * @brief Provide const access to halo face data
              * @return Const pointer to halo face data
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x0Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x0Const(const host::label_t i) const noexcept
             {
-                return x0_.constPtr();
+                return West_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x1Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *x1Const(const host::label_t i) const noexcept
             {
-                return x1_.constPtr();
+                return East_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y0Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y0Const(const host::label_t i) const noexcept
             {
-                return y0_.constPtr();
+                return South_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y1Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *y1Const(const host::label_t i) const noexcept
             {
-                return y1_.constPtr();
+                return North_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z0Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z0Const(const host::label_t i) const noexcept
             {
-                return z0_.constPtr();
+                return Back_.constPtr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z1Const() const noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr const scalar_t *z1Const(const host::label_t i) const noexcept
             {
-                return z1_.constPtr();
+                return Front_.constPtr(i);
             }
 
             /**
@@ -134,29 +134,29 @@ namespace LBM
              * @brief Provide mutable access to halo face data
              * @return Pointer to halo face data
              **/
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x0() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x0(const host::label_t i) noexcept
             {
-                return x0_.ptr();
+                return West_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x1() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *x1(const host::label_t i) noexcept
             {
-                return x1_.ptr();
+                return East_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y0() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y0(const host::label_t i) noexcept
             {
-                return y0_.ptr();
+                return South_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y1() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *y1(const host::label_t i) noexcept
             {
-                return y1_.ptr();
+                return North_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z0() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z0(const host::label_t i) noexcept
             {
-                return z0_.ptr();
+                return Back_.ptr(i);
             }
-            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z1() noexcept
+            __device__ __host__ [[nodiscard]] inline constexpr scalar_t *z1(const host::label_t i) noexcept
             {
-                return z1_.ptr();
+                return Front_.ptr(i);
             }
 
             /**
@@ -165,76 +165,51 @@ namespace LBM
              * @return Reference to pointer (used for buffer swapping)
              * @note These methods are specifically for pointer swapping and should not be used elsewhere
              **/
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x0Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x0Ref(const host::label_t i) noexcept
             {
-                return x0_.ptrRef();
+                return West_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x1Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & x1Ref(const host::label_t i) noexcept
             {
-                return x1_.ptrRef();
+                return East_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y0Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y0Ref(const host::label_t i) noexcept
             {
-                return y0_.ptrRef();
+                return South_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y1Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & y1Ref(const host::label_t i) noexcept
             {
-                return y1_.ptrRef();
+                return North_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z0Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z0Ref(const host::label_t i) noexcept
             {
-                return z0_.ptrRef();
+                return Back_.ptrRef(i);
             }
-            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z1Ref() noexcept
+            __host__ [[nodiscard]] inline constexpr scalar_t * ptrRestrict & z1Ref(const host::label_t i) noexcept
             {
-                return z1_.ptrRef();
+                return Front_.ptrRef(i);
             }
 
         private:
             /**
              * @brief Halo face arrays
              **/
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> x0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> x1_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> y0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> y1_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> z0_;
-            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> z1_;
-
-            /**
-             * @brief Calculate number of elements for a halo face
-             * @tparam alpha Direction index (x, y, or z)
-             * @param[in] mesh Lattice mesh for dimensioning
-             * @return Number of elements in the specified halo face
-             **/
-            template <const axis::type alpha>
-            __host__ [[nodiscard]] static inline constexpr label_t nFaces(const host::latticeMesh &mesh) noexcept
-            {
-                if constexpr (alpha == axis::X)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nx()) * VelocitySet::QF();
-                }
-                if constexpr (alpha == axis::Y)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::ny()) * VelocitySet::QF();
-                }
-                if constexpr (alpha == axis::Z)
-                {
-                    return ((mesh.nx() * mesh.ny() * mesh.nz()) / block::nz()) * VelocitySet::QF();
-                }
-
-                return 0;
-            }
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> West_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> East_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> South_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> North_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> Back_;
+            device::array<field::SKELETON, scalar_t, VelocitySet, time::instantaneous> Front_;
 
             /**
              * @brief Initialize population data for a specific halo face
              * @tparam alpha Direction index (x, y, or z)
-             * @tparam side Face side (0 for min, 1 for max)
+             * @tparam coeff Face coeff (-1 for min, 1 for max)
              * @param[in] fMom Moment representation of distribution functions
-             * @param[in] mesh Lattice mesh for dimensioning
+             * @param[in] mesh The lattice mesh
              * @return Initialized population data for the specified halo face
              **/
-            template <const axis::type alpha, const int side>
+            template <const axis::type alpha, const int coeff>
             __host__ [[nodiscard]] const std::vector<scalar_t> initialise_pop(
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &rho,
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &u,
@@ -249,39 +224,91 @@ namespace LBM
                 const host::array<host::PAGED, scalar_t, D3Q7, time::instantaneous> *phi,
                 const host::latticeMesh &mesh) const noexcept
             {
-                std::vector<scalar_t> face(nFaces<alpha>(mesh), 0);
+                axis::assertions::validate<alpha, axis::NOT_NULL>();
 
-                grid_for(
-                    mesh.nxBlocks(), mesh.nyBlocks(), mesh.nzBlocks(),
-                    [&](const label_t bx, const label_t by, const label_t bz,
-                        const label_t tx, const label_t ty, const label_t tz)
+                velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
+
+                std::vector<scalar_t> face(mesh.nFaces<alpha, VelocitySet::QF()>(), 0);
+
+                // Loop over all the blocks of the global domain
+                for (host::label_t bz = 0; bz < mesh.nBlocks<axis::Z>(); bz++)
+                {
+                    for (host::label_t by = 0; by < mesh.nBlocks<axis::Y>(); by++)
                     {
-                        const label_t base = host::idx(tx, ty, tz, bx, by, bz, mesh);
-
-                        thread::array<scalar_t, VelocitySet::Q()> pop;
-
-                        // Contiguous moment access
-                        if constexpr (VelocitySet::Q() == 7)
+                        for (host::label_t bx = 0; bx < mesh.nBlocks<axis::X>(); bx++)
                         {
-
-                            pop = VelocitySet::reconstruct(
-                                thread::array<scalar_t, 11>{
-                                    rho0<scalar_t>() + rho.arr()[base],
-                                    u.arr()[base],
-                                    v.arr()[base],
-                                    w.arr()[base],
-                                    m_xx.arr()[base],
-                                    m_xy.arr()[base],
-                                    m_xz.arr()[base],
-                                    m_yy.arr()[base],
-                                    m_yz.arr()[base],
-                                    m_zz.arr()[base],
-                                    phi->arr()[base]});
+                            // Handle the ghost cells for this block
+                            const host::blockLabel Bx(bx, by, bz);
+                            handleGhostCells<alpha, coeff>(
+                                face,
+                                rho,
+                                u, v, w,
+                                m_xx, m_xy, m_xz, m_yy, m_yz, m_zz,
+                                phi,
+                                Bx, mesh);
                         }
-                        else
+                    }
+                }
+
+                return face;
+            }
+
+            /**
+             * @brief Populate halo face with population data from boundary cells
+             * @tparam alpha Direction index (x, y, or z)
+             * @tparam coeff Face coeff (-1 for min, 1 for max)
+             * @param[out] face Halo face data to populate
+             * @param[in] pop Population density values for current cell
+             * @param[in] tx, ty, tz Thread indices within block
+             * @param[in] bx, by, bz Block indices
+             * @param[in] mesh The lattice mesh
+             *
+             * This method handles the D3Q19 lattice model, storing appropriate
+             * population components based on boundary position and direction.
+             **/
+            template <const axis::type alpha, const int coeff>
+            __host__ static void handleGhostCells(
+                std::vector<scalar_t> &face,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &rho,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &u,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &v,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &w,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_xx,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_xy,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_xz,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_yy,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_yz,
+                const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_zz,
+                const host::array<host::PAGED, scalar_t, D3Q7, time::instantaneous> *phi,
+                const host::blockLabel &Bx,
+                const host::latticeMesh &mesh) noexcept
+            {
+                axis::assertions::validate<alpha, axis::NOT_NULL>();
+
+                velocityCoefficient::assertions::validate<coeff, velocityCoefficient::NOT_NULL>();
+
+                constexpr const thread::array<host::label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, coeff>();
+
+                // For all velocity coefficients on this face
+                for (host::label_t i = 0; i < VelocitySet::QF(); i++)
+                {
+                    // Second perpendicular axis
+                    for (host::label_t tb = 0; tb < block::n<axis::orthogonal<alpha, 1>(), host::label_t>(); tb++)
+                    {
+                        // First perpendicular axis
+                        for (host::label_t ta = 0; ta < block::n<axis::orthogonal<alpha, 0>(), host::label_t>(); ta++)
                         {
-                            if (phi != nullptr)
+                            // Recover the 3D thread coordinates from the orthogonals, the axis and the normal coefficient
+                            const host::blockLabel Tx = axis::to_3d<alpha, coeff>(ta, tb);
+
+                            const host::label_t base = host::idx(Tx, Bx, mesh);
+
+                            thread::array<scalar_t, VelocitySet::Q()> pop;
+
+                            // Contiguous moment access
+                            if constexpr (VelocitySet::Q() == 7)
                             {
+
                                 pop = VelocitySet::reconstruct(
                                     thread::array<scalar_t, 11>{
                                         rho0<scalar_t>() + rho.arr()[base],
@@ -298,57 +325,49 @@ namespace LBM
                             }
                             else
                             {
-                                pop = VelocitySet::reconstruct(
-                                    thread::array<scalar_t, 10>{
-                                        rho0<scalar_t>() + rho.arr()[base],
-                                        u.arr()[base],
-                                        v.arr()[base],
-                                        w.arr()[base],
-                                        m_xx.arr()[base],
-                                        m_xy.arr()[base],
-                                        m_xz.arr()[base],
-                                        m_yy.arr()[base],
-                                        m_yz.arr()[base],
-                                        m_zz.arr()[base]});
+                                if (phi != nullptr)
+                                {
+                                    pop = VelocitySet::reconstruct(
+                                        thread::array<scalar_t, 11>{
+                                            rho0<scalar_t>() + rho.arr()[base],
+                                            u.arr()[base],
+                                            v.arr()[base],
+                                            w.arr()[base],
+                                            m_xx.arr()[base],
+                                            m_xy.arr()[base],
+                                            m_xz.arr()[base],
+                                            m_yy.arr()[base],
+                                            m_yz.arr()[base],
+                                            m_zz.arr()[base],
+                                            phi->arr()[base]});
+                                }
+                                else
+                                {
+                                    pop = VelocitySet::reconstruct(
+                                        thread::array<scalar_t, 10>{
+                                            rho0<scalar_t>() + rho.arr()[base],
+                                            u.arr()[base],
+                                            v.arr()[base],
+                                            w.arr()[base],
+                                            m_xx.arr()[base],
+                                            m_xy.arr()[base],
+                                            m_xz.arr()[base],
+                                            m_yy.arr()[base],
+                                            m_yz.arr()[base],
+                                            m_zz.arr()[base]});
+                                }
                             }
+
+                            const host::label_t j = host::idxPop<alpha, VelocitySet::QF()>(i, Tx, Bx, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+
+                            if (j >= face.size())
+                            {
+                                std::cout << j << " is greater than " << face.size() << std::endl;
+                            }
+                            face[j] = pop[indices[i]];
                         }
-
-                        // Handle ghost cells (equivalent to threadIdx.x/y/z checks)
-                        handleGhostCells<alpha, side>(face, pop, tx, ty, tz, bx, by, bz, mesh);
-                    });
-
-                return face;
-            }
-
-            /**
-             * @brief Populate halo face with population data from boundary cells
-             * @tparam alpha Direction index (x, y, or z)
-             * @tparam side Face side (0 for min, 1 for max)
-             * @param[out] face Halo face data to populate
-             * @param[in] pop Population density values for current cell
-             * @param[in] tx, ty, tz Thread indices within block
-             * @param[in] bx, by, bz Block indices
-             * @param[in] mesh Lattice mesh for dimensioning
-             *
-             * This method handles the D3Q19 lattice model, storing appropriate
-             * population components based on boundary position and direction.
-             **/
-            template <const axis::type alpha, const int side>
-            __host__ void static handleGhostCells(
-                std::vector<scalar_t> &face,
-                const thread::array<scalar_t, VelocitySet::Q()> &pop,
-                const label_t tx, const label_t ty, const label_t tz,
-                const label_t bx, const label_t by, const label_t bz,
-                const host::latticeMesh &mesh) noexcept
-            {
-                constexpr const thread::array<label_t, VelocitySet::QF()> indices = velocitySet::template indices_on_face<VelocitySet, alpha, side>();
-
-                // MODIFY FOR MULTI GPU: idxPop must be multi GPU aware
-                host::constexpr_for<0, VelocitySet::QF()>(
-                    [&](const auto q)
-                    {
-                        face[host::idxPop<alpha, q, VelocitySet::QF()>(tx, ty, tz, bx, by, bz, mesh.nxBlocks(), mesh.nyBlocks())] = pop[indices[q_i<q>()]];
-                    });
+                    }
+                }
             }
         };
     }

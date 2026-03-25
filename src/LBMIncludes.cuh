@@ -88,15 +88,41 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
-// Monophase boundary conditions defines
-#define JETFLOW
-// #define LIDDRIVENCAVITY
+#define MULTI_GPU
 
-// Multiphase boundary conditions defines
-// #define MULTIPHASEJET
-#define SUBSEAMECHANICALDISPERSION
+#define MULTI_GPU_HALO
 
-// Multi GPU define
-// #define MULTI_GPU
+#define MULTI_GPU_MSG_NOTE(func, note) #func " not implemented for multi GPU yet: " note
+
+#define MULTI_GPU_MSG(func) #func " not implemented for multi GPU yet"
+
+namespace LBM
+{
+    __host__ [[nodiscard]] inline consteval bool MULTI_GPU_ASSERTION() { return true; }
+
+    /**
+     * @brief Verbose logging
+     **/
+    __device__ __host__ [[nodiscard]] inline consteval bool verbose() noexcept
+    {
+#ifdef VERBOSE
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    /**
+     * @brief Runtime bounds checking for GPU kernels
+     **/
+    __device__ __host__ [[nodiscard]] inline consteval bool out_of_bounds_check() noexcept
+    {
+#ifdef OOB_CHECK
+        return true;
+#else
+        return false;
+#endif
+    }
+}
 
 #endif

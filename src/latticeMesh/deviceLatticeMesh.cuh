@@ -50,10 +50,43 @@ SourceFiles
 #ifndef __MBLBM_DEVICELATTICEMESH_CUH
 #define __MBLBM_DEVICELATTICEMESH_CUH
 
+#ifdef DEVICE_LATTICEMESH_READY
+
 namespace LBM
 {
     namespace device
     {
+        /**
+         * @brief Point indices descriptor
+         * @details Stores point indices in 3D space
+         **/
+        struct pointLabel_t
+        {
+            /**
+             * @brief Constructor for pointLabel_t
+             * @param[in] label A dim3 struct containing the point indices
+             **/
+            __device__ [[nodiscard]] inline constexpr pointLabel_t(const dim3 &label) noexcept
+                : x(static_cast<device::label_t>(label.x)),
+                  y(static_cast<device::label_t>(label.y)),
+                  z(static_cast<device::label_t>(label.z)) {}
+
+            /**
+             * @brief Constructor for pointLabel_t
+             * @param[in] X The point index in the x-direction
+             * @param[in] Y The point index in the y-direction
+             * @param[in] Z The point index in the z-direction
+             **/
+            __device__ [[nodiscard]] inline constexpr pointLabel_t(const device::label_t X, const device::label_t Y, const device::label_t Z) noexcept
+                : x(X),
+                  y(Y),
+                  z(Z) {}
+
+            const device::label_t x;
+            const device::label_t y;
+            const device::label_t z;
+        };
+
         /**
          * @class latticeMesh
          * @brief Represents the computational grid for LBM simulations
@@ -69,7 +102,7 @@ namespace LBM
             __host__ [[nodiscard]] inline latticeMesh(
                 const host::latticeMesh &hostMesh,
                 const pointLabel_t &deviceID,
-                const blockLabel_t &nGPUs) noexcept
+                const device::blockLabel &nGPUs) noexcept
                 : mesh_(hostMesh),
                   blockOffsets_({deviceID.x / (hostMesh.nxBlocks() / nGPUs.nx), deviceID.y / (hostMesh.nyBlocks() / nGPUs.ny), deviceID.z / (hostMesh.nzBlocks() / nGPUs.nz)}),
                   blockSpan_({hostMesh.nxBlocks() / nGPUs.nx, hostMesh.nyBlocks() / nGPUs.ny, hostMesh.nzBlocks() / nGPUs.nz}),
@@ -88,7 +121,7 @@ namespace LBM
             /**
              * @brief Get the size of the memory allocation for this partition of the global mesh for a single field
              **/
-            __host__ [[nodiscard]] inline constexpr label_t size() const noexcept
+            __host__ [[nodiscard]] inline constexpr device::label_t size() const noexcept
             {
                 return size_;
             }
@@ -102,19 +135,19 @@ namespace LBM
             /**
              * @brief Global block offsets: the blocks at which this partition of the mesh begins
              **/
-            const blockLabel_t blockOffsets_;
+            const device::blockLabel blockOffsets_;
 
             /**
              * @brief Device block span: the number of mesh blocks per device
              **/
-            const blockLabel_t blockSpan_;
+            const device::blockLabel blockSpan_;
 
             /**
              * @brief Device index: the flattened index of the device
              **/
             const deviceIndex_t deviceID_;
 
-            const label_t size_;
+            const device::label_t size_;
 
             /**
              * @brief Computes the device ID assigned to a mesh partition
@@ -123,20 +156,20 @@ namespace LBM
              * @param[in] nGPUs The number of GPUs partitioning the domain in the x, y and z directions
              **/
             __host__ [[nodiscard]] deviceIndex_t getPartitionDeviceID(
-                const blockLabel_t &blockOffsets,
-                const blockLabel_t &blockSpan,
-                const blockLabel_t &nGPUs) noexcept
+                const device::blockLabel &blockOffsets,
+                const device::blockLabel &blockSpan,
+                const device::blockLabel &nGPUs) noexcept
             {
                 // Calculate how many blocks each GPU gets in each dimension
                 // Using ceiling division to distribute blocks as evenly as possible
-                const label_t blocksPerGPUx = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
-                const label_t blocksPerGPUy = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
-                const label_t blocksPerGPUz = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
+                const device::label_t blocksPerDevicex = (blockSpan.nx + nGPUs.nx) / nGPUs.nx; // ceiling division
+                const device::label_t blocksPerDevicey = (blockSpan.ny + nGPUs.ny) / nGPUs.ny;
+                const device::label_t blocksPerDevicez = (blockSpan.nz + nGPUs.nz) / nGPUs.nz;
 
                 // Determine which GPU partition this block belongs to
-                const label_t gpuX = blockOffsets.nx / blocksPerGPUx;
-                const label_t gpuY = blockOffsets.ny / blocksPerGPUy;
-                const label_t gpuZ = blockOffsets.nz / blocksPerGPUz;
+                const device::label_t gpuX = blockOffsets.nx / blocksPerDevicex;
+                const device::label_t gpuY = blockOffsets.ny / blocksPerDevicey;
+                const device::label_t gpuZ = blockOffsets.nz / blocksPerDevicez;
 
                 // Calculate and return GPU device ID
                 return static_cast<deviceIndex_t>(gpuX + gpuY * nGPUs.nx + gpuZ * nGPUs.nx * nGPUs.ny);
@@ -144,5 +177,7 @@ namespace LBM
         };
     }
 }
+
+#endif
 
 #endif

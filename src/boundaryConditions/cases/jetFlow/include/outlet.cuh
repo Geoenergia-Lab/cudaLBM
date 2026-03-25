@@ -282,8 +282,6 @@ case normalVector::NORTH_FRONT():
 
 case normalVector::FRONT():
 {
-    const label_t tid = device::idxBlock(threadIdx.x, threadIdx.y, threadIdx.z - 1);
-
     // Classic Neumann
     moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<0>()]; // rho
     moments[m_i<1>()] = shared_buffer[tid * (NUMBER_MOMENTS<false>() + 1) + m_i<1>()]; // ux

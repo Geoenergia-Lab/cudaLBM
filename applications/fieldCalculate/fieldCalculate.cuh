@@ -51,20 +51,20 @@ SourceFiles
 #define __MBLBM_FIELDCALCULATE_CUH
 
 #include "../../src/LBMIncludes.cuh"
-#include "../../src/LBMTypedefs.cuh"
+#include "../../src/typedefs/typedefs.cuh"
 #include "../../src/array/threadArray.cuh"
 #include "../../src/collision/collision.cuh"
 #include "../../src/blockHalo/blockHalo.cuh"
 #include "../../src/fileIO/fileIO.cuh"
 #include "../../src/runTimeIO/runTimeIO.cuh"
 #include "../../src/postProcess/postProcess.cuh"
-#include "../../src/inputControl.cuh"
+#include "../../src/programControl/programControl.cuh"
 #include "../../src/numericalSchemes/numericalSchemes.cuh"
 #include "../fieldConvert/fieldConvert.cuh"
 
 namespace LBM
 {
-    __host__ [[nodiscard]] inline consteval label_t SchemeOrder() { return 8; }
+    __host__ [[nodiscard]] inline consteval host::label_t SchemeOrder() { return 8; }
 
     /**
      * @brief Checks if a field contains any NaN values
@@ -92,7 +92,7 @@ namespace LBM
     __host__ void containsNaN(
         const host::arrayCollection<scalar_t, ctorType::MUST_READ> &variables,
         const host::latticeMesh &mesh,
-        const label_t timeStep) noexcept
+        const host::label_t timeStep) noexcept
     {
         // De-interleave the fields
         const std::vector<std::vector<scalar_t>> fields = fileIO::deinterleaveAoS(variables.arr(), mesh);
@@ -100,10 +100,10 @@ namespace LBM
         std::cout << "Time: " << timeStep << std::endl;
         std::cout << "{" << std::endl;
 
-        std::size_t numberNaNs = 0;
+        host::label_t numberNaNs = 0;
 
         // Loop over the fields checking for NaN
-        for (std::size_t field = 0; field < fields.size(); field++)
+        for (host::label_t field = 0; field < fields.size(); field++)
         {
             if (containsNaN(fields[field]))
             {
@@ -122,7 +122,6 @@ namespace LBM
         }
 
         std::cout << "};" << std::endl;
-        std::cout << std::endl;
 
         return;
     }
@@ -151,7 +150,7 @@ namespace LBM
     __host__ void spatialMean(
         const host::arrayCollection<scalar_t, ctorType::MUST_READ> &variables,
         const host::latticeMesh &mesh,
-        const label_t timeStep) noexcept
+        const host::label_t timeStep) noexcept
     {
         // De-interleave the fields
         const std::vector<std::vector<scalar_t>> fields = fileIO::deinterleaveAoS(variables.arr(), mesh);
@@ -159,14 +158,13 @@ namespace LBM
         std::cout << "Time: " << timeStep << std::endl;
         std::cout << "{" << std::endl;
 
-        for (std::size_t field = 0; field < fields.size(); field++)
+        for (host::label_t field = 0; field < fields.size(); field++)
         {
             const scalar_t fieldMean = spatialMean(fields[field]);
             std::cout << "    mean(" << variables.varNames()[field] << "): " << fieldMean << ";" << std::endl;
         }
 
         std::cout << "};" << std::endl;
-        std::cout << std::endl;
     }
 }
 

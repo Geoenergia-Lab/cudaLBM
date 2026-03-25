@@ -56,33 +56,34 @@ namespace LBM
     {
         namespace VTU
         {
-            __host__ [[nodiscard]] inline consteval bool hasFields() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasPoints() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasElements() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasOffsets() { return true; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() { return ".vtu"; }
+            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::BINARY; }
+            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".vtu"; }
 
             /**
              * @brief Auxiliary template function that performs the VTU file writing.
-             * @tparam indexType The data type for the mesh indices (uint32_t or uint64_t).
-             */
+             * @tparam indexType The data type for the mesh indices (uint32_t or host::label_t).
+             **/
             template <typename indexType>
             __host__ void VTUWriter(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames) noexcept
+                const words_t &solutionVarNames) noexcept
             {
-                const label_t numNodes = mesh.nx() * mesh.ny() * mesh.nz();
-                const label_t numElements = (mesh.nx() - 1) * (mesh.ny() - 1) * (mesh.nz() - 1);
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const host::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
+                const host::label_t numVars = solutionVars.size();
 
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
                 const std::vector<indexType> connectivity = meshConnectivity<false, indexType>(mesh);
                 const std::vector<indexType> offsets = meshOffsets<indexType>(mesh);
 
                 std::stringstream xml;
-                uint64_t currentOffset = 0;
+                host::label_t currentOffset = 0;
 
                 xml << "<?xml version=\"1.0\"?>\n";
                 xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
@@ -90,25 +91,25 @@ namespace LBM
                 xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
 
                 xml << "      <PointData Scalars=\"" << (solutionVarNames.empty() ? "" : solutionVarNames[0]) << "\">\n";
-                for (std::size_t i = 0; i < numVars; ++i)
+                for (host::label_t i = 0; i < numVars; ++i)
                 {
                     xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << solutionVarNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(uint64_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
                 }
                 xml << "      </PointData>\n";
 
                 xml << "      <Points>\n";
                 xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
                 xml << "      </Points>\n";
-                currentOffset += sizeof(uint64_t) + points.size() * sizeof(scalar_t);
+                currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
 
                 xml << "      <Cells>\n";
                 // Usa o indexType para obter o nome do tipo VTK correto
                 xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(uint64_t) + connectivity.size() * sizeof(indexType);
+                currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(indexType);
 
                 xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(uint64_t) + offsets.size() * sizeof(indexType);
+                currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(indexType);
 
                 xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
                 xml << "      </Cells>\n";
@@ -140,26 +141,26 @@ namespace LBM
              * @brief Writes solution variables to an unstructured grid VTU file (.vtu)
              * This function checks the mesh size and dispatches to the implementation with
              * the appropriate index type (32-bit or 64-bit).
-             */
+             **/
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
-                const std::string &fileName,
+                const name_t &fileName,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames)
+                const words_t &solutionVarNames)
             {
-                const uint64_t numNodes = static_cast<uint64_t>(mesh.nx()) * static_cast<uint64_t>(mesh.ny()) * static_cast<uint64_t>(mesh.nz());
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+                const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())
                 {
-                    errorHandler(-1, "Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
+                    throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
                 }
 
-                for (std::size_t i = 0; i < numVars; i++)
+                for (host::label_t i = 0; i < numVars; i++)
                 {
                     if (solutionVars[i].size() != numNodes)
                     {
-                        errorHandler(-1, "Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
+                        throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
                     }
                 }
 
@@ -174,7 +175,7 @@ namespace LBM
                         std::cout << "    directoryStatus: Unable to create directory" << directoryPrefix() << ";" << std::endl;
                         std::cout << "    writeStatus: Fail (unable to create directory)" << ";" << std::endl;
                         std::cout << "};" << std::endl;
-                        errorHandler(-1, "Error: Unable to create directory" + std::string(directoryPrefix()));
+                        throw std::runtime_error("Error: Unable to create directory" + name_t(directoryPrefix()));
                     }
                 }
                 else
@@ -182,29 +183,24 @@ namespace LBM
                     std::cout << "    directoryStatus: OK;" << std::endl;
                 }
 
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<format(), hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
 
                 // Check if there is enough disk space to store the file
-                if (!fileSystem::diskSpaceCheck<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size()))
-                {
-                    std::cout << "    diskSpace: Insufficient (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                    std::cout << "    writeStatus: Fail (insufficient disk space)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error: Insufficient disk space on drive " + fileSystem::diskName());
-                }
-                else
-                {
-                    std::cout << "    diskSpace: OK (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                }
+                fileSystem::diskSpaceAssertion<
+                    format(),
+                    hasFields(),
+                    hasPoints(),
+                    hasElements(),
+                    hasOffsets()>(
+                    mesh,
+                    solutionVars.size(),
+                    fileName);
 
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
+                constexpr const host::label_t limit32 = static_cast<host::label_t>(std::numeric_limits<uint32_t>::max());
 
-                constexpr const uint64_t limit32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
+                std::cout << "    indexType: uint" << ((numNodes >= limit32) ? "64_t;" : "32_t;") << std::endl;
 
-                std::cout << "    indexType: " << ((numNodes >= limit32) ? "uint64_t;" : "uint32_t;") << std::endl;
-
-                const std::string trueFileName(std::string(directoryPrefix()) + "/" + fileName + fileExtension());
+                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 
                 std::ofstream outFile(trueFileName);
                 if (outFile)
@@ -215,12 +211,12 @@ namespace LBM
                 {
                     std::cout << "    ofstreamStatus: Fail" << std::endl;
                     std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error opening file: " + trueFileName);
+                    throw std::runtime_error("Error opening file: " + trueFileName);
                 }
 
                 if (numNodes >= limit32)
                 {
-                    VTUWriter<uint64_t>(solutionVars, outFile, mesh, solutionVarNames);
+                    VTUWriter<host::label_t>(solutionVars, outFile, mesh, solutionVarNames);
                 }
                 else
                 {
@@ -228,7 +224,6 @@ namespace LBM
                 }
                 std::cout << "    writeStatus: success" << ";" << std::endl;
                 std::cout << "};" << std::endl;
-                std::cout << std::endl;
             }
         }
     }

@@ -53,261 +53,196 @@ SourceFiles
 
 using namespace LBM;
 
-using VelocitySet = D3Q19;
-
 int main(const int argc, const char *const argv[])
 {
-    static_assert((std::is_same<BoundaryConditions, lidDrivenCavity>::value) || std::is_same<BoundaryConditions, jetFlow>::value);
-
     const programControl programCtrl(argc, argv);
 
     // Set cuda device
-    checkCudaErrors(cudaDeviceSynchronize());
-    checkCudaErrors(cudaSetDevice(programCtrl.deviceList()[0]));
-    checkCudaErrors(cudaDeviceSynchronize());
+    errorHandler::check(cudaDeviceSynchronize());
+    errorHandler::check(cudaSetDevice(programCtrl.deviceList()[0]));
+    errorHandler::check(cudaDeviceSynchronize());
 
     const host::latticeMesh mesh(programCtrl);
 
     VelocitySet::print();
 
-    // Number of mesh points per GPU
-    const label_t nxGPUs = mesh.nDevices<axis::X>();
-    const label_t nyGPUs = mesh.nDevices<axis::Y>();
-    const label_t nzGPUs = mesh.nDevices<axis::Z>();
-    // const label_t nGPUs = nxGPUs * nyGPUs * nzGPUs;
+    // Allocate the arrays on the device
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> rho("rho", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> u("u", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> v("v", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> w("w", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mxx("m_xx", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mxy("m_xy", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mxz("m_xz", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> myy("m_yy", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> myz("m_yz", mesh, programCtrl);
+    device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> mzz("m_zz", mesh, programCtrl);
 
-    const label_t nxPointsPerGPU = mesh.nx() / nxGPUs;
-    const label_t nyPointsPerGPU = mesh.ny() / nyGPUs;
-    const label_t nzPointsPerGPU = mesh.nz() / nzGPUs;
-    const label_t nPointsPerGPU = nxPointsPerGPU * nyPointsPerGPU * nzPointsPerGPU;
+    // Setup Streams
+    const streamHandler streamsLBM(programCtrl);
 
-    // Number of mesh blocks per GPU
-    const label_t nxBlocksPerGPU = (mesh.nxBlocks()) / nxGPUs; // > Set to device::NUM_BLOCK_X
-    const label_t nyBlocksPerGPU = (mesh.nyBlocks()) / nyGPUs; // > Set to device::NUM_BLOCK_Y
-    const label_t nzBlocksPerGPU = (mesh.nzBlocks()) / nzGPUs; // > Set to device::NUM_BLOCK_Z
-    const dim3 gridBlock{static_cast<uint32_t>(nxBlocksPerGPU), static_cast<uint32_t>(nyBlocksPerGPU), static_cast<uint32_t>(nzBlocksPerGPU)};
+    // Allocate a buffer of pinned memory on the host for writing
+    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> hostWriteBuffer(mesh.size() * NUMBER_MOMENTS(), mesh);
 
-    // Create a host array corresponding to the deviceID - now in GPU-major order
-    host::array<host::PINNED, label_t, VelocitySet, time::instantaneous> deviceIndexArray(mesh.nPoints());
+    objectRegistry<VelocitySet> runTimeObjects(hostWriteBuffer, mesh, rho, u, v, w, mxx, mxy, mxz, myy, myz, mzz, streamsLBM, programCtrl);
 
-    // Vector of pointers to device memory
-    host::array<host::PINNED, label_t *, VelocitySet, time::instantaneous> devicePtrs(nxGPUs * nyGPUs * nzGPUs, nullptr);
+    BlockHalo blockHalo(mesh, programCtrl);
 
-    // Initialize deviceIndexArray in GPU-major order (all points for GPU 0, then GPU 1, etc.)
-    // This makes each GPU's data contiguous in memory
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
+    programCtrl.configure<smem_alloc_size<VelocitySet>()>(momentBasedD3Q27);
+
+    const runTimeIO IO(mesh, programCtrl);
+
+    for (host::label_t timeStep = programCtrl.latestTime(); timeStep < programCtrl.nt(); timeStep++)
     {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        // Do the run-time IO
+        if (programCtrl.print(timeStep))
         {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
-            {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
-
-                // Fill this GPU's contiguous segment
-                grid_for(
-                    nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
-                    [&](const label_t bx, const label_t by, const label_t bz,
-                        const label_t tx, const label_t ty, const label_t tz)
-                    {
-                        // Local index within GPU (same as kernel expects)
-                        const label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
-
-                        // Store in GPU-major order: GPU offset + local index
-                        deviceIndexArray[startIndex + localIdx] = virtualDeviceIndex;
-                    });
-            }
+            std::cout << "Time: " << timeStep << std::endl;
         }
-    }
 
-    // Now copy each GPU's contiguous segment to device memory
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
-    {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        // Checkpoint
+        if (programCtrl.save(timeStep))
         {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
+            // Do this in a loop
+            for (host::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
             {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
-
-                // Allocate memory on the GPU
-                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, static_cast<label_t>(programCtrl.deviceList().size() - 1))])));
-                checkCudaErrors(cudaMalloc(&(devicePtrs[virtualDeviceIndex]), nPointsPerGPU * sizeof(label_t)));
-                std::cout << "GPU " << virtualDeviceIndex << ": Allocated " << nPointsPerGPU
-                          << " elements of size " << sizeof(label_t) << std::endl;
-
-                // Copy the contiguous segment directly to GPU
-                // No packing needed - it's already contiguous!
-                checkCudaErrors(cudaMemcpy(
-                    devicePtrs[virtualDeviceIndex],
-                    &(deviceIndexArray[startIndex]),
-                    nPointsPerGPU * sizeof(label_t),
-                    cudaMemcpyHostToDevice));
-
-                // Create stream and launch test kernel
-                const streamHandler<1> streamsLBM;
-                testKernel<<<gridBlock, mesh.threadBlock(), 0, streamsLBM.streams()[0]>>>(
-                    devicePtrs[virtualDeviceIndex],
-                    nxBlocksPerGPU, nyBlocksPerGPU,
-                    (GPU_x * nxBlocksPerGPU),
-                    (GPU_y * nyBlocksPerGPU),
-                    (GPU_z * nzBlocksPerGPU),
-                    virtualDeviceIndex);
-                checkCudaErrors(cudaDeviceSynchronize());
+                hostWriteBuffer.copy_from_device(
+                    device::ptrCollection<10, scalar_t>{
+                        rho.ptr(VirtualDeviceIndex),
+                        u.ptr(VirtualDeviceIndex),
+                        v.ptr(VirtualDeviceIndex),
+                        w.ptr(VirtualDeviceIndex),
+                        mxx.ptr(VirtualDeviceIndex),
+                        mxy.ptr(VirtualDeviceIndex),
+                        mxz.ptr(VirtualDeviceIndex),
+                        myy.ptr(VirtualDeviceIndex),
+                        myz.ptr(VirtualDeviceIndex),
+                        mzz.ptr(VirtualDeviceIndex)},
+                    mesh,
+                    VirtualDeviceIndex);
             }
+
+            fileIO::writeFile<time::instantaneous>(
+                programCtrl.caseName() + "_" + std::to_string(timeStep) + ".LBMBin",
+                mesh,
+                functionObjects::solutionVariableNames,
+                hostWriteBuffer.data(),
+                timeStep,
+                rho.meanCount());
+
+            runTimeObjects.save(timeStep);
         }
-    }
 
-    // Copy back from GPU memory to the same contiguous segments
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
-    {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
         {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
-            {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
-
-                // Set the active device
-                checkCudaErrors(cudaSetDevice(static_cast<int>(programCtrl.deviceList()[std::min(virtualDeviceIndex, static_cast<label_t>(programCtrl.deviceList().size() - 1))])));
-                checkCudaErrors(cudaDeviceSynchronize());
-
-                // Copy back from device to the contiguous segment
-                checkCudaErrors(cudaMemcpy(
-                    &(deviceIndexArray[startIndex]),
-                    devicePtrs[virtualDeviceIndex],
-                    nPointsPerGPU * sizeof(label_t),
-                    cudaMemcpyDeviceToHost));
-
-                checkCudaErrors(cudaDeviceSynchronize());
-            }
+            errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+            errorHandler::checkInline(cudaDeviceSynchronize());
+            streamsLBM.synchronize(VirtualDeviceIndex);
         }
-    }
 
-    // After reconstruction, verify the data
-    bool verificationFailed = false;
-
-    // Verify each GPU's segment
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
-    {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        // Main kernel
+        for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
         {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
-            {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                const label_t expectedValue = virtualDeviceIndex + 100;
-                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
+            errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+            streamsLBM.synchronize(VirtualDeviceIndex);
 
-                // Check all points in this GPU's segment
-                for (label_t i = 0; i < nPointsPerGPU; i++)
-                {
-                    if (deviceIndexArray[startIndex + i] != expectedValue)
-                    {
-                        // Convert local index to coordinates for debugging
-                        label_t localIdx = i;
-                        const label_t tx = localIdx % block::nx();
-                        localIdx /= block::nx();
-                        const label_t ty = localIdx % block::ny();
-                        localIdx /= block::ny();
-                        const label_t tz = localIdx % block::nz();
-                        localIdx /= block::nz();
-                        const label_t bx = localIdx % nxBlocksPerGPU;
-                        localIdx /= nxBlocksPerGPU;
-                        const label_t by = localIdx % nyBlocksPerGPU;
-                        const label_t bz = localIdx / nyBlocksPerGPU;
+            const device::ptrCollection<10, scalar_t> devPtrs{
+                rho.ptr(VirtualDeviceIndex),
+                u.ptr(VirtualDeviceIndex),
+                v.ptr(VirtualDeviceIndex),
+                w.ptr(VirtualDeviceIndex),
+                mxx.ptr(VirtualDeviceIndex),
+                mxy.ptr(VirtualDeviceIndex),
+                mxz.ptr(VirtualDeviceIndex),
+                myy.ptr(VirtualDeviceIndex),
+                myz.ptr(VirtualDeviceIndex),
+                mzz.ptr(VirtualDeviceIndex)};
 
-                        const label_t global_bx = bx + (GPU_x * nxBlocksPerGPU);
-                        const label_t global_by = by + (GPU_y * nyBlocksPerGPU);
-                        const label_t global_bz = bz + (GPU_z * nzBlocksPerGPU);
+            const device::ptrCollection<6, const scalar_t> readBuffer = blockHalo.readBuffer(VirtualDeviceIndex);
+            const device::ptrCollection<6, scalar_t> writeBuffer = blockHalo.writeBuffer(VirtualDeviceIndex);
 
-                        std::cout << "Verification failed for GPU " << virtualDeviceIndex
-                                  << " at (block: " << global_bx << "," << global_by << "," << global_bz
-                                  << " thread: " << tx << "," << ty << "," << tz << ")"
-                                  << ": expected " << expectedValue
-                                  << ", got " << deviceIndexArray[startIndex + i] << std::endl;
-                        verificationFailed = true;
-                        {
-                            break;
-                        }
-                    }
-                }
-                if (verificationFailed)
-                {
-                    break;
-                }
-            }
-            if (verificationFailed)
-            {
-                break;
-            }
+            // Configure the kernel to run per GPU
+            momentBasedD3Q27<<<mesh.gridBlock(), mesh.threadBlock(), smem_alloc_size<VelocitySet>(), streamsLBM.streams()[VirtualDeviceIndex]>>>(devPtrs, readBuffer, writeBuffer);
+
+            errorHandler::checkLast();
         }
-        if (verificationFailed)
+
+        // Sync all devices and streams
+        for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
         {
-            break;
+            errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+            errorHandler::checkInline(cudaDeviceSynchronize());
+            streamsLBM.synchronize(VirtualDeviceIndex);
         }
-    }
 
-    if (!verificationFailed)
-    {
-        std::cout << "Reconstruction verification passed!" << std::endl;
-        std::cout << std::endl;
-    }
+        // Set the device
+        errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[0]));
 
-    // Create a temporary 2D array to reconstruct the z=0 plane
-    std::vector<std::vector<label_t>> plane(mesh.ny(), std::vector<label_t>(mesh.nx(), 999));
+        const host::label_t nxb = mesh.nBlocks<axis::X>();
+        const host::label_t nyb = mesh.nBlocks<axis::Y>();
 
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
-    {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
+        constexpr const host::threadLabel threadStart(static_cast<device::label_t>(0), static_cast<device::label_t>(0), static_cast<device::label_t>(0));
+
+        const host::label_t Size = static_cast<host::label_t>(sizeof(scalar_t)) * VelocitySet::QF<host::label_t>() * block::nx<host::label_t>() * block::ny<host::label_t>() * mesh.blocksPerDevice<axis::X>() * mesh.blocksPerDevice<axis::Y>();
+
+        constexpr const host::label_t WestDevice = 0;
+        constexpr const host::label_t EastDevice = 1;
+
+        constexpr const host::label_t WestPtr_x0 = 4;
+        constexpr const host::label_t EastPtr_x1 = 5;
+
+        // East to West exchange
+        // Destination z block: located at bz = nzBlocks
+        // Pretty sure this is right, not 100%
+        const host::blockLabel WestDeviceDestinationBlock(0, 0, 0);
+        const host::label_t WestDestinationID = host::idxPop<axis::Z, VelocitySet::QF()>(0, threadStart, WestDeviceDestinationBlock, nxb, nyb);
+
+        // Source z block: located at bz = 0
+        // Pretty sure this is right
+        const host::blockLabel EastDeviceSourceBlock(0, 0, 0);
+        const host::label_t EastSourceID = host::idxPop<axis::Z, VelocitySet::QF()>(0, threadStart, EastDeviceSourceBlock, nxb, nyb);
+
+        errorHandler::check(cudaMemcpyPeer(
+            &(blockHalo.writeBuffer(WestDevice).ptr<WestPtr_x0>()[WestDestinationID]),
+            programCtrl.deviceList()[WestDevice],
+            &(blockHalo.writeBuffer(EastDevice).ptr<WestPtr_x0>()[EastSourceID]),
+            programCtrl.deviceList()[EastDevice],
+            Size));
+
+        // West to East exchange
+        // Destination z block: located at bz = 0
+        // Pretty sure this is right
+        const host::blockLabel EastDeviceDestinationBlock(0, 0, mesh.blocksPerDevice<axis::Z>() - 1);
+        const host::label_t EastDestinationID = host::idxPop<axis::Z, VelocitySet::QF()>(0, threadStart, EastDeviceDestinationBlock, nxb, nyb);
+
+        // Source z block: located at bz = nzBlocks
+        // Pretty sure this is right
+        const host::blockLabel WestDeviceSourceBlock(0, 0, mesh.blocksPerDevice<axis::Z>() - 1);
+        const host::label_t WestSourceID = host::idxPop<axis::Z, VelocitySet::QF()>(0, threadStart, WestDeviceSourceBlock, nxb, nyb);
+
+        errorHandler::check(cudaMemcpyPeer(
+            &(blockHalo.writeBuffer(EastDevice).ptr<EastPtr_x1>()[EastDestinationID]),
+            programCtrl.deviceList()[EastDevice],
+            &(blockHalo.writeBuffer(WestDevice).ptr<EastPtr_x1>()[WestSourceID]),
+            programCtrl.deviceList()[WestDevice],
+            Size));
+
+        // Sync all devices and streams
+        for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
         {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
-            {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                const label_t startIndex = virtualDeviceIndex * nPointsPerGPU;
-
-                grid_for(
-                    nxBlocksPerGPU, nyBlocksPerGPU, nzBlocksPerGPU,
-                    [&](const label_t bx, const label_t by, const label_t bz,
-                        const label_t tx, const label_t ty, const label_t tz)
-                    {
-                        // Calculate global coordinates
-                        const label_t x = tx + block::nx() * (bx + (GPU_x * nxBlocksPerGPU));
-                        const label_t y = ty + block::ny() * (by + (GPU_y * nyBlocksPerGPU));
-                        const label_t z = tz + block::nz() * (bz + (GPU_z * nzBlocksPerGPU));
-
-                        if (z == 0)
-                        {
-                            // Calculate local index
-                            const label_t localIdx = host::idx(tx, ty, tz, bx, by, bz, nxBlocksPerGPU, nyBlocksPerGPU);
-                            plane[y][x] = deviceIndexArray[startIndex + localIdx] - 100; // Subtract 100 to get original GPU ID
-                        }
-                    });
-            }
+            errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+            errorHandler::checkInline(cudaDeviceSynchronize());
+            streamsLBM.synchronize(VirtualDeviceIndex);
         }
-    }
 
-    // Print the plane
-    for (label_t y = 0; y < mesh.ny(); y++)
-    {
-        for (label_t x = 0; x < mesh.nx(); x++)
+        // Halo pointer swap
+        for (device::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
         {
-            std::cout << plane[y][x] << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-
-    // Clean up memory used for testing
-    for (label_t GPU_z = 0; GPU_z < nzGPUs; GPU_z++)
-    {
-        for (label_t GPU_y = 0; GPU_y < nyGPUs; GPU_y++)
-        {
-            for (label_t GPU_x = 0; GPU_x < nxGPUs; GPU_x++)
-            {
-                const label_t virtualDeviceIndex = GPU_x + GPU_y * nxGPUs + GPU_z * nxGPUs * nyGPUs;
-                std::cout << "Freeing memory from address " << devicePtrs[virtualDeviceIndex] << " on device " << virtualDeviceIndex << std::endl;
-                checkCudaErrors(cudaFree(devicePtrs[virtualDeviceIndex]));
-            }
+            errorHandler::checkInline(cudaDeviceSynchronize());
+            errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
+            errorHandler::checkInline(cudaDeviceSynchronize());
+            blockHalo.swap(VirtualDeviceIndex);
+            errorHandler::checkInline(cudaDeviceSynchronize());
         }
     }
 

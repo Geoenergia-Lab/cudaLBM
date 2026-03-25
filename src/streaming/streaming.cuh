@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_STREAMING_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 #include "../globalFunctions.cuh"
 #include "../array/array.cuh"
 
@@ -72,11 +72,11 @@ namespace LBM
         /**
          * @brief Default constructor
          **/
-        __device__ __host__ [[nodiscard]] inline consteval streaming(){};
+        __device__ __host__ [[nodiscard]] inline consteval streaming() {}
 
         /**
          * @brief Saves thread population density to shared memory
-         * @tparam VelocitySet Velocity set configuration defining lattice structure
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          * @tparam N Size of shared memory array
          * @param[in] pop Population density array for current thread
          * @param[out] s_pop Shared memory array for population storage
@@ -86,35 +86,31 @@ namespace LBM
          * shared memory for efficient access during the streaming step.
          * It uses compile-time loop unrolling for optimal performance.
          **/
-        template <class VelocitySet, const std::size_t N>
-        __device__ static inline void save(
-            const thread::array<scalar_t, VelocitySet::Q()> &pop,
-            thread::array<scalar_t, N> &s_pop,
-            const label_t tid) noexcept
-        {
-            device::constexpr_for<0, (VelocitySet::Q() - 1)>(
-                [&](const auto q_)
-                {
-                    s_pop[q_i<q_ * block::stride()>() + tid] = pop[q_i<q_ + 1>()];
-                });
-        }
-
         template <class VelocitySet>
         __device__ static inline void save(
             const thread::array<scalar_t, VelocitySet::Q()> &pop,
             scalar_t *const ptrRestrict s_pop,
-            const label_t tid) noexcept
+            const device::label_t tid) noexcept
         {
             device::constexpr_for<0, (VelocitySet::Q() - 1)>(
-                [&](const auto q_)
+                [&](const auto i)
                 {
-                    s_pop[q_i<q_ * block::stride()>() + tid] = pop[q_i<q_ + 1>()];
+                    s_pop[q_i<i * block::stride()>() + tid] = pop[q_i<i + 1>()];
                 });
+        }
+
+        template <class VelocitySet, const host::label_t N>
+        __device__ static inline void save(
+            const thread::array<scalar_t, VelocitySet::Q()> &pop,
+            thread::array<scalar_t, N> &s_pop,
+            const device::label_t tid) noexcept
+        {
+            save<VelocitySet>(pop, s_pop.data(), tid);
         }
 
         /**
          * @brief Pulls population density from shared memory with periodic boundaries
-         * @tparam VelocitySet Velocity set configuration defining lattice structure
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          * @tparam N Size of shared memory array
          * @param[out] pop Population density array to be populated
          * @param[in] s_pop Shared memory array containing population data
@@ -123,104 +119,32 @@ namespace LBM
          * periodic boundary conditions to handle data exchange between threads
          * at block boundaries. It implements the D3Q19 streaming pattern.
          **/
-        template <class VelocitySet, const std::size_t N>
-        __device__ static inline void pull(
-            thread::array<scalar_t, VelocitySet::Q()> &pop,
-            const thread::array<scalar_t, N> &s_pop) noexcept
-        {
-            device::constexpr_for<0, (VelocitySet::Q() - 1)>(
-                [&](const auto q_)
-                {
-                    const label_t x = periodic_index<-VelocitySet::template cx<int>(q_i<q_ + 1>()), block::nx()>(threadIdx.x);
-                    const label_t y = periodic_index<-VelocitySet::template cy<int>(q_i<q_ + 1>()), block::ny()>(threadIdx.y);
-                    const label_t z = periodic_index<-VelocitySet::template cz<int>(q_i<q_ + 1>()), block::nz()>(threadIdx.z);
-                    pop[q_i<q_ + 1>()] = s_pop[q_i<q_ * block::stride()>() + device::idxBlock(x, y, z)];
-                });
-        }
-
         template <class VelocitySet>
         __device__ static inline void pull(
             thread::array<scalar_t, VelocitySet::Q()> &pop,
-            const scalar_t *const ptrRestrict s_pop) noexcept
+            const scalar_t *const ptrRestrict s_pop,
+            const thread::coordinate &Tx) noexcept
         {
             device::constexpr_for<0, (VelocitySet::Q() - 1)>(
-                [&](const auto q_)
+                [&](const auto i)
                 {
-                    const label_t x = periodic_index<-VelocitySet::template cx<int>(q_i<q_ + 1>()), block::nx()>(threadIdx.x);
-                    const label_t y = periodic_index<-VelocitySet::template cy<int>(q_i<q_ + 1>()), block::ny()>(threadIdx.y);
-                    const label_t z = periodic_index<-VelocitySet::template cz<int>(q_i<q_ + 1>()), block::nz()>(threadIdx.z);
-                    pop[q_i<q_ + 1>()] = s_pop[q_i<q_ * block::stride()>() + device::idxBlock(x, y, z)];
+                    const device::label_t x = periodic_index<-VelocitySet::template cx<int>(q_i<i + 1>()), block::nx()>(Tx.value<axis::X>());
+                    const device::label_t y = periodic_index<-VelocitySet::template cy<int>(q_i<i + 1>()), block::ny()>(Tx.value<axis::Y>());
+                    const device::label_t z = periodic_index<-VelocitySet::template cz<int>(q_i<i + 1>()), block::nz()>(Tx.value<axis::Z>());
+                    pop[q_i<i + 1>()] = s_pop[q_i<i * block::stride()>() + block::idx(x, y, z)];
                 });
         }
 
-        template <const label_t N>
-        __device__ static inline void phase_pull(
-            thread::array<scalar_t, 7> &phase_pop,
-            const thread::array<scalar_t, N> &s_phase_pop) noexcept
+        template <class VelocitySet, const host::label_t N>
+        __device__ static inline void pull(
+            thread::array<scalar_t, VelocitySet::Q()> &pop,
+            const thread::array<scalar_t, N> &s_pop,
+            const thread::coordinate &Tx) noexcept
         {
-            const label_t xm1 = periodic_index<-1, block::nx()>(threadIdx.x);
-            const label_t xp1 = periodic_index<1, block::nx()>(threadIdx.x);
-            const label_t ym1 = periodic_index<-1, block::ny()>(threadIdx.y);
-            const label_t yp1 = periodic_index<1, block::ny()>(threadIdx.y);
-            const label_t zm1 = periodic_index<-1, block::nz()>(threadIdx.z);
-            const label_t zp1 = periodic_index<1, block::nz()>(threadIdx.z);
-
-            phase_pop[q_i<1>()] = s_phase_pop[q_i<0 * block::stride()>() + device::idxBlock(xm1, threadIdx.y, threadIdx.z)];
-            phase_pop[q_i<2>()] = s_phase_pop[q_i<1 * block::stride()>() + device::idxBlock(xp1, threadIdx.y, threadIdx.z)];
-            phase_pop[q_i<3>()] = s_phase_pop[q_i<2 * block::stride()>() + device::idxBlock(threadIdx.x, ym1, threadIdx.z)];
-            phase_pop[q_i<4>()] = s_phase_pop[q_i<3 * block::stride()>() + device::idxBlock(threadIdx.x, yp1, threadIdx.z)];
-            phase_pop[q_i<5>()] = s_phase_pop[q_i<4 * block::stride()>() + device::idxBlock(threadIdx.x, threadIdx.y, zm1)];
-            phase_pop[q_i<6>()] = s_phase_pop[q_i<5 * block::stride()>() + device::idxBlock(threadIdx.x, threadIdx.y, zp1)];
-        }
-
-        __device__ static inline void phase_pull(
-            thread::array<scalar_t, 7> &phase_pop,
-            const scalar_t *const ptrRestrict s_phase_pop) noexcept
-        {
-            const label_t xm1 = periodic_index<-1, block::nx()>(threadIdx.x);
-            const label_t xp1 = periodic_index<1, block::nx()>(threadIdx.x);
-            const label_t ym1 = periodic_index<-1, block::ny()>(threadIdx.y);
-            const label_t yp1 = periodic_index<1, block::ny()>(threadIdx.y);
-            const label_t zm1 = periodic_index<-1, block::nz()>(threadIdx.z);
-            const label_t zp1 = periodic_index<1, block::nz()>(threadIdx.z);
-
-            phase_pop[q_i<1>()] = s_phase_pop[q_i<0 * block::stride()>() + device::idxBlock(xm1, threadIdx.y, threadIdx.z)];
-            phase_pop[q_i<2>()] = s_phase_pop[q_i<1 * block::stride()>() + device::idxBlock(xp1, threadIdx.y, threadIdx.z)];
-            phase_pop[q_i<3>()] = s_phase_pop[q_i<2 * block::stride()>() + device::idxBlock(threadIdx.x, ym1, threadIdx.z)];
-            phase_pop[q_i<4>()] = s_phase_pop[q_i<3 * block::stride()>() + device::idxBlock(threadIdx.x, yp1, threadIdx.z)];
-            phase_pop[q_i<5>()] = s_phase_pop[q_i<4 * block::stride()>() + device::idxBlock(threadIdx.x, threadIdx.y, zm1)];
-            phase_pop[q_i<6>()] = s_phase_pop[q_i<5 * block::stride()>() + device::idxBlock(threadIdx.x, threadIdx.y, zp1)];
+            pull<VelocitySet>(pop, s_pop.data(), Tx);
         }
 
     private:
-        /**
-         * @brief Computes linear index for population data within a block
-         * @tparam pop Population component index
-         * @param[in] tx Thread x-coordinate within block
-         * @param[in] ty Thread y-coordinate within block
-         * @param[in] tz Thread z-coordinate within block
-         * @return Linearized index in shared memory
-         *
-         * Memory layout: [pop][tz][ty][tx] (pop slowest varying, tx fastest)
-         **/
-        template <const label_t pop>
-        __device__ [[nodiscard]] static inline label_t idxPopBlock(const label_t tx, const label_t ty, const label_t tz) noexcept
-        {
-            return tx + block::nx() * (ty + block::ny() * (tz + block::nz() * (pop)));
-        }
-
-        /**
-         * @brief Computes linear index for population data using dim3 coordinates
-         * @tparam pop Population component index
-         * @param[in] tx Thread coordinates as dim3 structure
-         * @return Linearized index in shared memory
-         **/
-        template <const label_t pop>
-        __device__ [[nodiscard]] static inline label_t idxPopBlock(const dim3 &tx) noexcept
-        {
-            return idxPopBlock<pop>(tx.x, tx.y, tx.z);
-        }
-
         /**
          * @brief Computes periodic boundary index with optimization for power-of-two dimensions
          * @tparam Shift Direction shift (-1 for backward, +1 for forward)
@@ -231,23 +155,25 @@ namespace LBM
          * This function uses bitwise AND optimization when Dim is power-of-two
          * for improved performance, falling back to modulo arithmetic otherwise.
          **/
-        template <const int Shift, const int Dim>
-        __device__ [[nodiscard]] static inline label_t periodic_index(const label_t idx) noexcept
+        template <const int coeff, const device::label_t Dim>
+        __device__ [[nodiscard]] static inline device::label_t periodic_index(const device::label_t idx) noexcept
         {
-            static_assert((Shift == -1) || (Shift == 1) || (Shift == 0), "Shift must be -1, 0, or 1");
+            velocityCoefficient::assertions::validate<coeff, velocityCoefficient::CAN_BE_NULL>();
 
             if constexpr (Dim > 0 && (Dim & (Dim - 1)) == 0)
             {
                 // Power-of-two: use bitwise AND
-                if constexpr (Shift == -1)
+                if constexpr (coeff == -1)
                 {
                     return (idx - 1) & (Dim - 1);
                 }
-                else if constexpr (Shift == 1)
+
+                if constexpr (coeff == 1)
                 {
                     return (idx + 1) & (Dim - 1);
                 }
-                else
+
+                if constexpr (coeff == 0)
                 {
                     return idx & (Dim - 1);
                 }
@@ -255,15 +181,17 @@ namespace LBM
             else
             {
                 // General case: adjust by adding Dim to ensure nonnegative modulo
-                if constexpr (Shift == -1)
+                if constexpr (coeff == -1)
                 {
                     return (idx - 1 + Dim) % Dim;
                 }
-                else if constexpr (Shift == 1)
+
+                if constexpr (coeff == 1)
                 {
                     return (idx + 1) % Dim;
                 }
-                else
+
+                if constexpr (coeff == 0)
                 {
                     return idx % Dim;
                 }

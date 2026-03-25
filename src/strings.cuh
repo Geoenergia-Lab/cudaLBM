@@ -48,7 +48,7 @@ SourceFiles
 \*---------------------------------------------------------------------------*/
 
 #include "LBMIncludes.cuh"
-#include "LBMTypedefs.cuh"
+#include "typedefs/typedefs.cuh"
 
 #ifndef __MBLBM_STRINGS_CUH
 #define __MBLBM_STRINGS_CUH
@@ -64,11 +64,11 @@ namespace LBM
          * @return A new vector of strings with s concatenated to each element of S.
          * @note This function creates a new vector and does not modify the input vector S.
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> catenate(const std::string &s, const std::vector<std::string> &S) noexcept
+        __host__ [[nodiscard]] const words_t catenate(const name_t &s, const words_t &S) noexcept
         {
-            std::vector<std::string> S_new(S.size(), "");
+            words_t S_new(S.size(), "");
 
-            for (std::size_t i = 0; i < S_new.size(); i++)
+            for (host::label_t i = 0; i < S_new.size(); i++)
             {
                 S_new[i] = s + S_new[i];
             }
@@ -83,11 +83,11 @@ namespace LBM
          * @return A new vector of strings with s concatenated to each element of S.
          * @note This function creates a new vector and does not modify the input vector S.
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> catenate(const std::vector<std::string> &S, const std::string &s) noexcept
+        __host__ [[nodiscard]] const words_t catenate(const words_t &S, const name_t &s) noexcept
         {
-            std::vector<std::string> S_new(S.size(), "");
+            words_t S_new(S.size(), "");
 
-            for (std::size_t i = 0; i < S_new.size(); i++)
+            for (host::label_t i = 0; i < S_new.size(); i++)
             {
                 S_new[i] = S[i] + s;
             }
@@ -102,7 +102,7 @@ namespace LBM
          * @return true if target is found in vec, false otherwise.
          * @note Uses std::find for efficient searching.
          **/
-        __host__ [[nodiscard]] inline bool containsString(const std::vector<std::string> &vec, const std::string &target) noexcept
+        __host__ [[nodiscard]] inline constexpr bool containsString(const words_t &vec, const name_t &target) noexcept
         {
             return std::find(vec.begin(), vec.end(), target) != vec.end(); // was constexpr
         }
@@ -113,7 +113,7 @@ namespace LBM
          * @param[in] c The character to search for
          * @return The position of c within str
          **/
-        __host__ [[nodiscard]] inline std::size_t findCharPosition(const std::string &str, const char (&c)[2])
+        __host__ [[nodiscard]] inline constexpr host::label_t findCharPosition(const name_t &str, const char (&c)[2])
         {
             return str.find(c[0]); // was constexpr
         }
@@ -124,10 +124,10 @@ namespace LBM
          * @return A single string with each element of S separated by a newline character.
          * @note This function is useful for creating multi-line strings from a list of lines.
          **/
-        __host__ [[nodiscard]] const std::string catenate(const std::vector<std::string> &S) noexcept
+        __host__ [[nodiscard]] const name_t catenate(const words_t &S) noexcept
         {
-            std::string s;
-            for (std::size_t line = 0; line < S.size(); line++)
+            name_t s;
+            for (host::label_t line = 0; line < S.size(); line++)
             {
                 s = s + S[line] + "\n";
             }
@@ -141,30 +141,30 @@ namespace LBM
          * @throws std::runtime_error if the input vector has 2 or fewer lines.
          * @note This function is useful for removing enclosing braces from blocks of text.
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> eraseBraces(const std::vector<std::string> &lines) noexcept
+        __host__ [[nodiscard]] const words_t eraseBraces(const words_t &lines)
         {
             // Check minimum size requirement
             if (lines.size() < 3)
             {
-                errorHandler(-1, "Lines must have at least 3 entries: opening bracket, content, and closing bracket. Problematic entry: " + catenate(lines));
+                throw std::runtime_error("Lines must have at least 3 entries: opening bracket, content, and closing bracket. Problematic entry: " + catenate(lines));
             }
 
             // Check that first element is exactly "{"
             if (lines.front() != "{")
             {
-                errorHandler(-1, "First element must be opening brace '{'. Problematic entry: " + catenate(lines));
+                throw std::runtime_error("First element must be opening brace '{'. Problematic entry: " + catenate(lines));
             }
 
             // Check that last element is exactly "};"
             if (lines.back() != "};")
             {
-                errorHandler(-1, "Last element must be closing brace with semicolon '};'. Problematic entry: " + catenate(lines));
+                throw std::runtime_error("Last element must be closing brace with semicolon '};'. Problematic entry: " + catenate(lines));
             }
 
             // Create new vector without the braces
-            std::vector<std::string> newLines(lines.size() - 2);
+            words_t newLines(lines.size() - 2);
 
-            for (std::size_t line = 1; line < lines.size() - 1; line++)
+            for (host::label_t line = 1; line < lines.size() - 1; line++)
             {
                 newLines[line - 1] = lines[line];
             }
@@ -172,18 +172,31 @@ namespace LBM
             return newLines;
         }
 
+        __host__ [[nodiscard]] const words_t splitByWhitespace(const name_t &str)
+        {
+            std::istringstream iss(str);
+            words_t tokens;
+            name_t token;
+            while (iss >> token)
+            {
+                // operator>> skips leading whitespace and stops at whitespace
+                tokens.push_back(token);
+            }
+            return tokens;
+        }
+
         /**
          * @brief Trims leading and trailing whitespace from a string.
-         * @param str The input string to trim.
+         * @param[in] str The input string to trim.
          * @return Trimmed string, or empty string if only whitespace.
          * @note Handles space, tab, newline, carriage return, form feed, and vertical tab.
          **/
         template <const bool trimSemicolon>
-        __host__ [[nodiscard]] const std::string trim(const std::string &str)
+        __host__ [[nodiscard]] const name_t trim(const name_t &str)
         {
-            const std::size_t start = str.find_first_not_of(" \t\n\r\f\v");
+            const host::label_t start = str.find_first_not_of(" \t\n\r\f\v");
 
-            if (start == std::string::npos)
+            if (start == name_t::npos)
             {
                 return "";
             }
@@ -200,15 +213,15 @@ namespace LBM
 
         /**
          * @brief Trims leading and trailing whitespace from each string in a vector.
-         * @param str The vector of strings to trim.
+         * @param[in] str The vector of strings to trim.
          * @return A new vector with each string trimmed.
          **/
         template <const bool trimSemicolon>
-        __host__ [[nodiscard]] const std::vector<std::string> trim(const std::vector<std::string> &str)
+        __host__ [[nodiscard]] const words_t trim(const words_t &str)
         {
-            std::vector<std::string> strTrimmed(str.size(), "");
+            words_t strTrimmed(str.size(), "");
 
-            for (std::size_t s = 0; s < str.size(); s++)
+            for (host::label_t s = 0; s < str.size(); s++)
             {
                 strTrimmed[s] = trim<trimSemicolon>(str[s]);
             }
@@ -218,14 +231,14 @@ namespace LBM
 
         /**
          * @brief Removes C++-style comments from a string.
-         * @param str The input string to process.
+         * @param[in] str The input string to process.
          * @return String with comments removed (everything after '//').
          * @note Only handles single-line comments starting with '//'.
          **/
-        __host__ [[nodiscard]] const std::string removeComments(const std::string &str)
+        __host__ [[nodiscard]] const name_t removeComments(const name_t &str)
         {
-            const std::size_t commentPos = str.find("//");
-            if (commentPos != std::string::npos)
+            const host::label_t commentPos = str.find("//");
+            if (commentPos != name_t::npos)
             {
                 return str.substr(0, commentPos);
             }
@@ -234,11 +247,11 @@ namespace LBM
 
         /**
          * @brief Checks if a string contains only whitespace characters.
-         * @param str The string to check.
+         * @param[in] str The string to check.
          * @return true if string contains only whitespace, false otherwise.
          * @note Uses std::isspace for whitespace detection.
          **/
-        __host__ [[nodiscard]] bool isOnlyWhitespace(const std::string &str)
+        __host__ [[nodiscard]] bool isOnlyWhitespace(const name_t &str)
         {
             for (char c : str)
             {
@@ -252,25 +265,25 @@ namespace LBM
 
         /**
          * @brief Finds the line number where a block declaration starts.
-         * @param lines Vector of strings representing the source lines.
-         * @param blockName The name of the block to find (e.g., "boundaryField").
-         * @param startLine Line number to start searching from (default: 0).
+         * @param[in] lines Vector of strings representing the source lines.
+         * @param[in] blockName The name of the block to find (e.g., "boundaryField").
+         * @param[in] startLine Line number to start searching from (default: 0).
          * @return Line number where the block declaration was found.
          * @throws std::runtime_error if block is not found.
          * @note Handles various declaration styles including braces and semicolons.
          **/
-        __host__ [[nodiscard]] std::size_t findBlockLine(const std::vector<std::string> &lines, const std::string &blockName, const std::size_t startLine = 0)
+        __host__ [[nodiscard]] host::label_t findBlockLine(const words_t &lines, const name_t &blockName, const host::label_t startLine = 0)
         {
-            for (std::size_t i = startLine; i < lines.size(); ++i)
+            for (host::label_t i = startLine; i < lines.size(); ++i)
             {
-                const std::string processedLine = removeComments(lines[i]);
-                const std::string trimmedLine = trim<false>(processedLine);
+                const name_t processedLine = removeComments(lines[i]);
+                const name_t trimmedLine = trim<false>(processedLine);
 
                 // Check if line starts with the block name
                 if (trimmedLine.compare(0, blockName.length(), blockName) == 0)
                 {
                     // Extract the rest of the line after the block name
-                    const std::string rest = trim<false>(trimmedLine.substr(blockName.length()));
+                    const name_t rest = trim<false>(trimmedLine.substr(blockName.length()));
 
                     // Check if the next token is empty or a brace
                     if (rest.empty() || rest == "{" || rest[0] == '{')
@@ -286,7 +299,7 @@ namespace LBM
 
                     // For cases like "internalField" which might be followed by other content
                     std::istringstream iss(rest);
-                    std::string nextToken;
+                    name_t nextToken;
                     iss >> nextToken;
 
                     if (nextToken.empty() || nextToken == "{" || nextToken == ";")
@@ -301,29 +314,29 @@ namespace LBM
 
         /**
          * @brief Extracts a complete block (with braces) from source lines.
-         * @param lines Vector of strings representing the source lines.
-         * @param blockName The name of the block to extract.
-         * @param startLine Line number to start searching from (default: 0).
+         * @param[in] lines Vector of strings representing the source lines.
+         * @param[in] blockName The name of the block to extract.
+         * @param[in] startLine Line number to start searching from (default: 0).
          * @return Vector of strings containing the complete block including braces.
          * @throws std::runtime_error for malformed blocks or unbalanced braces.
          * @note Preserves original formatting including comments in the returned block.
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> extractBlock(const std::vector<std::string> &lines, const std::string &blockName, const std::size_t startLine = 0)
+        __host__ [[nodiscard]] const words_t extractBlock(const words_t &lines, const name_t &blockName, const host::label_t startLine = 0)
         {
-            std::vector<std::string> result;
+            words_t result;
 
             // Find the block line using the helper function
-            const std::size_t blockLine = findBlockLine(lines, blockName, startLine);
+            const host::label_t blockLine = findBlockLine(lines, blockName, startLine);
 
             // Check for non-whitespace content between block declaration and opening brace
             bool foundOpeningBrace = false;
             int braceCount = 0;
-            std::size_t openingBraceLine = 0;
+            host::label_t openingBraceLine = 0;
 
             // First, check if the opening brace is on the same line as the block declaration
-            const std::string blockLineProcessed = removeComments(lines[blockLine]);
-            std::size_t openBracePos = blockLineProcessed.find('{');
-            if (openBracePos != std::string::npos)
+            const name_t blockLineProcessed = removeComments(lines[blockLine]);
+            host::label_t openBracePos = blockLineProcessed.find('{');
+            if (openBracePos != name_t::npos)
             {
                 // Opening brace is on the same line as block declaration
                 braceCount = 1;
@@ -334,26 +347,26 @@ namespace LBM
             else
             {
                 // Check subsequent lines for the opening brace
-                for (std::size_t i = blockLine + 1; i < lines.size(); ++i)
+                for (host::label_t i = blockLine + 1; i < lines.size(); ++i)
                 {
-                    const std::string processedLine = removeComments(lines[i]);
-                    const std::string trimmedLine = trim<false>(processedLine);
+                    const name_t processedLine = removeComments(lines[i]);
+                    const name_t trimmedLine = trim<false>(processedLine);
 
                     // Check for closing brace before opening brace
-                    if (processedLine.find('}') != std::string::npos)
+                    if (processedLine.find('}') != name_t::npos)
                     {
                         throw std::runtime_error("Found closing brace before opening brace for block '" + blockName + "'");
                     }
 
                     // Check for non-whitespace content
-                    if (!isOnlyWhitespace(trimmedLine) && trimmedLine.find('{') == std::string::npos)
+                    if (!isOnlyWhitespace(trimmedLine) && trimmedLine.find('{') == name_t::npos)
                     {
                         throw std::runtime_error("Non-whitespace content found between block declaration and opening brace for block '" + blockName + "'");
                     }
 
                     // Check for opening brace
                     openBracePos = processedLine.find('{');
-                    if (openBracePos != std::string::npos)
+                    if (openBracePos != name_t::npos)
                     {
                         braceCount = 1;
                         result.push_back(lines[i]);
@@ -373,10 +386,10 @@ namespace LBM
             }
 
             // Continue processing from the line after the opening brace
-            for (std::size_t i = openingBraceLine + 1; i < lines.size(); ++i)
+            for (host::label_t i = openingBraceLine + 1; i < lines.size(); ++i)
             {
                 // Process each line to count braces, but keep the original line in the result
-                const std::string processedLineInner = removeComments(lines[i]);
+                const name_t processedLineInner = removeComments(lines[i]);
                 for (char c : processedLineInner)
                 {
                     if (c == '{')
@@ -402,13 +415,13 @@ namespace LBM
 
         /**
          * @brief Extracts a field-specific block using a combined key-field identifier.
-         * @param lines Vector of strings representing the source lines.
-         * @param fieldName The field name (e.g., "p" for pressure).
-         * @param key The block type key (e.g., "internalField").
+         * @param[in] lines Vector of strings representing the source lines.
+         * @param[in] fieldName The field name (e.g., "p" for pressure).
+         * @param[in] key The block type key (e.g., "internalField").
          * @return Vector of strings containing the complete block.
          * @note Convenience wrapper for extractBlock(lines, key + " " + fieldName).
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> extractBlock(const std::vector<std::string> &lines, const std::string &fieldName, const std::string &key)
+        __host__ [[nodiscard]] const words_t extractBlock(const words_t &lines, const name_t &fieldName, const name_t &key)
         {
             return extractBlock(lines, key + " " + fieldName);
         }
@@ -418,21 +431,21 @@ namespace LBM
          * @return A std::vector of std::string_view objects contained within the caseInfo file
          * @note This function will cause the program to exit if caseInfo is not found in the launch directory
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> readFile(const std::string &fileName)
+        __host__ [[nodiscard]] const words_t readFile(const name_t &fileName)
         {
             // Does the file even exist?
             if (!std::filesystem::exists(fileName))
             {
-                throw std::runtime_error(std::string(fileName) + std::string(" file not opened"));
+                throw std::runtime_error(name_t(fileName) + name_t(" file not opened"));
             }
 
             // Read the caseInfo file contained within the directory
-            std::ifstream caseInfo(std::string(fileName).c_str());
-            std::vector<std::string> S;
-            std::string s;
+            std::ifstream caseInfo(name_t(fileName).c_str());
+            words_t S;
+            name_t s;
 
             // Count the number of lines
-            label_t nLines = 0;
+            device::label_t nLines = 0;
 
             // Count the number of lines
             while (std::getline(caseInfo, s))
@@ -448,18 +461,18 @@ namespace LBM
 
         /**
          * @brief Checks that the input string is numeric.
-         * @param s The string_view object which is to be checked.
+         * @param[in] s The string_view object which is to be checked.
          * @return True if s is a valid number, false otherwise.
          * @note A valid number can optionally start with a '+' or '-' sign and may contain one decimal point.
          **/
-        __host__ [[nodiscard]] bool isNumber(const std::string &s) noexcept
+        __host__ [[nodiscard]] bool isNumber(const name_t &s) noexcept
         {
             if (s.empty())
             {
                 return false;
             }
 
-            std::string::const_iterator it = s.begin();
+            name_t::const_iterator it = s.begin();
 
             // Check for optional sign
             if (*it == '+' || *it == '-')
@@ -507,10 +520,10 @@ namespace LBM
 
         /**
          * @brief Determines whether or not the number string is all digits
-         * @param numStr The number string
+         * @param[in] numStr The number string
          * @return True if the string is all digits, false otherwise
          **/
-        __host__ [[nodiscard]] inline bool isAllDigits(const std::string &numStr) noexcept
+        __host__ [[nodiscard]] inline bool isAllDigits(const name_t &numStr) noexcept
         {
             for (char c : numStr)
             {
@@ -525,16 +538,16 @@ namespace LBM
 
         /**
          * @brief Splits the string_view object s according to the delimiter delim
-         * @param s The string_view object which is to be split
-         * @param delim The delimiter character by which s is split, e.g. a comma, space, etc
-         * @param removeWhitespace Controls the removal of whitespace; removes blank spaces from the return value if true (default true)
+         * @param[in] s The string_view object which is to be split
+         * @param[in] delim The delimiter character by which s is split, e.g. a comma, space, etc
+         * @param[in] removeWhitespace Controls the removal of whitespace; removes blank spaces from the return value if true (default true)
          * @return A std::vector of std::string_view objects split from s by delim
          * @note This function can be used to, for example, split a string by commas, spaces, etc
          **/
-        template <const char delim>
-        __host__ [[nodiscard]] const std::vector<std::string> split(const std::string_view &s, const bool removeWhitespace = true) noexcept
+        template <const char delim, const bool removeWhitespace>
+        __host__ [[nodiscard]] const words_t split(const std::string_view &s) noexcept
         {
-            std::vector<std::string> result;
+            words_t result;
             const char *left = s.begin();
             for (const char *it = left; it != s.end(); ++it)
             {
@@ -550,23 +563,30 @@ namespace LBM
             }
 
             // Remove whitespace from the returned vector
-            if (removeWhitespace)
+            if constexpr (removeWhitespace)
             {
-                result.erase(std::remove(result.begin(), result.end(), ""), result.end());
+                result.erase(std::remove(result.begin(), result.end(), " "), result.end());
             }
 
             return result;
         }
 
-        __host__ [[nodiscard]] const std::string extractParameterLine(const std::vector<std::string> &S, const std::string &name)
+        __host__ [[nodiscard]] const name_t extractParameterLine(const words_t &S, const name_t &name)
         {
-            for (const auto &line : S)
+            // Loop over S
+            for (device::label_t i = 0; i < S.size(); i++)
             {
-                // Trim leading whitespace
-                const auto first = line.find_first_not_of(" \t");
-                if (first == std::string::npos)
+                // Check if S[i] contains a substring of name
+                if (S[i].find(name) != name_t::npos)
                 {
-                    continue;
+                    // Split by space and remove whitespace
+                    const words_t s = splitByWhitespace(S[i]);
+                    // const words_t s = split<" "[0], true>(S[i]);
+
+                    // Check that the last char is ;
+                    // Perform the exit here if the above string is not equal to ;
+
+                    return name_t(s[1].begin(), s[1].end() - 1);
                 }
 
                 // Key must match at start of line
@@ -621,18 +641,18 @@ namespace LBM
 
         /**
          * @brief Searches for an entry corresponding to variableName within the vector of strings S
-         * @param T The type of variable returned
-         * @param S The vector of strings which is searched
-         * @param name The name of the variable which is to be found and returned as type T
+         * @param[in] T The type of variable returned
+         * @param[in] S The vector of strings which is searched
+         * @param[in] name The name of the variable which is to be found and returned as type T
          * @return The value of the variable expressed as a type T
          * @note This function can be used to, for example, read an entry of nx within caseInfo after caseInfo has been loaded into S
          * @note The line containing the definition of variableName must separate variableName and its value with a space, for instance nx 128;
          **/
         template <typename T>
-        __host__ [[nodiscard]] T extractParameter(const std::vector<std::string> &S, const std::string &name)
+        __host__ [[nodiscard]] T extractParameter(const words_t &S, const name_t &name)
         {
             // First get the parameter line string
-            const std::string toReturn = extractParameterLine(S, name);
+            const name_t toReturn = extractParameterLine(S, name);
 
             // Is it supposed a boolean?
             if constexpr (std::is_same_v<T, bool>)
@@ -673,7 +693,7 @@ namespace LBM
                 return static_cast<T>(std::stold(toReturn));
             }
             // Is it supposed a string?
-            else if constexpr (std::is_same_v<T, std::string>)
+            else if constexpr (std::is_same_v<T, name_t>)
             {
                 return toReturn;
             }
@@ -684,7 +704,7 @@ namespace LBM
         }
 
         template <typename T>
-        __host__ [[nodiscard]] T extractParameter(const std::string &toReturn)
+        __host__ [[nodiscard]] T extractParameter(const name_t &toReturn)
         {
             // Is it supposed a boolean?
             if constexpr (std::is_same_v<T, bool>)
@@ -719,13 +739,13 @@ namespace LBM
                     return static_cast<T>(std::stol(toReturn));
                 }
             }
-            // Is it supposed a floating ponit value?
+            // Is it supposed a floating point value?
             else if constexpr (std::is_floating_point_v<T>)
             {
                 return static_cast<T>(std::stold(toReturn));
             }
             // Is it supposed a string?
-            else if constexpr (std::is_same_v<T, std::string>)
+            else if constexpr (std::is_same_v<T, name_t>)
             {
                 return toReturn;
             }
@@ -736,15 +756,39 @@ namespace LBM
         }
 
         /**
+         * @brief Extract a three‑component vector from a configuration file.
+         *
+         * Reads the file to obtain the x, y, z components using keys formed by appending
+         * "x", "y", "z" to the prefix. Each component is extracted via
+         * string::extractParameter<value_type>`
+         *
+         * @tparam T Vector type with nested value_type and constructible from three values.
+         * @param[in] fileName Configuration file path.
+         * @param[in] prefix Common prefix for component keys (e.g., "block").
+         * @return T constructed from the three extracted values.
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] const T extractParameter(const name_t &fileName, const name_t &prefix) noexcept
+        {
+            using value_type = typename T::value_type;
+
+            const words_t fileLines = string::readFile(fileName);
+
+            return {string::extractParameter<value_type>(fileLines, prefix + "x"),
+                    string::extractParameter<value_type>(fileLines, prefix + "y"),
+                    string::extractParameter<value_type>(fileLines, prefix + "z")};
+        }
+
+        /**
          * @brief Parses a name-value pair
-         * @param args The list of arguments to be searched
-         * @param name The argument to be searched for
+         * @param[in] args The list of arguments to be searched
+         * @param[in] name The argument to be searched for
          * @return A std::string_view of the value argument corresponding to name
          **/
-        __host__ [[nodiscard]] const std::string parseNameValuePair(const std::vector<std::string> &args, const std::string &name)
+        __host__ [[nodiscard]] const name_t parseNameValuePair(const words_t &args, const name_t &name)
         {
             // Loop over the input arguments and search for name
-            for (label_t i = 0; i < args.size(); i++)
+            for (device::label_t i = 0; i < args.size(); i++)
             {
                 // The name argument exists, so handle it
                 if (args[i] == name)
@@ -757,53 +801,53 @@ namespace LBM
                     // Otherwise it is out of bounds: the supplied argument is the last argument and no value pair has been supplied
                     else
                     {
-                        throw std::runtime_error("Input argument " + std::string(name) + std::string(" has not been supplied with a value; the correct syntax is -GPU 0,1 for example"));
+                        throw std::runtime_error("Input argument " + name_t(name) + name_t(" has not been supplied with a value; the correct syntax is -GPU 0,1 for example"));
                         return "";
                     }
                 }
             }
-            throw std::runtime_error("Input argument " + std::string(name) + std::string(" has not been supplied"));
+            throw std::runtime_error("Input argument " + name_t(name) + name_t(" has not been supplied"));
             return "";
         }
 
         /**
          * @brief Parses the value of the argument following name
-         * @param argc First argument passed to main
-         * @param argv Second argument passed to main
+         * @param[in] argc First argument passed to main
+         * @param[in] argv Second argument passed to main
          * @return A vector of integral type T
          * @note This function can be used to parse arguments passed to the executable on the command line such as -GPU 0,1
          **/
         template <typename T>
-        __host__ [[nodiscard]] const std::vector<T> parseValue(const std::vector<std::string> &args, const std::string &name)
+        __host__ [[nodiscard]] const std::vector<T> parseValue(const words_t &args, const name_t &name)
         {
-            const std::vector<std::string> s_v = string::split<","[0]>(parseNameValuePair(args, name), true);
+            const words_t s_v = string::split<","[0], true>(parseNameValuePair(args, name));
 
             std::vector<T> arr;
-            label_t arrLength = 0;
+            device::label_t arrLength = 0;
 
-            for (label_t i = 0; i < s_v.size(); i++)
+            for (device::label_t i = 0; i < s_v.size(); i++)
             {
                 // Should check here if the string converts to a negative number and exit
                 if constexpr (std::is_signed_v<T>)
                 {
                     if (isNumber(s_v[i]))
                     {
-                        arr.push_back(std::stoi(std::string(s_v[i])));
+                        arr.push_back(std::stoi(name_t(s_v[i])));
                     }
                     else
                     {
-                        throw std::runtime_error(std::string(name) + std::string(" is not numeric"));
+                        throw std::runtime_error(name_t(name) + name_t(" is not numeric"));
                     }
                 }
                 else
                 {
                     if (isNumber(s_v[i]))
                     {
-                        arr.push_back(std::stoul(std::string(s_v[i])));
+                        arr.push_back(std::stoul(name_t(s_v[i])));
                     }
                     else
                     {
-                        throw std::runtime_error(std::string("Value supplied to argument ") + std::string(name) + std::string(" is not numeric"));
+                        throw std::runtime_error(name_t("Value supplied to argument ") + name_t(name) + name_t(" is not numeric"));
                     }
                 }
                 arrLength = arrLength + 1;

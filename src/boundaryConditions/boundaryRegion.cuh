@@ -56,7 +56,7 @@ namespace LBM
     /**
      * @class boundaryRegion
      * @brief Represents a complete set of boundary values for all fields in a specific region
-     * @tparam VelocitySet Velocity set configuration defining lattice structure
+     * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
      *
      * This struct aggregates all field values (density, velocity components, and moments)
      * for a specific boundary region, providing convenient access to individual components.
@@ -65,7 +65,8 @@ namespace LBM
     class boundaryRegion
     {
     public:
-        __host__ [[nodiscard]] boundaryRegion(const std::string &regionName)
+        // Need to check that the length of fieldNames is 10
+        __host__ [[nodiscard]] boundaryRegion(const name_t &regionName)
             : values_{
                   boundaryValue<VelocitySet, Scaled>("rho", regionName),
                   boundaryValue<VelocitySet, Scaled>("u", regionName),
@@ -95,43 +96,43 @@ namespace LBM
          **/
         __host__ [[nodiscard]] inline constexpr scalar_t rho() const noexcept
         {
-            return values_[index::rho()]();
+            return values_[index::rho]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t u() const noexcept
         {
-            return values_[index::u()]();
+            return values_[index::u]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t v() const noexcept
         {
-            return values_[index::v()]();
+            return values_[index::v]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t w() const noexcept
         {
-            return values_[index::w()]();
+            return values_[index::w]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xx() const noexcept
         {
-            return values_[index::xx()]();
+            return values_[index::xx]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xy() const noexcept
         {
-            return values_[index::xy()]();
+            return values_[index::xy]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_xz() const noexcept
         {
-            return values_[index::xz()]();
+            return values_[index::xz]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_yy() const noexcept
         {
-            return values_[index::yy()]();
+            return values_[index::yy]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_yz() const noexcept
         {
-            return values_[index::yz()]();
+            return values_[index::yz]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t m_zz() const noexcept
         {
-            return values_[index::zz()]();
+            return values_[index::zz]();
         }
         __host__ [[nodiscard]] inline constexpr scalar_t phi() const noexcept
         {
@@ -144,7 +145,8 @@ namespace LBM
          **/
         void print() const noexcept
         {
-            for (std::size_t field = 0; field < N_FIELDS; field++)
+            const words_t regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
+            for (host::label_t field = 0; field < regionNames.size(); field++)
             {
                 std::cout << index::name(field) << ": " << values_[field]() << std::endl;
             }

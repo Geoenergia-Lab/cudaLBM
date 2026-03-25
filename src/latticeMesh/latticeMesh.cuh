@@ -51,18 +51,42 @@ SourceFiles
 #define __MBLBM_LATTICEMESH_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 #include "../globalFunctions.cuh"
 #include "../programControl/programControl.cuh"
+
+#include "hostLatticeMesh.cuh"
+#include "deviceLatticeMesh.cuh"
 
 namespace LBM
 {
     namespace host
     {
+        /**
+         * @brief Memory index (host version)
+         * @param[in] tx,ty,tz Thread-local coordinates
+         * @param[in] bx,by,bz Block indices
+         * @param[in] mesh The lattice mesh
+         * @return Linearized index using mesh constants
+         *
+         * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
+         **/
+        __host__ [[nodiscard]] inline label_t idx(
+            const label_t tx, const label_t ty, const label_t tz,
+            const label_t bx, const label_t by, const label_t bz,
+            const latticeMesh &mesh) noexcept
+        {
+            return idx(tx, ty, tz, bx, by, bz, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+        }
+
+        __host__ [[nodiscard]] inline label_t idx(
+            const threadLabel &Tx,
+            const blockLabel &Bx,
+            const latticeMesh &mesh) noexcept
+        {
+            return idx(Tx.x, Tx.y, Tx.z, Bx.x, Bx.y, Bx.z, mesh.nBlocks<axis::X>(), mesh.nBlocks<axis::Y>());
+        }
     }
 }
-
-#include "hostLatticeMesh.cuh"
-#include "deviceLatticeMesh.cuh"
 
 #endif

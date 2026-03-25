@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_BOUNDARYCONDITIONS_CUH
 
 #include "../LBMIncludes.cuh"
-#include "../LBMTypedefs.cuh"
+#include "../typedefs/typedefs.cuh"
 #include "../array/threadArray.cuh"
 #include "normalVector.cuh"
 #include "boundaryValue.cuh"

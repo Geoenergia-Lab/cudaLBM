@@ -51,7 +51,7 @@ SourceFiles
 #define __MBLBM_YOUR_FILENAME_UPPERCASE_CUH
 
 #include "LBMIncludes.cuh"
-#include "LBMTypedefs.cuh"
+#include "typedefs/typedefs.cuh"
 
 // Add additional includes as needed
 // #include "path/to/other/dependencies.cuh"
@@ -79,7 +79,7 @@ namespace LBM
          * @param[in] param2 Description of second parameter
          **/
         template <class ParamType1, class ParamType2>
-        __host__ YourClassName(const ParamType1 param1, const ParamType2 param2) {};
+        __host__ YourClassName(const ParamType1 param1, const ParamType2 param2) {}
 
         /**
          * @brief Destructor
@@ -90,27 +90,27 @@ namespace LBM
          * @brief Copy constructor
          * @param[in] other Object to copy from
          **/
-        YourClassName(const YourClassName &other) {};
+        YourClassName(const YourClassName &other) {}
 
         /**
          * @brief Move constructor
          * @param[in] other Object to move from
          **/
-        YourClassName(const YourClassName &&other) noexcept {};
+        YourClassName(const YourClassName &&other) noexcept {}
 
         /**
          * @brief Copy assignment operator
          * @param[in] other Object to copy from
          * @return Reference to this object
          **/
-        YourClassName &operator=(const YourClassName &other) {};
+        YourClassName &operator=(const YourClassName &other) {}
 
         /**
          * @brief Move assignment operator
          * @param[in] other Object to move from
          * @return Reference to this object
          **/
-        YourClassName &operator=(const YourClassName &&other) noexcept {};
+        YourClassName &operator=(const YourClassName &&other) noexcept {}
 
         /**
          * @brief Example member function
@@ -118,7 +118,7 @@ namespace LBM
          * @return Description of return value
          **/
         template <class ReturnType, class InputType>
-        __host__ [[nodiscard]] ReturnType exampleFunction(const InputType input) const {};
+        __host__ [[nodiscard]] ReturnType exampleFunction(const InputType input) const {}
 
         /**
          * @brief Example CUDA device function
@@ -126,7 +126,7 @@ namespace LBM
          * @return Description of return value
          **/
         template <class DeviceReturnType, class DeviceInputType>
-        __device__ [[nodiscard]] DeviceReturnType deviceFunction(const DeviceInputType input) const {};
+        __device__ [[nodiscard]] DeviceReturnType deviceFunction(const DeviceInputType input) const {}
 
     private:
         // Member variables with brief descriptions
@@ -138,7 +138,7 @@ namespace LBM
          * @param[in] input Description of input parameter
          **/
         template <class HelperInputType>
-        void helperFunction(const HelperInputType input) {};
+        void helperFunction(const HelperInputType input) {}
     };
 
     /**
@@ -149,7 +149,7 @@ namespace LBM
      * @note Optional
      **/
     template <class ReturnType, class ParamType>
-    __device__ __host__ [[nodiscard]] ReturnType nonMemberFunction(const YourClassName &obj, const ParamType param) {};
+    __device__ __host__ [[nodiscard]] ReturnType nonMemberFunction(const YourClassName &obj, const ParamType param) {}
 
 } // namespace LBM
 

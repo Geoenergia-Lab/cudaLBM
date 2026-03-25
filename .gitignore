@@ -40,11 +40,7 @@ thirdParty/opt*
 thirdParty/openmpi-5.0.7.tar.gz
 build
 
-# Lid driven cavity directory ignores
-cases/*/*/*.dat
-cases/*/*/*.vtu
-cases/*/*/*.vts
-cases/*/*/*.vti
+# Case directory ignores
 cases/*/*/*.LBMBin
 cases/*/*/*/*.dat
 cases/*/*/*/*.vtu
@@ -52,9 +48,17 @@ cases/*/*/*/*.vts
 cases/*/*/*/*.vti
 
 # Unit test directory ignores
+unitTests/ComputeSanitizerTest/*.LBMBin
 unitTests/ComputeSanitizerTest/*.dat
 unitTests/ComputeSanitizerTest/*.vtu
 unitTests/ComputeSanitizerTest/*.vts
 unitTests/ComputeSanitizerTest/*.vti
-unitTests/ComputeSanitizerTest/*.LBMBin
 unitTests/ComputeSanitizerTest/logs
+
+# Test executable directory ignores
+applications/testExecutable/*/*.LBMBin
+applications/testExecutable/*/*/*.dat
+applications/testExecutable/*/*/*.vts
+applications/testExecutable/*/*/*.vtu
+applications/testExecutable/*/*/*.vti
+applications/testExecutable/*/logs

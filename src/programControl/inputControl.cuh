@@ -50,10 +50,6 @@ SourceFiles
 #ifndef __MBLBM_INPUTCONTROL_CUH
 #define __MBLBM_INPUTCONTROL_CUH
 
-#include "LBMIncludes.cuh"
-#include "LBMTypedefs.cuh"
-#include "strings.cuh"
-
 namespace LBM
 {
     /**
@@ -76,12 +72,18 @@ namespace LBM
         __host__ [[nodiscard]] inputControl(const int argc, const char *const argv[]) noexcept
             : nArgs_(nArgsCheck(argc)),
               commandLine_(parseCommandLine(argc, argv)),
-              deviceList_(initialiseDeviceList()){};
+              deviceList_(initialiseDeviceList()) {}
 
         /**
          * @brief Destructor for the inputControl class
          **/
-        ~inputControl() noexcept {};
+        ~inputControl() noexcept {}
+
+        /**
+         * @brief Disable copying
+         **/
+        __host__ [[nodiscard]] inputControl(const inputControl &) = delete;
+        __host__ [[nodiscard]] inputControl &operator=(const inputControl &) = delete;
 
         /**
          * @brief Returns the device list as a vector of ints
@@ -97,9 +99,9 @@ namespace LBM
          * @param[in] name The argument to search for
          * @return bool True if the argument is present, false otherwise
          **/
-        __host__ [[nodiscard]] bool isArgPresent(const std::string &name) const noexcept
+        __host__ [[nodiscard]] bool isArgPresent(const name_t &name) const noexcept
         {
-            for (label_t i = 0; i < commandLine_.size(); i++)
+            for (device::label_t i = 0; i < commandLine_.size(); i++)
             {
                 if (commandLine_[i] == name)
                 {
@@ -112,16 +114,16 @@ namespace LBM
 
         /**
          * @brief Returns the command line input as a vector of strings
-         * @return const std::vector<std::string>& The parsed command line arguments
+         * @return The parsed command line arguments
          **/
-        __host__ [[nodiscard]] inline constexpr const std::vector<std::string> &commandLine() const noexcept
+        __host__ [[nodiscard]] inline constexpr const words_t &commandLine() const noexcept
         {
             return commandLine_;
         }
 
         /**
          * @brief Returns the name of the currently running executable
-         * @return const std::string& The executable name
+         * @return The executable name
          **/
         __host__ [[nodiscard]] inline const std::string &executableName() const noexcept
         {
@@ -132,47 +134,47 @@ namespace LBM
         /**
          * @brief Number of arguments supplied at the command line
          **/
-        const label_t nArgs_;
+        const device::label_t nArgs_;
 
         /**
          * @brief Validates and returns the number of command line arguments
          * @param[in] argc First argument passed to main (argument count)
-         * @return label_t Validated number of arguments
+         * @return device::label_t Validated number of arguments
          * @throws std::runtime_error if argument count is negative
          **/
-        __host__ [[nodiscard]] label_t nArgsCheck(const int argc) const
+        __host__ [[nodiscard]] device::label_t nArgsCheck(const int argc) const
         {
             // Check for a bad number of supplied arguments
             if (argc < 0)
             {
                 throw std::runtime_error("Bad value of argc: cannot be negative");
-                return std::numeric_limits<label_t>::max();
+                return std::numeric_limits<device::label_t>::max();
             }
             else
             {
-                return static_cast<label_t>(argc);
+                return static_cast<device::label_t>(argc);
             }
         }
 
         /**
          * @brief The parsed command line
          **/
-        const std::vector<std::string> commandLine_;
+        const words_t commandLine_;
 
         /**
          * @brief Parses command line arguments into a vector of strings
          * @param[in] argc First argument passed to main (argument count)
          * @param[in] argv Second argument passed to main (argument vector)
-         * @return std::vector<std::string> Parsed command line arguments
+         * @return words_t Parsed command line arguments
          **/
-        __host__ [[nodiscard]] const std::vector<std::string> parseCommandLine(const int argc, const char *const argv[]) const noexcept
+        __host__ [[nodiscard]] const words_t parseCommandLine(const int argc, const char *const argv[]) const noexcept
         {
             if (argc > 0)
             {
-                std::vector<std::string> arr;
-                label_t arrLength = 0;
+                words_t arr;
+                device::label_t arrLength = 0;
 
-                for (label_t i = 0; i < static_cast<label_t>(argc); i++)
+                for (device::label_t i = 0; i < static_cast<device::label_t>(argc); i++)
                 {
                     arr.push_back(argv[i]);
                     arrLength = arrLength + 1;
@@ -183,7 +185,7 @@ namespace LBM
             }
             else
             {
-                return std::vector<std::string>{""};
+                return words_t{""};
             }
         }
 
@@ -207,7 +209,7 @@ namespace LBM
             {
                 const std::vector<deviceIndex_t> parsedList = string::parseValue<deviceIndex_t>(commandLine_, "-GPU");
 
-                if (parsedList.size() > static_cast<label_t>(nAvailableDevices()) || nAvailableDevices() < 1)
+                if (parsedList.size() > static_cast<device::label_t>(nAvailableDevices()) || nAvailableDevices() < 1)
                 {
                     throw std::runtime_error("Number of GPUs requested is greater than the number available");
                 }
@@ -217,7 +219,7 @@ namespace LBM
             {
                 if ((executableName() == "fieldConvert") | (executableName() == "fieldCalculate") | (executableName() == "computeVersion"))
                 {
-                    return {0};
+                    return {};
                 }
                 else
                 {
@@ -233,7 +235,7 @@ namespace LBM
         __host__ [[nodiscard]] deviceIndex_t nAvailableDevices() const noexcept
         {
             deviceIndex_t deviceCount = -1;
-            cudaGetDeviceCount(&deviceCount);
+            errorHandler::check(cudaGetDeviceCount(&deviceCount));
             return deviceCount;
         }
     };

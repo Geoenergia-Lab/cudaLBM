@@ -57,15 +57,15 @@ case normalVector::WEST_SOUTH_BACK():
     {
         moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -80,15 +80,15 @@ case normalVector::EAST_SOUTH_BACK():
     {
         moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -103,15 +103,15 @@ case normalVector::WEST_NORTH_BACK():
     {
         moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -126,15 +126,15 @@ case normalVector::EAST_NORTH_BACK():
     {
         moments[m_i<0>()] = (static_cast<scalar_t>(216) * rho_I) / (static_cast<scalar_t>(125)); // rho
     }
-    moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
+    //  moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    //  moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -144,16 +144,19 @@ case normalVector::WEST_BACK():
     // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-    moments[m_i<0>()] = (static_cast<scalar_t>(36) * mxz_I * device::omega * rho_I - static_cast<scalar_t>(36) * mxz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
-    moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mxy
-    moments[m_i<6>()] = (static_cast<scalar_t>(25) * mxz_I - static_cast<scalar_t>(1)) / (static_cast<scalar_t>(9) * mxz_I * device::omega - static_cast<scalar_t>(9) * mxz_I + static_cast<scalar_t>(9));         // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mzz
+    const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    //  moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz; // mxz
+                             // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+                             // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+                             //  moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -163,16 +166,19 @@ case normalVector::EAST_BACK():
     // Incoming moments
     const scalar_t mxz_I = velocitySet::calculate_moment<VelocitySet, axis::X, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-    moments[m_i<0>()] = (-static_cast<scalar_t>(36) * mxz_I * device::omega * rho_I + static_cast<scalar_t>(36) * mxz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
-    moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mxy
-    moments[m_i<6>()] = (static_cast<scalar_t>(25) * mxz_I + static_cast<scalar_t>(1)) / (-static_cast<scalar_t>(9) * mxz_I * device::omega + static_cast<scalar_t>(9) * mxz_I + static_cast<scalar_t>(9));         // mxz
-    moments[m_i<8>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mzz
+    const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - mxz_I * rho_I + mxz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t mxz = (static_cast<scalar_t>(36) * mxz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    //  moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    moments[m_i<6>()] = mxz; // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    // moments[m_i<8>()] = static_cast<scalar_t>(0); // myz
+    // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -182,16 +188,19 @@ case normalVector::SOUTH_BACK():
     // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-    moments[m_i<0>()] = (static_cast<scalar_t>(36) * myz_I * device::omega * rho_I - static_cast<scalar_t>(36) * myz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
-    moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mxz
-    moments[m_i<8>()] = (static_cast<scalar_t>(25) * myz_I - static_cast<scalar_t>(1)) / (static_cast<scalar_t>(9) * myz_I * device::omega - static_cast<scalar_t>(9) * myz_I + static_cast<scalar_t>(9));         // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0);                                                                                                                                                                  // mzz
+    const scalar_t rho = static_cast<scalar_t>(36) * (rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I - rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz; // myz
+                             // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
@@ -201,16 +210,19 @@ case normalVector::NORTH_BACK():
     // Incoming moments
     const scalar_t myz_I = velocitySet::calculate_moment<VelocitySet, axis::Y, axis::Z>(pop, boundaryNormal) * inv_rho_I;
 
-    moments[m_i<0>()] = (-static_cast<scalar_t>(36) * myz_I * device::omega * rho_I + static_cast<scalar_t>(36) * myz_I * rho_I + static_cast<scalar_t>(36) * rho_I) / (device::omega + static_cast<scalar_t>(24)); // rho
-    moments[m_i<1>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // ux
-    moments[m_i<2>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // uy
-    moments[m_i<3>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // uz
-    moments[m_i<4>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mxx
-    moments[m_i<5>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mxy
-    moments[m_i<6>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mxz
-    moments[m_i<8>()] = (static_cast<scalar_t>(25) * myz_I + static_cast<scalar_t>(1)) / (-static_cast<scalar_t>(9) * myz_I * device::omega + static_cast<scalar_t>(9) * myz_I + static_cast<scalar_t>(9));         // myz
-    moments[m_i<7>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // myy
-    moments[m_i<9>()] = static_cast<scalar_t>(0);                                                                                                                                                                   // mzz
+    const scalar_t rho = -static_cast<scalar_t>(36) * (-rho_I - myz_I * rho_I + myz_I * rho_I * device::omega) / (static_cast<scalar_t>(24) + device::omega);
+    const scalar_t myz = (static_cast<scalar_t>(36) * myz_I * rho_I + rho) / (static_cast<scalar_t>(9) * rho);
+
+    moments[m_i<0>()] = rho;
+    // moments[m_i<1>()] = static_cast<scalar_t>(0); // ux
+    // moments[m_i<2>()] = static_cast<scalar_t>(0); // uy
+    // moments[m_i<3>()] = static_cast<scalar_t>(0); // uz
+    // moments[m_i<4>()] = static_cast<scalar_t>(0); // mxx
+    // moments[m_i<5>()] = static_cast<scalar_t>(0); // mxy
+    // moments[m_i<6>()] = static_cast<scalar_t>(0); // mxz
+    // moments[m_i<7>()] = static_cast<scalar_t>(0); // myy
+    moments[m_i<8>()] = myz; // myz
+                             // moments[m_i<9>()] = static_cast<scalar_t>(0); // mzz
 
     return;
 }
