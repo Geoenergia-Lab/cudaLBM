@@ -74,7 +74,7 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const words_t &varNames) noexcept
+                const words_t &varNames)
             {
                 // For a structured grid, we need different calculations
                 const host::label_t numVars = solutionVars.size();
@@ -82,41 +82,41 @@ namespace LBM
                 // Get points in the correct order for structured grid (i fastest, then j, then k)
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
 
-                std::stringstream xml;
-                host::label_t currentOffset = 0;
-
-                // Calculate extents - note the -1 for the maximum indices
-                const host::label_t dimX = mesh.dimension<axis::X>() - 1;
-                const host::label_t dimY = mesh.dimension<axis::Y>() - 1;
-                const host::label_t dimZ = mesh.dimension<axis::Z>() - 1;
-
-                xml << "<?xml version=\"1.0\"?>\n";
-                xml << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
-                xml << "  <StructuredGrid WholeExtent=\"0 " << dimX << " 0 " << dimY << " 0 " << dimZ << "\">\n";
-                xml << "    <Piece Extent=\"0 " << dimX << " 0 " << dimY << " 0 " << dimZ << "\">\n";
-
-                // Point data (same as before)
-                xml << "      <PointData Scalars=\"" << (varNames.empty() ? "" : varNames[0]) << "\">\n";
-                for (host::label_t i = 0; i < numVars; ++i)
                 {
-                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << varNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    std::stringstream xml;
+                    host::label_t currentOffset = 0;
+
+                    // Calculate extents - note the -1 for the maximum indices
+                    const host::label_t dimX = mesh.dimension<axis::X>() - 1;
+                    const host::label_t dimY = mesh.dimension<axis::Y>() - 1;
+                    const host::label_t dimZ = mesh.dimension<axis::Z>() - 1;
+
+                    xml << "<?xml version=\"1.0\"?>\n";
+                    xml << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+                    xml << "  <StructuredGrid WholeExtent=\"0 " << dimX << " 0 " << dimY << " 0 " << dimZ << "\">\n";
+                    xml << "    <Piece Extent=\"0 " << dimX << " 0 " << dimY << " 0 " << dimZ << "\">\n";
+
+                    // Point data (same as before)
+                    xml << "      <PointData Scalars=\"" << (varNames.empty() ? "" : varNames[0]) << "\">\n";
+                    for (host::label_t i = 0; i < numVars; ++i)
+                    {
+                        xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << varNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                        currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    }
+                    xml << "      </PointData>\n";
+
+                    // Points section (same as before)
+                    xml << "      <Points>\n";
+                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"" << 3 << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    xml << "      </Points>\n";
+                    currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
+
+                    xml << "    </Piece>\n";
+                    xml << "  </StructuredGrid>\n";
+                    xml << "  <AppendedData encoding=\"raw\">_";
+
+                    outFile << xml.str();
                 }
-                xml << "      </PointData>\n";
-
-                // Points section (same as before)
-                xml << "      <Points>\n";
-                xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"" << 3 << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                xml << "      </Points>\n";
-                currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
-
-                // NO Cells section for StructuredGrid - this is the key difference!
-
-                xml << "    </Piece>\n";
-                xml << "  </StructuredGrid>\n";
-                xml << "  <AppendedData encoding=\"raw\">_";
-
-                outFile << xml.str();
 
                 // Write point data arrays
                 for (const auto &varData : solutionVars)

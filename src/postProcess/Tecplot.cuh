@@ -96,7 +96,7 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const words_t &varNames) noexcept
+                const words_t &varNames)
             {
                 // Check input sizes
                 const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();

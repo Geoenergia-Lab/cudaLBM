@@ -72,81 +72,64 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const words_t &varNames) noexcept
+                const words_t &varNames)
             {
                 const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
                 const host::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
                 const host::label_t numVars = solutionVars.size();
 
-                std::cout << "Creating mesh detail" << std::endl;
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
                 const std::vector<host::label_t> connectivity = meshConnectivity<false, host::label_t>(mesh);
                 const std::vector<host::label_t> offsets = meshOffsets<host::label_t>(mesh);
-                std::cout << "Done creating mesh detail" << std::endl;
-                std::cout << "points.size() = " << points.size() << std::endl;
-                std::cout << "connectivity.size() = " << connectivity.size() << std::endl;
-                std::cout << "offsets.size() = " << offsets.size() << std::endl;
+                const std::vector<uint8_t> types(numElements, static_cast<uint8_t>(12));
 
-                std::stringstream xml;
-                host::label_t currentOffset = 0;
-
-                xml << "<?xml version=\"1.0\"?>\n";
-                xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
-                xml << "  <UnstructuredGrid>\n";
-                xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
-
-                xml << "      <PointData Scalars=\"" << (varNames.empty() ? "" : varNames[0]) << "\">\n";
-                for (host::label_t i = 0; i < numVars; ++i)
                 {
-                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << varNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
-                }
-                xml << "      </PointData>\n";
+                    std::stringstream xml;
+                    host::label_t currentOffset = 0;
 
-                xml << "      <Points>\n";
-                xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                xml << "      </Points>\n";
-                currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
+                    xml << "<?xml version=\"1.0\"?>\n";
+                    xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+                    xml << "  <UnstructuredGrid>\n";
+                    xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
 
-                xml << "      <Cells>\n";
-                // Usa o indexType para obter o nome do tipo VTK correto
-                xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(host::label_t);
+                    xml << "      <PointData Scalars=\"" << (varNames.empty() ? "" : varNames[0]) << "\">\n";
+                    for (host::label_t i = 0; i < numVars; ++i)
+                    {
+                        xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << varNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                        currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    }
+                    xml << "      </PointData>\n";
 
-                xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(host::label_t);
+                    xml << "      <Points>\n";
+                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    xml << "      </Points>\n";
+                    currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
 
-                xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                xml << "      </Cells>\n";
+                    xml << "      <Cells>\n";
+                    // Usa o indexType para obter o nome do tipo VTK correto
+                    xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(host::label_t);
 
-                xml << "    </Piece>\n";
-                xml << "  </UnstructuredGrid>\n";
-                xml << "  <AppendedData encoding=\"raw\">_";
+                    xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(host::label_t);
 
-                outFile << xml.str();
+                    xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    xml << "      </Cells>\n";
 
-                for (host::label_t i = 0; i < solutionVars.size(); i++)
-                {
-                    std::cout << varNames[i] << std::endl;
-                    writeBinaryBlock(solutionVars[i], outFile);
+                    xml << "    </Piece>\n";
+                    xml << "  </UnstructuredGrid>\n";
+                    xml << "  <AppendedData encoding=\"raw\">_";
+
+                    outFile << xml.str();
                 }
 
-                // for (const auto &varData : solutionVars)
-                // {
-                //     writeBinaryBlock(varData, outFile);
-                // }
-                std::cout << "points" << std::endl;
+                for (const auto &varData : solutionVars)
+                {
+                    writeBinaryBlock(varData, outFile);
+                }
                 writeBinaryBlock(points, outFile);
-
-                std::cout << "connectivity" << std::endl;
                 writeBinaryBlock(connectivity, outFile);
-
-                std::cout << "offsets" << std::endl;
                 writeBinaryBlock(offsets, outFile);
-
-                const std::vector<uint8_t> types(numElements, 12); // 12 é o código VTK para hexaedro
-
-                std::cout << "types" << std::endl;
                 writeBinaryBlock(types, outFile);
 
                 outFile << "</AppendedData>\n";

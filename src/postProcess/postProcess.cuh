@@ -71,7 +71,12 @@ namespace LBM
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshCoordinates(const host::latticeMesh &mesh)
         {
-            std::vector<T> coords(mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>() * 3, 0);
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            const host::label_t nPoints = nx * ny * nz;
+
+            std::vector<T> coords(nPoints * 3, 0);
 
             global::forAll(
                 mesh.dimensions(),
@@ -98,10 +103,15 @@ namespace LBM
         template <const bool one_based, typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshConnectivity(const host::latticeMesh &mesh)
         {
-            std::vector<IndexType> connectivity((mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1) * 8);
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            const host::label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
+
+            std::vector<IndexType> connectivity(numElements * 8, 0);
             constexpr const device::label_t offset = one_based ? 1 : 0;
             global::forAll(
-                mesh.dimensions(),
+                host::blockLabel(nx - 1, ny - 1, nz - 1),
                 host::blockLabel(0, 0, 0),
                 [&](const host::label_t x, const host::label_t y, const host::label_t z)
                 {
@@ -194,8 +204,14 @@ namespace LBM
             }
         }
 
+        /**
+         * @brief Write a std::vector of type T to an ofstream object
+         * @tparam T The type of the vector
+         * @param[in] vec The vector to write
+         * @param[out] outFile The output ofstream object
+         **/
         template <typename T>
-        __host__ void writeBinaryBlock(const std::vector<T> vec, std::ofstream &outFile)
+        __host__ void writeBinaryBlock(const std::vector<T> &vec, std::ofstream &outFile)
         {
             const host::label_t blockSize = vec.size() * sizeof(T);
 
@@ -224,6 +240,19 @@ namespace LBM
                 fileName);
         }
 
+        __host__ static inline void printStatus(const name_t &key, const bool value) noexcept
+        {
+            std::cout << "    " << key << ": " << (value ? "OK;" : "Fail;") << std::endl;
+        }
+
+        /**
+         * @brief Templated writer function for post-processing
+         * @tparam Writer The type of file output (VTU, VTS, Tecplot)
+         * @param[in] solutionVars The solution variables to write
+         * @param[in] fileName The name of the file to be written
+         * @param[in] mesh The lattice mesh
+         * @param[in] varNames The names of the variables to write
+         **/
         template <class Writer>
         __host__ static void write(
             const std::vector<std::vector<scalar_t>> &solutionVars,
@@ -253,48 +282,27 @@ namespace LBM
             std::cout << "{" << std::endl;
             std::cout << "    fileName: " << trueFileName << ";" << std::endl;
 
-            if (!std::filesystem::is_directory(directoryPrefix()))
-            {
-                if (!std::filesystem::create_directory(directoryPrefix()))
-                {
-                    std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
-                    std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    throw std::runtime_error("Error: unable to create directory" + name_t(directoryPrefix()));
-                }
-            }
-            else
-            {
-                std::cout << "    directoryStatus: OK;" << std::endl;
-            }
+            const bool directoryStatus = fileSystem::makeDirectory(directoryPrefix());
 
-            std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<Writer::format(), Writer::hasFields(), Writer::hasPoints(), Writer::hasElements(), Writer::hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+            printStatus("directory", directoryStatus);
+
+            std::cout << "    fileSize: " << fileSystem::to_MiB<double>(fileSystem::expectedDiskUsage<Writer::format(), Writer::hasFields(), Writer::hasPoints(), Writer::hasElements(), Writer::hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
 
             // Check if there is enough disk space to store the file
             writer::diskSpaceAssertion<Writer>(mesh, varNames, fileName);
 
             std::ofstream outFile(trueFileName);
-            if (outFile)
+
+            if (!outFile)
             {
-                std::cout << "    ofstreamStatus: OK;" << std::endl;
-            }
-            else
-            {
-                std::cout << "    ofstreamStatus: Fail" << std::endl;
                 std::cout << "};" << std::endl;
                 throw std::runtime_error("Error opening file: " + trueFileName);
             }
 
             const bool writeStatus = Writer::write(solutionVars, outFile, mesh, varNames);
 
-            if (!writeStatus)
-            {
-                std::cout << "    writeStatus: fail" << ";" << std::endl;
-            }
-            else
-            {
-                std::cout << "    writeStatus: success" << ";" << std::endl;
-            }
+            printStatus("ofstream", outFile.good());
+
             std::cout << "};" << std::endl;
         }
     };
