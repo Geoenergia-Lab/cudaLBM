@@ -125,12 +125,12 @@ namespace LBM
 
                 for (const auto &varData : solutionVars)
                 {
-                    writeBinaryBlock(varData, outFile);
+                    fileIO::writeBinaryBlock(varData, outFile);
                 }
-                writeBinaryBlock(points, outFile);
-                writeBinaryBlock(connectivity, outFile);
-                writeBinaryBlock(offsets, outFile);
-                writeBinaryBlock(types, outFile);
+                fileIO::writeBinaryBlock(points, outFile);
+                fileIO::writeBinaryBlock(connectivity, outFile);
+                fileIO::writeBinaryBlock(offsets, outFile);
+                fileIO::writeBinaryBlock(types, outFile);
 
                 outFile << "</AppendedData>\n";
                 outFile << "</VTKFile>\n";

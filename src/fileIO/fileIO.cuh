@@ -60,6 +60,28 @@ namespace LBM
     namespace fileIO
     {
         /**
+         * @brief Safely converts an integer of type T to a std::streamsize
+         * @param[in] size The size to convert
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] std::streamsize to_streamsize(const T size)
+        {
+            types::assertions::validate<T>();
+
+            static_assert(std::is_integral_v<T>, "Conversion to std::streamsize must be from an integral type");
+
+            if (size > static_cast<T>(std::numeric_limits<std::streamsize>::max()))
+            {
+                throw std::runtime_error("Data size " + std::to_string(size) + " exceeds maximum stream size");
+                return 0;
+            }
+            else
+            {
+                return static_cast<std::streamsize>(size);
+            }
+        }
+
+        /**
          * @brief Validates if a string represents a valid integer
          * @param[in] intStr String to validate
          * @return True if string is non-empty and contains only digits

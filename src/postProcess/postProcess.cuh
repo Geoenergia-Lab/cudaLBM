@@ -203,22 +203,6 @@ namespace LBM
                 return "Unknown";
             }
         }
-
-        /**
-         * @brief Write a std::vector of type T to an ofstream object
-         * @tparam T The type of the vector
-         * @param[in] vec The vector to write
-         * @param[out] outFile The output ofstream object
-         **/
-        template <typename T>
-        __host__ void writeBinaryBlock(const std::vector<T> &vec, std::ofstream &outFile)
-        {
-            const host::label_t blockSize = vec.size() * sizeof(T);
-
-            outFile.write(reinterpret_cast<const char *>(&blockSize), sizeof(host::label_t));
-
-            outFile.write(reinterpret_cast<const char *>(vec.data()), static_cast<std::streamsize>(blockSize));
-        };
     }
 
     class writer

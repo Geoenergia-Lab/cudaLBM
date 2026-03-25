@@ -59,7 +59,6 @@ namespace LBM
             namespace kernel
             {
                 __host__ [[nodiscard]] inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
-#define launchBounds __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
                 /**
                  * @brief Calculates the strain rate tensor component
@@ -89,7 +88,7 @@ namespace LBM
                  * @param[in] SMeanPtrs Device pointer collection for mean strain rate tensor components
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
-                launchBounds __global__ void mean(
+                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void mean(
                     const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SMeanPtrs,
                     const scalar_t invNewCount)
@@ -146,7 +145,7 @@ namespace LBM
                  * @param[in] SMeanPtrs Device pointer collection for mean strain rate tensor components
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
-                launchBounds __global__ void instantaneousAndMean(
+                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void instantaneousAndMean(
                     const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SPtrs,
                     const device::ptrCollection<6, scalar_t> SMeanPtrs,
@@ -208,7 +207,7 @@ namespace LBM
                  * @param[in] devPtrs Device pointer collection containing velocity and moment fields
                  * @param[in] SPtrs Device pointer collection for instantaneous strain rate tensor components
                  **/
-                launchBounds __global__ void instantaneous(
+                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void instantaneous(
                     const device::ptrCollection<10, const scalar_t> devPtrs,
                     const device::ptrCollection<6, scalar_t> SPtrs)
                 {
@@ -442,7 +441,7 @@ namespace LBM
                             virtualDeviceIndex);
                     }
 
-                    postProcess::LBMBin::writeFile<time::instantaneous>(
+                    postProcess::LBMBin::write<time::instantaneous>(
                         fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNames_,
@@ -468,7 +467,7 @@ namespace LBM
                             virtualDeviceIndex);
                     }
 
-                    postProcess::LBMBin::writeFile<time::timeAverage>(
+                    postProcess::LBMBin::write<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,

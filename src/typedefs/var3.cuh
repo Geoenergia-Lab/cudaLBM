@@ -108,6 +108,7 @@ namespace LBM
          * @param[in] name Name to identify the structure in the output
          * @param[in] os Output stream to write to
          */
+        template <const bool LineBreak = false>
         void print(const name_t &name, std::ostream &os) const noexcept
         {
             os << name << std::endl;
@@ -116,6 +117,10 @@ namespace LBM
             os << "    y = " << y << ";" << std::endl;
             os << "    z = " << z << ";" << std::endl;
             os << "};" << std::endl;
+            if constexpr (LineBreak)
+            {
+                os << std::endl;
+            }
         }
 
         /**

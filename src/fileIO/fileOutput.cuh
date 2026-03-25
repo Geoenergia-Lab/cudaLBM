@@ -70,6 +70,38 @@ namespace LBM
                 return "timeAverage";
             }
         }
+
+        /**
+         * @brief Write a pointer of type T to an ofstream object
+         * @tparam T The type of the pointer
+         * @param[in] ptr The pointer to write from
+         * @param[in] size The length of the data to write
+         * @param[out] out The output ofstream object
+         **/
+        template <typename T>
+        __host__ void writeBinaryBlock(
+            const T *const ptrRestrict ptr,
+            const host::label_t size,
+            std::ofstream &out)
+        {
+            out.write(reinterpret_cast<const char *>(ptr), to_streamsize(size));
+        }
+
+        /**
+         * @brief Write a std::vector of type T to an ofstream object
+         * @tparam T The type of the vector
+         * @param[in] vec The vector to write from
+         * @param[out] out The output ofstream object
+         **/
+        template <typename T>
+        __host__ void writeBinaryBlock(const std::vector<T> &vec, std::ofstream &out)
+        {
+            const host::label_t blockSize = vec.size() * static_cast<host::label_t>(sizeof(T));
+
+            writeBinaryBlock(&blockSize, static_cast<host::label_t>(sizeof(host::label_t)), out);
+
+            writeBinaryBlock(vec.data(), blockSize, out);
+        }
     }
 }
 

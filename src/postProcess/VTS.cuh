@@ -121,11 +121,11 @@ namespace LBM
                 // Write point data arrays
                 for (const auto &varData : solutionVars)
                 {
-                    writeBinaryBlock(varData, outFile);
+                    fileIO::writeBinaryBlock(varData, outFile);
                 }
 
                 // Write points
-                writeBinaryBlock(points, outFile);
+                fileIO::writeBinaryBlock(points, outFile);
 
                 outFile << "</AppendedData>\n";
                 outFile << "</VTKFile>\n";

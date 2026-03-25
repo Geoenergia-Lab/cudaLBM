@@ -59,7 +59,6 @@ namespace LBM
             namespace kernel
             {
                 __host__ [[nodiscard]] inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
-#define launchBounds __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP())
 
                 /**
                  * @brief CUDA kernel for calculating time-averaged total kinetic energy
@@ -67,7 +66,7 @@ namespace LBM
                  * @param[in] KMeanPtrs Device pointer collection for mean total kinetic energy
                  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
                  **/
-                launchBounds __global__ void mean(
+                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void mean(
                     const device::ptrCollection<NUMBER_MOMENTS(), const scalar_t> devPtrs,
                     const device::ptrCollection<NUMBER_MOMENTS(), scalar_t> devMeanPtrs,
                     const scalar_t invNewCount)
@@ -277,7 +276,7 @@ namespace LBM
                             virtualDeviceIndex);
                     }
 
-                    postProcess::LBMBin::writeFile<time::timeAverage>(
+                    postProcess::LBMBin::write<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,

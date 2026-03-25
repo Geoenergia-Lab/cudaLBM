@@ -72,6 +72,43 @@ namespace LBM
         return static_cast<T>(1);
     }
 
+    struct systemInfo
+    {
+    public:
+        __host__ [[nodiscard]] static inline consteval host::label_t scalarSize() noexcept
+        {
+            return static_cast<host::label_t>(sizeof(scalar_t)) * static_cast<host::label_t>(8);
+        }
+
+        __host__ [[nodiscard]] static inline consteval host::label_t labelSize() noexcept
+        {
+            return static_cast<host::label_t>(sizeof(device::label_t)) * static_cast<host::label_t>(8);
+        }
+
+        __host__ [[nodiscard]] static inline consteval const char *binaryType() noexcept
+        {
+            return endian::nameString();
+        }
+
+        __host__ static void print(std::ostream &out)
+        {
+            out << "systemInformation" << std::endl;
+            out << "{" << std::endl;
+            out << "    binaryType\t" << binaryType() << ";" << std::endl;
+            out << std::endl;
+            out << "    scalarSize\t" << scalarSize() << ";" << std::endl;
+            out << std::endl;
+            out << "    labelSize\t" << labelSize() << ";" << std::endl;
+            out << "};" << std::endl;
+            out << std::endl;
+        }
+
+        __host__ static void print()
+        {
+            print(std::cout);
+        }
+    };
+
     namespace device
     {
         /**

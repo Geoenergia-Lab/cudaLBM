@@ -122,7 +122,7 @@ int main(const int argc, const char *const argv[])
                     VirtualDeviceIndex);
             }
 
-            postProcess::LBMBin::writeFile<time::instantaneous>(
+            postProcess::LBMBin::write<time::instantaneous>(
                 programCtrl.caseName() + "_" + std::to_string(timeStep) + ".LBMBin",
                 mesh,
                 functionObjects::solutionVariableNames,

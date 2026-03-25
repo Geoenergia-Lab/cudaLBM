@@ -84,6 +84,36 @@ namespace LBM
         }
 
         /**
+         * @brief Read from an istream object to a pointer of type T
+         * @tparam T The type of the pointer
+         * @param[in] ptr The pointer to read to
+         * @param[in] size The length of the data to read
+         * @param[in] in The input istream object
+         **/
+        template <typename T>
+        __host__ void readBinaryBlock(
+            T *const ptrRestrict ptr,
+            const host::label_t size,
+            std::ifstream &in)
+        {
+            in.read(reinterpret_cast<char *>(ptr), to_streamsize(size));
+        }
+
+        /**
+         * @brief Read from an istream object to a std::vector of type T
+         * @tparam T The type of the vector
+         * @param[out] vec The vector to read to
+         * @param[in] in The input istream object
+         **/
+        template <typename T>
+        __host__ void readBinaryBlock(std::vector<T> &vec, std::ifstream &in)
+        {
+            const host::label_t size = vec.size() * static_cast<host::label_t>(sizeof(T));
+
+            readBinaryBlock(vec.data(), size, in);
+        }
+
+        /**
          * @brief Read all field data from a binary file
          * @tparam T Floating-point type to read (must match file format)
          * @param[in] fileName Name of the file to read
@@ -142,7 +172,7 @@ namespace LBM
             {
                 throw std::runtime_error("Data size exceeds maximum stream size");
             }
-            in.read(reinterpret_cast<char *>(data.data()), static_cast<std::streamsize>(byteCount));
+            readBinaryBlock(data, in);
 
             if (!in.good() || in.gcount() != static_cast<std::streamsize>(byteCount))
             {
@@ -304,7 +334,7 @@ namespace LBM
                 throw std::runtime_error("Field data size exceeds maximum stream size");
             }
 
-            in.read(reinterpret_cast<char *>(fieldData.data()), static_cast<std::streamsize>(byteCount));
+            readBinaryBlock(fieldData, in);
 
             if (!in.good())
             {

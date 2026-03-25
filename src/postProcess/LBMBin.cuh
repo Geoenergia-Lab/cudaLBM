@@ -74,7 +74,7 @@ namespace LBM
              * @tparam indexType The data type for the mesh indices (uint32_t or host::label_t).
              **/
             template <const time::type TimeType, typename T>
-            __host__ static void writeFile(
+            __host__ static void write(
                 const name_t &fileName,
                 const host::latticeMesh &mesh,
                 const words_t &varNames,
@@ -85,10 +85,6 @@ namespace LBM
                 types::assertions::validate<T>();
                 endian::assertions::validate();
 
-                const host::label_t nVars = varNames.size();
-                const host::label_t nPoints = mesh.size();
-                const host::label_t expectedSize = nPoints * nVars;
-
                 // Check if there is enough disk space to store the file
                 writer::diskSpaceAssertion<This>(mesh, varNames, fileName);
 
@@ -98,66 +94,78 @@ namespace LBM
                     throw std::runtime_error("Cannot open file: " + fileName);
                 }
 
-                // Write the system information: binary endianness
-                out << "systemInformation" << std::endl;
-                out << "{" << std::endl;
-                out << "\tbinaryType\t" << endian::nameString() << ";" << std::endl;
-                out << std::endl;
-                out << "\tscalarSize\t" << sizeof(scalar_t) * 8 << ";" << std::endl;
-                out << "};" << std::endl;
-                out << std::endl;
+                // Write the system information
+                systemInfo::print(out);
 
                 // Write the mesh information: number of points, number of devices
-                mesh.dimensions().print("latticeMesh", out);
-                out << std::endl;
-                mesh.nDevices().print("deviceDecomposition", out);
-                out << std::endl;
+                mesh.dimensions().print<true>("latticeMesh", out);
+                mesh.nDevices().print<true>("deviceDecomposition", out);
 
                 // Write the field information: instantaneous or time-averaged, field names
+                writeFieldInformation<TimeType>(timeStep, varNames, meanCount, out);
+
+                // Write binary data with safe size conversion
+                writeFieldData(mesh, fields, varNames, out);
+            }
+
+        private:
+            template <typename T>
+            __host__ static void writeFieldData(
+                const host::latticeMesh &mesh,
+                const T *const ptrRestrict fields,
+                const words_t &varNames,
+                std::ofstream &out)
+            {
+                const host::label_t nPoints = mesh.size();
+                const host::label_t expectedSize = nPoints * varNames.size();
+                const host::label_t byteSize = expectedSize * sizeof(T);
+
+                out << "fieldData" << std::endl;
+                out << "{" << std::endl;
+                out << "    fieldType\tnonUniform;" << std::endl;
+                out << std::endl;
+                out << "    field[" << expectedSize << "][" << varNames.size() << "][" << mesh.template dimension<axis::Z>() << "][" << mesh.template dimension<axis::Y>() << "][" << mesh.template dimension<axis::X>() << "]" << std::endl;
+                out << "    {" << std::endl;
+
+                fileIO::writeBinaryBlock(fields, byteSize, out);
+
+                out << std::endl;
+                out << "    };" << std::endl;
+                out << "};" << std::endl;
+            }
+
+            template <const time::type TimeType>
+            __host__ static void writeFieldInformation(
+                const host::label_t timeStep,
+                const words_t &varNames,
+                const host::label_t meanCount,
+                std::ofstream &out)
+            {
                 out << "fieldInformation" << std::endl;
                 out << "{" << std::endl;
-                out << "\ttimeStep\t" << timeStep << ";" << std::endl;
+                out << "    timeStep\t" << timeStep << ";" << std::endl;
                 out << std::endl;
                 // For now, only writing instantaneous fields
-                out << "\ttimeType\t" << fileIO::timeTypeString<TimeType>() << ";" << std::endl;
+                out << "    timeType\t" << fileIO::timeTypeString<TimeType>() << ";" << std::endl;
                 out << std::endl;
 
                 if constexpr (TimeType == time::timeAverage)
                 {
-                    out << "\tmeanCount\t" << meanCount << ";" << std::endl;
+                    out << "    meanCount\t" << meanCount << ";" << std::endl;
                     out << std::endl;
                 }
 
-                out << "\tnFields\t\t" << nVars << ";" << std::endl;
+                out << "    nFields\t\t" << varNames.size() << ";" << std::endl;
                 out << std::endl;
-                out << "\tfieldNames[" << nVars << "]" << std::endl;
-                out << "\t{" << std::endl;
+                out << "    fieldNames[" << varNames.size() << "]" << std::endl;
+                out << "    {" << std::endl;
                 for (const auto &name : varNames)
                 {
-                    out << "\t\t" << name << ";" << std::endl;
+                    out << "    \t" << name << ";" << std::endl;
                 }
-                out << "\t};" << std::endl;
+                out << "    };" << std::endl;
                 out << "};" << std::endl;
                 out << std::endl;
-
-                // Write binary data with safe size conversion
-                const host::label_t byteSize = expectedSize * sizeof(T);
-
-                if (byteSize > static_cast<host::label_t>(std::numeric_limits<std::streamsize>::max()))
-                {
-                    throw std::runtime_error("Data size exceeds maximum stream size");
-                }
-
-                out << "fieldData" << std::endl;
-                out << "{" << std::endl;
-                out << "\tfieldType\tnonUniform;" << std::endl;
-                out << std::endl;
-                out << "\tfield[" << expectedSize << "][" << nVars << "][" << mesh.template dimension<axis::Z>() << "][" << mesh.template dimension<axis::Y>() << "][" << mesh.template dimension<axis::X>() << "]" << std::endl;
-                out << "\t{" << std::endl;
-                out.write(reinterpret_cast<const char *>(fields), static_cast<std::streamsize>(byteSize));
-                out << std::endl;
-                out << "\t};" << std::endl;
-                out << "};" << std::endl;
             }
         };
     }
