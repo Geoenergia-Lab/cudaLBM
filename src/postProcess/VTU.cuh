@@ -54,71 +54,74 @@ namespace LBM
 {
     namespace postProcess
     {
-        namespace VTU
+        class VTU : public writer
         {
-            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::BINARY; }
-            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
-            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".vtu"; }
+        public:
+            __host__ [[nodiscard]] static inline consteval fileSystem::format format() noexcept { return fileSystem::BINARY; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::Yes; }
+            __host__ [[nodiscard]] static inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::Yes; }
+            __host__ [[nodiscard]] static inline consteval const char *fileExtension() noexcept { return ".vtu"; }
+            __host__ [[nodiscard]] static inline consteval const char *name() noexcept { return "VTU"; }
 
-            /**
-             * @brief Auxiliary template function that performs the VTU file writing.
-             * @tparam indexType The data type for the mesh indices (uint32_t or host::label_t).
-             **/
-            template <typename indexType>
-            __host__ void VTUWriter(
+            __host__ [[nodiscard]] inline consteval VTU(){};
+
+            // Write implementation
+            __host__ static bool write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const words_t &solutionVarNames) noexcept
+                const words_t &varNames)
             {
                 const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
                 const host::label_t numElements = (mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1);
                 const host::label_t numVars = solutionVars.size();
 
                 const std::vector<scalar_t> points = meshCoordinates<scalar_t>(mesh);
-                const std::vector<indexType> connectivity = meshConnectivity<false, indexType>(mesh);
-                const std::vector<indexType> offsets = meshOffsets<indexType>(mesh);
+                const std::vector<host::label_t> connectivity = meshConnectivity<false, host::label_t>(mesh);
+                const std::vector<host::label_t> offsets = meshOffsets<host::label_t>(mesh);
+                const std::vector<uint8_t> types(numElements, static_cast<uint8_t>(12));
 
-                std::stringstream xml;
-                host::label_t currentOffset = 0;
-
-                xml << "<?xml version=\"1.0\"?>\n";
-                xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
-                xml << "  <UnstructuredGrid>\n";
-                xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
-
-                xml << "      <PointData Scalars=\"" << (solutionVarNames.empty() ? "" : solutionVarNames[0]) << "\">\n";
-                for (host::label_t i = 0; i < numVars; ++i)
                 {
-                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << solutionVarNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    std::stringstream xml;
+                    host::label_t currentOffset = 0;
+
+                    xml << "<?xml version=\"1.0\"?>\n";
+                    xml << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+                    xml << "  <UnstructuredGrid>\n";
+                    xml << "    <Piece NumberOfPoints=\"" << numNodes << "\" NumberOfCells=\"" << numElements << "\">\n";
+
+                    xml << "      <PointData Scalars=\"" << (varNames.empty() ? "" : varNames[0]) << "\">\n";
+                    for (host::label_t i = 0; i < numVars; ++i)
+                    {
+                        xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << varNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                        currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    }
+                    xml << "      </PointData>\n";
+
+                    xml << "      <Points>\n";
+                    xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    xml << "      </Points>\n";
+                    currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
+
+                    xml << "      <Cells>\n";
+                    // Usa o indexType para obter o nome do tipo VTK correto
+                    xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(host::label_t);
+
+                    xml << "        <DataArray type=\"" << getVtkTypeName<host::label_t>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(host::label_t);
+
+                    xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
+                    xml << "      </Cells>\n";
+
+                    xml << "    </Piece>\n";
+                    xml << "  </UnstructuredGrid>\n";
+                    xml << "  <AppendedData encoding=\"raw\">_";
+
+                    outFile << xml.str();
                 }
-                xml << "      </PointData>\n";
-
-                xml << "      <Points>\n";
-                xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"Coordinates\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                xml << "      </Points>\n";
-                currentOffset += sizeof(host::label_t) + points.size() * sizeof(scalar_t);
-
-                xml << "      <Cells>\n";
-                // Usa o indexType para obter o nome do tipo VTK correto
-                xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"connectivity\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(host::label_t) + connectivity.size() * sizeof(indexType);
-
-                xml << "        <DataArray type=\"" << getVtkTypeName<indexType>() << "\" Name=\"offsets\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                currentOffset += sizeof(host::label_t) + offsets.size() * sizeof(indexType);
-
-                xml << "        <DataArray type=\"" << getVtkTypeName<uint8_t>() << "\" Name=\"types\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                xml << "      </Cells>\n";
-
-                xml << "    </Piece>\n";
-                xml << "  </UnstructuredGrid>\n";
-                xml << "  <AppendedData encoding=\"raw\">_";
-
-                outFile << xml.str();
 
                 for (const auto &varData : solutionVars)
                 {
@@ -127,105 +130,16 @@ namespace LBM
                 writeBinaryBlock(points, outFile);
                 writeBinaryBlock(connectivity, outFile);
                 writeBinaryBlock(offsets, outFile);
-
-                const std::vector<uint8_t> types(numElements, 12); // 12 é o código VTK para hexaedro
                 writeBinaryBlock(types, outFile);
 
                 outFile << "</AppendedData>\n";
                 outFile << "</VTKFile>\n";
 
                 outFile.close();
+
+                return outFile.good();
             }
-
-            /**
-             * @brief Writes solution variables to an unstructured grid VTU file (.vtu)
-             * This function checks the mesh size and dispatches to the implementation with
-             * the appropriate index type (32-bit or 64-bit).
-             **/
-            __host__ void write(
-                const std::vector<std::vector<scalar_t>> &solutionVars,
-                const name_t &fileName,
-                const host::latticeMesh &mesh,
-                const words_t &solutionVarNames)
-            {
-                const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
-                const host::label_t numVars = solutionVars.size();
-
-                if (numVars != solutionVarNames.size())
-                {
-                    throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
-                }
-
-                for (host::label_t i = 0; i < numVars; i++)
-                {
-                    if (solutionVars[i].size() != numNodes)
-                    {
-                        throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
-                    }
-                }
-
-                std::cout << "vtuWriter:" << std::endl;
-                std::cout << "{" << std::endl;
-                std::cout << "    fileName: " << directoryPrefix() << "/" << fileName << fileExtension() << ";" << std::endl;
-
-                if (!std::filesystem::is_directory(directoryPrefix()))
-                {
-                    if (!std::filesystem::create_directory(directoryPrefix()))
-                    {
-                        std::cout << "    directoryStatus: Unable to create directory" << directoryPrefix() << ";" << std::endl;
-                        std::cout << "    writeStatus: Fail (unable to create directory)" << ";" << std::endl;
-                        std::cout << "};" << std::endl;
-                        throw std::runtime_error("Error: Unable to create directory" + name_t(directoryPrefix()));
-                    }
-                }
-                else
-                {
-                    std::cout << "    directoryStatus: OK;" << std::endl;
-                }
-
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<format(), hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
-
-                // Check if there is enough disk space to store the file
-                fileSystem::diskSpaceAssertion<
-                    format(),
-                    hasFields(),
-                    hasPoints(),
-                    hasElements(),
-                    hasOffsets()>(
-                    mesh,
-                    solutionVars.size(),
-                    fileName);
-
-                constexpr const host::label_t limit32 = static_cast<host::label_t>(std::numeric_limits<uint32_t>::max());
-
-                std::cout << "    indexType: uint" << ((numNodes >= limit32) ? "64_t;" : "32_t;") << std::endl;
-
-                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
-
-                std::ofstream outFile(trueFileName);
-                if (outFile)
-                {
-                    std::cout << "    ofstreamStatus: OK;" << std::endl;
-                }
-                else
-                {
-                    std::cout << "    ofstreamStatus: Fail" << std::endl;
-                    std::cout << "};" << std::endl;
-                    throw std::runtime_error("Error opening file: " + trueFileName);
-                }
-
-                if (numNodes >= limit32)
-                {
-                    VTUWriter<host::label_t>(solutionVars, outFile, mesh, solutionVarNames);
-                }
-                else
-                {
-                    VTUWriter<uint32_t>(solutionVars, outFile, mesh, solutionVarNames);
-                }
-                std::cout << "    writeStatus: success" << ";" << std::endl;
-                std::cout << "};" << std::endl;
-            }
-        }
+        };
     }
 }
 

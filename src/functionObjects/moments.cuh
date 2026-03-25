@@ -277,7 +277,7 @@ namespace LBM
                             virtualDeviceIndex);
                     }
 
-                    fileIO::writeFile<time::timeAverage>(
+                    postProcess::LBMBin::writeFile<time::timeAverage>(
                         fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
                         mesh_,
                         componentNamesMean_,

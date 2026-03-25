@@ -53,6 +53,7 @@ SourceFiles
 #include "../LBMIncludes.cuh"
 #include "../typedefs/typedefs.cuh"
 #include "../strings.cuh"
+#include "../postProcess/postProcess.cuh"
 #include "functionObjects.cuh"
 #include "moments.cuh"
 #include "strainRateTensor.cuh"

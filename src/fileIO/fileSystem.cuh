@@ -241,7 +241,7 @@ namespace LBM
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
         __host__ [[nodiscard]] inline constexpr host::label_t expectedDiskUsage(const LatticeMesh &mesh, const host::label_t nVars) noexcept
         {
-            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(static_cast<host::label_t>(mesh.template dimension<axis::X>()), static_cast<host::label_t>(mesh.template dimension<axis::Y>()), static_cast<host::label_t>(mesh.template dimension<axis::Z>()), nVars);
+            return expectedDiskUsage<Format, Fields, Points, Elements, Offsets>(mesh.template dimension<axis::X>(), mesh.template dimension<axis::Y>(), mesh.template dimension<axis::Z>(), nVars);
         }
 
         /**
@@ -310,11 +310,30 @@ namespace LBM
          * @param[in] bytes Number of bytes
          */
         template <typename T>
-        __host__ [[nodiscard]] inline constexpr T to_mebibytes(const host::label_t bytes) noexcept
+        __host__ [[nodiscard]] inline constexpr T to_MiB(const host::label_t bytes) noexcept
         {
-            return static_cast<T>(static_cast<double>(bytes) / (1024.0 * 1024.0));
+            return static_cast<T>(static_cast<double>(bytes) / static_cast<double>(1024 * 1024));
         }
 
+        __host__ [[nodiscard]] bool makeDirectory(const name_t &dir)
+        {
+            if (!std::filesystem::is_directory(dir))
+            {
+                if (!std::filesystem::create_directory(dir))
+                {
+                    throw std::runtime_error("Error: unable to create directory" + dir);
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                return true;
+            }
+        }
     }
 }
 

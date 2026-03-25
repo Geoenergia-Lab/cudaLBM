@@ -58,8 +58,6 @@ namespace LBM
 {
     namespace postProcess
     {
-        __host__ [[nodiscard]] inline consteval const char *directoryPrefix() { return "postProcess"; }
-
         /**
          * @brief Calculates physical coordinates of lattice points
          * @tparam T Coordinate data type (typically scalar_t or double)
@@ -73,7 +71,12 @@ namespace LBM
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshCoordinates(const host::latticeMesh &mesh)
         {
-            std::vector<T> coords(mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>() * 3, 0);
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            const host::label_t nPoints = nx * ny * nz;
+
+            std::vector<T> coords(nPoints * 3, 0);
 
             global::forAll(
                 mesh.dimensions(),
@@ -100,10 +103,15 @@ namespace LBM
         template <const bool one_based, typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshConnectivity(const host::latticeMesh &mesh)
         {
-            std::vector<IndexType> connectivity((mesh.dimension<axis::X>() - 1) * (mesh.dimension<axis::Y>() - 1) * (mesh.dimension<axis::Z>() - 1) * 8);
+            const host::label_t nx = mesh.dimension<axis::X>();
+            const host::label_t ny = mesh.dimension<axis::Y>();
+            const host::label_t nz = mesh.dimension<axis::Z>();
+            const host::label_t numElements = (nx - 1) * (ny - 1) * (nz - 1);
+
+            std::vector<IndexType> connectivity(numElements * 8, 0);
             constexpr const device::label_t offset = one_based ? 1 : 0;
             global::forAll(
-                mesh.dimensions(),
+                host::blockLabel(nx - 1, ny - 1, nz - 1),
                 host::blockLabel(0, 0, 0),
                 [&](const host::label_t x, const host::label_t y, const host::label_t z)
                 {
@@ -196,8 +204,14 @@ namespace LBM
             }
         }
 
+        /**
+         * @brief Write a std::vector of type T to an ofstream object
+         * @tparam T The type of the vector
+         * @param[in] vec The vector to write
+         * @param[out] outFile The output ofstream object
+         **/
         template <typename T>
-        __host__ void writeBinaryBlock(const std::vector<T> vec, std::ofstream &outFile)
+        __host__ void writeBinaryBlock(const std::vector<T> &vec, std::ofstream &outFile)
         {
             const host::label_t blockSize = vec.size() * sizeof(T);
 
@@ -206,11 +220,98 @@ namespace LBM
             outFile.write(reinterpret_cast<const char *>(vec.data()), static_cast<std::streamsize>(blockSize));
         };
     }
+
+    class writer
+    {
+    public:
+        __host__ [[nodiscard]] static inline consteval const char *directoryPrefix() noexcept { return "postProcess"; }
+
+        template <class Writer>
+        static inline void diskSpaceAssertion(const host::latticeMesh &mesh, const words_t &varNames, const name_t &fileName)
+        {
+            fileSystem::diskSpaceAssertion<
+                Writer::format(),
+                Writer::hasFields(),
+                Writer::hasPoints(),
+                Writer::hasElements(),
+                Writer::hasOffsets()>(
+                mesh,
+                varNames.size(),
+                fileName);
+        }
+
+        __host__ static inline void printStatus(const name_t &key, const bool value) noexcept
+        {
+            std::cout << "    " << key << ": " << (value ? "OK;" : "Fail;") << std::endl;
+        }
+
+        /**
+         * @brief Templated writer function for post-processing
+         * @tparam Writer The type of file output (VTU, VTS, Tecplot)
+         * @param[in] solutionVars The solution variables to write
+         * @param[in] fileName The name of the file to be written
+         * @param[in] mesh The lattice mesh
+         * @param[in] varNames The names of the variables to write
+         **/
+        template <class Writer>
+        __host__ static void write(
+            const std::vector<std::vector<scalar_t>> &solutionVars,
+            const name_t &fileName,
+            const host::latticeMesh &mesh,
+            const words_t &varNames)
+        {
+            const host::label_t numNodes = mesh.dimension<axis::X>() * mesh.dimension<axis::Y>() * mesh.dimension<axis::Z>();
+            const host::label_t numVars = solutionVars.size();
+
+            if (numVars != varNames.size())
+            {
+                throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(varNames.size()));
+            }
+
+            for (host::label_t i = 0; i < numVars; i++)
+            {
+                if (solutionVars[i].size() != numNodes)
+                {
+                    throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
+                }
+            }
+
+            const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + Writer::fileExtension());
+
+            std::cout << Writer::name() << std::endl;
+            std::cout << "{" << std::endl;
+            std::cout << "    fileName: " << trueFileName << ";" << std::endl;
+
+            const bool directoryStatus = fileSystem::makeDirectory(directoryPrefix());
+
+            printStatus("directory", directoryStatus);
+
+            std::cout << "    fileSize: " << fileSystem::to_MiB<double>(fileSystem::expectedDiskUsage<Writer::format(), Writer::hasFields(), Writer::hasPoints(), Writer::hasElements(), Writer::hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+
+            // Check if there is enough disk space to store the file
+            writer::diskSpaceAssertion<Writer>(mesh, varNames, fileName);
+
+            std::ofstream outFile(trueFileName);
+
+            if (!outFile)
+            {
+                std::cout << "};" << std::endl;
+                throw std::runtime_error("Error opening file: " + trueFileName);
+            }
+
+            const bool writeStatus = Writer::write(solutionVars, outFile, mesh, varNames);
+
+            printStatus("ofstream", outFile.good());
+
+            std::cout << "};" << std::endl;
+        }
+    };
 }
 
 #include "Tecplot.cuh"
 #include "VTU.cuh"
 #include "VTS.cuh"
+#include "LBMBin.cuh"
 #include "writerFunction.cuh"
 
 #endif
