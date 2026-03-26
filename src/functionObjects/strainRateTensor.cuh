@@ -252,18 +252,12 @@ namespace LBM
              **/
             __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
             {
-                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xx_.programCtrl().deviceList().size(); ++virtualDeviceIndex)
-                {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<6, scalar_t>(
-                            xx_.ptr(virtualDeviceIndex), xy_.ptr(virtualDeviceIndex),
-                            xz_.ptr(virtualDeviceIndex), yy_.ptr(virtualDeviceIndex),
-                            yz_.ptr(virtualDeviceIndex), zz_.ptr(virtualDeviceIndex)),
-                        mesh_, virtualDeviceIndex);
-                }
-                postProcess::LBMBin::write<time::instantaneous>(
-                    name_ + "_" + std::to_string(timeStep) + ".LBMBin",
-                    mesh_, componentNames_, hostWriteBuffer_.data(), timeStep, 0);
+                BaseType::saveInstantaneous(
+                    timeStep,
+                    name_,
+                    componentNames_,
+                    xx_.programCtrl().deviceList().size(),
+                    xx_, xy_, xz_, yy_, yz_, zz_);
             }
 
             /**
@@ -271,18 +265,13 @@ namespace LBM
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < xxMean_.programCtrl().deviceList().size(); ++virtualDeviceIndex)
-                {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<6, scalar_t>(
-                            xxMean_.ptr(virtualDeviceIndex), xyMean_.ptr(virtualDeviceIndex),
-                            xzMean_.ptr(virtualDeviceIndex), yyMean_.ptr(virtualDeviceIndex),
-                            yzMean_.ptr(virtualDeviceIndex), zzMean_.ptr(virtualDeviceIndex)),
-                        mesh_, virtualDeviceIndex);
-                }
-                postProcess::LBMBin::write<time::timeAverage>(
-                    nameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
-                    mesh_, componentNamesMean_, hostWriteBuffer_.data(), timeStep, xxMean_.meanCount());
+                BaseType::saveMean(
+                    timeStep,
+                    nameMean_,
+                    componentNamesMean_,
+                    xxMean_.programCtrl().deviceList().size(),
+                    xxMean_.meanCount(),
+                    xxMean_, xyMean_, xzMean_, yyMean_, yzMean_, zzMean_);
             }
 
         private:

@@ -73,8 +73,32 @@ namespace LBM
              * @brief Auxiliary template function that performs the VTU file writing.
              * @tparam indexType The data type for the mesh indices (uint32_t or host::label_t).
              **/
-            template <const time::type TimeType, typename T>
+            template <typename T>
             __host__ static void write(
+                const name_t &fileName,
+                const host::latticeMesh &mesh,
+                const words_t &varNames,
+                const T *const ptrRestrict fields,
+                const host::label_t timeStep,
+                const host::label_t meanCount)
+            {
+                common_write<time::timeAverage>(fileName, mesh, varNames, fields, timeStep, meanCount);
+            }
+
+            template <typename T>
+            __host__ static void write(
+                const name_t &fileName,
+                const host::latticeMesh &mesh,
+                const words_t &varNames,
+                const T *const ptrRestrict fields,
+                const host::label_t timeStep)
+            {
+                common_write<time::instantaneous>(fileName, mesh, varNames, fields, timeStep, 0);
+            }
+
+        private:
+            template <const time::type TimeType, typename T>
+            __host__ static void common_write(
                 const name_t &fileName,
                 const host::latticeMesh &mesh,
                 const words_t &varNames,
@@ -108,7 +132,6 @@ namespace LBM
                 writeFieldData(mesh, fields, varNames, out);
             }
 
-        private:
             template <typename T>
             __host__ static void writeFieldData(
                 const host::latticeMesh &mesh,

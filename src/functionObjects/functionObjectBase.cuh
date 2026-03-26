@@ -97,6 +97,7 @@ namespace LBM
 
             /**
              * @brief Construct the component names from the field name
+             * @param[in] name Name of the field
              **/
             __host__ [[nodiscard]] static inline constexpr const words_t component_names(const name_t &name)
             {
@@ -114,6 +115,90 @@ namespace LBM
                 {
                     return solutionVariableNames;
                 }
+            }
+
+            /**
+             * @brief Copy all device subdomains to the write buffer
+             * @tparam Arrays The type of the array to copy
+             * @param[in] numDevices The number of devices
+             * @param[in] arrays The arrays to copy back to the host
+             **/
+            template <typename... Arrays>
+            __host__ void copy_from_device(
+                const host::label_t numDevices,
+                const Arrays &...arrays)
+            {
+                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < numDevices; virtualDeviceIndex++)
+                {
+                    // Collect pointers from each array for this device index
+                    const auto pointers = std::make_tuple(arrays.ptr(virtualDeviceIndex)...);
+
+                    // Build a ptrCollection from the tuple and copy from device
+                    hostWriteBuffer_.copy_from_device(
+                        std::apply([&](auto &&...args)
+                                   { return device::ptrCollection<sizeof...(Arrays), const scalar_t>(std::forward<decltype(args)>(args)...); }, pointers),
+                        mesh_,
+                        virtualDeviceIndex);
+                }
+            }
+
+            /**
+             * @brief Save the time-averaged arrays to the disk
+             * @tparam Arrays The type of the array to copy
+             * @param[in] timeStep The current time step
+             * @param[in] name Name of the field
+             * @param[in] componentNames Names of the components of the field
+             * @param[in] numDevices The number of devices
+             * @param[in] meanCount Counter of time averaging steps
+             * @param[in] arrays The arrays to copy back to the host
+             **/
+            template <typename... Arrays>
+            __host__ void saveMean(
+                const host::label_t timeStep,
+                const name_t &name,
+                const words_t &componentNames,
+                const host::label_t numDevices,
+                const host::label_t meanCount,
+                const Arrays &...arrays) noexcept
+            {
+                copy_from_device(numDevices, arrays...);
+
+                // Write to disk
+                postProcess::LBMBin::write(
+                    name + "_" + std::to_string(timeStep) + ".LBMBin",
+                    mesh_,
+                    componentNames,
+                    hostWriteBuffer_.data(),
+                    timeStep,
+                    meanCount);
+            }
+
+            /**
+             * @brief Save the instantaneous arrays to the disk
+             * @tparam Arrays The type of the array to copy
+             * @param[in] timeStep The current time step
+             * @param[in] name Name of the field
+             * @param[in] componentNames Names of the components of the field
+             * @param[in] numDevices The number of devices
+             * @param[in] arrays The arrays to copy back to the host
+             **/
+            template <typename... Arrays>
+            __host__ void saveInstantaneous(
+                const host::label_t timeStep,
+                const name_t &name,
+                const words_t &componentNames,
+                const host::label_t numDevices,
+                const Arrays &...arrays) noexcept
+            {
+                copy_from_device(numDevices, arrays...);
+
+                // Write to disk
+                postProcess::LBMBin::write(
+                    name + "_" + std::to_string(timeStep) + ".LBMBin",
+                    mesh_,
+                    componentNames,
+                    hostWriteBuffer_.data(),
+                    timeStep);
             }
 
         public:

@@ -162,7 +162,7 @@ namespace LBM
              **/
             template <const host::label_t N>
             __host__ void copy_from_device(
-                const device::ptrCollection<N, T> &devPtrs,
+                const device::ptrCollection<N, const T> &devPtrs,
                 const host::latticeMesh &mesh,
                 const host::label_t virtualDeviceIndex)
             {

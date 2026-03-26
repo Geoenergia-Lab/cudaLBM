@@ -121,7 +121,7 @@ int main(const int argc, const char *const argv[])
             // Do this in a loop
             {
                 hostWriteBuffer.copy_from_device(
-                    device::ptrCollection<10, scalar_t>{
+                    device::ptrCollection<10, const scalar_t>{
                         rho.ptr(VirtualDeviceIndex()),
                         u.ptr(VirtualDeviceIndex()),
                         v.ptr(VirtualDeviceIndex()),
@@ -136,13 +136,12 @@ int main(const int argc, const char *const argv[])
                     VirtualDeviceIndex());
             }
 
-            postProcess::LBMBin::write<time::instantaneous>(
+            postProcess::LBMBin::write(
                 programCtrl.caseName() + "_" + std::to_string(timeStep) + ".LBMBin",
                 mesh,
                 functionObjects::solutionVariableNames,
                 hostWriteBuffer.data(),
-                timeStep,
-                rho.meanCount());
+                timeStep);
 
             runTimeObjects.save(timeStep);
         }

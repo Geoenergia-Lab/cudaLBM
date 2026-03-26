@@ -226,15 +226,12 @@ namespace LBM
              **/
             __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
             {
-                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < k_.programCtrl().deviceList().size(); ++virtualDeviceIndex)
-                {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<1, scalar_t>(k_.ptr(virtualDeviceIndex)),
-                        mesh_, virtualDeviceIndex);
-                }
-                postProcess::LBMBin::write<time::instantaneous>(
-                    name_ + "_" + std::to_string(timeStep) + ".LBMBin",
-                    mesh_, componentNames_, hostWriteBuffer_.data(), timeStep, 0);
+                BaseType::saveInstantaneous(
+                    timeStep,
+                    name_,
+                    componentNames_,
+                    k_.programCtrl().deviceList().size(),
+                    k_);
             }
 
             /**
@@ -242,15 +239,13 @@ namespace LBM
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < kMean_.programCtrl().deviceList().size(); ++virtualDeviceIndex)
-                {
-                    hostWriteBuffer_.copy_from_device(
-                        device::ptrCollection<1, scalar_t>(kMean_.ptr(virtualDeviceIndex)),
-                        mesh_, virtualDeviceIndex);
-                }
-                postProcess::LBMBin::write<time::timeAverage>(
-                    nameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
-                    mesh_, componentNamesMean_, hostWriteBuffer_.data(), timeStep, kMean_.meanCount());
+                BaseType::saveMean(
+                    timeStep,
+                    nameMean_,
+                    componentNamesMean_,
+                    kMean_.programCtrl().deviceList().size(),
+                    kMean_.meanCount(),
+                    kMean_);
             }
 
         private:
