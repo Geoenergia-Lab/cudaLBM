@@ -144,17 +144,17 @@ namespace LBM
         /**
          * @brief Moments function object
          **/
-        functionObjects::moments::collection<VelocitySet> M_;
+        functionObjects::moments<VelocitySet> M_;
 
         /**
          * @brief Strain rate tensor function object
          **/
-        functionObjects::strainRate::tensor<VelocitySet> S_;
+        functionObjects::strainRateTensor<VelocitySet> S_;
 
         /**
          * @brief Kinetic energy function object
          **/
-        functionObjects::kineticEnergy::scalar<VelocitySet> k_;
+        functionObjects::kineticEnergy<VelocitySet> k_;
 
         /**
          * @brief Registry of function objects to invoke
@@ -167,9 +167,9 @@ namespace LBM
          * @return Vector of function objects to be executed
          **/
         __host__ [[nodiscard]] const std::vector<functionObjects::calculateFunction> functionObjectCallInitialiser(
-            functionObjects::moments::collection<VelocitySet> &moments,
-            functionObjects::strainRate::tensor<VelocitySet> &S,
-            functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
+            functionObjects::moments<VelocitySet> &moments,
+            functionObjects::strainRateTensor<VelocitySet> &S,
+            functionObjects::kineticEnergy<VelocitySet> &k) const noexcept
         {
             std::vector<functionObjects::calculateFunction> calls;
 
@@ -185,24 +185,28 @@ namespace LBM
         {
             // If both instantaneous and mean calculations are enabled, calculate both in one call
             // Only do this for variables other than the 10 moments
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
             {
                 if ((object.doInstantaneous()) && (object.doMean()))
                 {
                     calls.push_back(
                         [&object]()
-                        { object.calculateInstantaneousAndMean(); });
+                        {
+                            object.calculateInstantaneousAndMean();
+                        });
                 }
             }
 
             // Must be only saving instantaneous, so just calculate instantaneous without saving mean
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
             {
                 if (object.doInstantaneous() && !(object.doMean()))
                 {
                     calls.push_back(
                         [&object]()
-                        { object.calculateInstantaneous(); });
+                        {
+                            object.calculateInstantaneous();
+                        });
                 }
             }
 
@@ -211,7 +215,9 @@ namespace LBM
             {
                 calls.push_back(
                     [&object]()
-                    { object.calculateMean(); });
+                    {
+                        object.calculateMean();
+                    });
             }
         }
 
@@ -226,9 +232,9 @@ namespace LBM
          * @return Vector of function objects to be executed
          **/
         __host__ [[nodiscard]] const std::vector<functionObjects::saveFunction> functionObjectSaveInitialiser(
-            functionObjects::moments::collection<VelocitySet> &moments,
-            functionObjects::strainRate::tensor<VelocitySet> &S,
-            functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
+            functionObjects::moments<VelocitySet> &moments,
+            functionObjects::strainRateTensor<VelocitySet> &S,
+            functionObjects::kineticEnergy<VelocitySet> &k) const noexcept
         {
             std::vector<functionObjects::saveFunction> calls;
 
@@ -242,20 +248,24 @@ namespace LBM
         template <class C>
         __host__ void addSaveCall(std::vector<functionObjects::saveFunction> &calls, C &object) const noexcept
         {
-            if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
+            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
             {
                 if (object.doInstantaneous())
                 {
                     calls.push_back(
                         [&object](const host::label_t label)
-                        { object.saveInstantaneous(label); });
+                        {
+                            object.saveInstantaneous(label);
+                        });
                 }
             }
             if (object.doMean())
             {
                 calls.push_back(
                     [&object](const host::label_t label)
-                    { object.saveMean(label); });
+                    {
+                        object.saveMean(label);
+                    });
             }
         }
     };

@@ -87,328 +87,325 @@ namespace LBM
             __host__ [[nodiscard]] static inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
         };
 
-        namespace kineticEnergy
+        namespace kineticEnergyDetail
         {
-            namespace detail
-            {
-                using This = k;
+            using This = k;
 
 #include "commonKernelDefinitions.cuh"
+        }
+
+        /**
+         * @brief Class for managing total kinetic energy scalar calculations in LBM simulations
+         * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
+         * @tparam N The number of streams (compile-time constant)
+         **/
+        template <class VelocitySet>
+        class kineticEnergy
+        {
+        public:
+            /**
+             * @brief Constructs a total kinetic energy scalar object
+             * @param[in] mesh The lattice mesh
+             * @param[in] devPtrs Device pointer collection for memory access
+             * @param[in] streamsLBM Stream handler for CUDA operations
+             **/
+            __host__ [[nodiscard]] kineticEnergy(
+                host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
+                const host::latticeMesh &mesh,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz,
+                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz,
+                const streamHandler &streamsLBM,
+                const programControl &programCtrl) noexcept
+                : hostWriteBuffer_(hostWriteBuffer),
+                  mesh_(mesh),
+                  rho_(rho),
+                  u_(u),
+                  v_(v),
+                  w_(w),
+                  mxx_(mxx),
+                  mxy_(mxy),
+                  mxz_(mxz),
+                  myy_(myy),
+                  myz_(myz),
+                  mzz_(mzz),
+                  streamsLBM_(streamsLBM),
+                  calculate_(initialiserSwitch(fieldName_)),
+                  calculateMean_(initialiserSwitch(fieldNameMean_)),
+                  k_(objectAllocator<VelocitySet, time::instantaneous>(fieldName_, mesh, programCtrl)),
+                  kMean_(objectAllocator<VelocitySet, time::timeAverage>(fieldNameMean_, mesh, programCtrl))
+            {
+                // Set the cache config to prefer L1
+                programCtrl.configure<0, false>(kineticEnergyDetail::instantaneous);
+                programCtrl.configure<0, false>(kineticEnergyDetail::instantaneousAndMean);
+                programCtrl.configure<0, false>(kineticEnergyDetail::mean);
+            };
+
+            /**
+             * @brief Default destructor
+             **/
+            ~kineticEnergy() {}
+
+            /**
+             * @brief Disable copying
+             **/
+            __host__ [[nodiscard]] kineticEnergy(const kineticEnergy &) = delete;
+            __host__ [[nodiscard]] kineticEnergy &operator=(const kineticEnergy &) = delete;
+
+            /**
+             * @brief Check if instantaneous calculation is enabled
+             * @return True if instantaneous calculation is enabled
+             **/
+            __host__ [[nodiscard]] inline constexpr bool doInstantaneous() const noexcept
+            {
+                return calculate_;
             }
 
             /**
-             * @brief Class for managing total kinetic energy scalar calculations in LBM simulations
-             * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
-             * @tparam N The number of streams (compile-time constant)
+             * @brief Check if mean calculation is enabled
+             * @return True if mean calculation is enabled
              **/
-            template <class VelocitySet>
-            class scalar
+            __host__ [[nodiscard]] inline constexpr bool doMean() const noexcept
             {
-            public:
-                /**
-                 * @brief Constructs a total kinetic energy scalar object
-                 * @param[in] mesh The lattice mesh
-                 * @param[in] devPtrs Device pointer collection for memory access
-                 * @param[in] streamsLBM Stream handler for CUDA operations
-                 **/
-                __host__ [[nodiscard]] scalar(
-                    host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
-                    const host::latticeMesh &mesh,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz,
-                    const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz,
-                    const streamHandler &streamsLBM,
-                    const programControl &programCtrl) noexcept
-                    : hostWriteBuffer_(hostWriteBuffer),
-                      mesh_(mesh),
-                      rho_(rho),
-                      u_(u),
-                      v_(v),
-                      w_(w),
-                      mxx_(mxx),
-                      mxy_(mxy),
-                      mxz_(mxz),
-                      myy_(myy),
-                      myz_(myz),
-                      mzz_(mzz),
-                      streamsLBM_(streamsLBM),
-                      calculate_(initialiserSwitch(fieldName_)),
-                      calculateMean_(initialiserSwitch(fieldNameMean_)),
-                      k_(objectAllocator<VelocitySet, time::instantaneous>(fieldName_, mesh, programCtrl)),
-                      kMean_(objectAllocator<VelocitySet, time::timeAverage>(fieldNameMean_, mesh, programCtrl))
+                return calculateMean_;
+            }
+
+            /**
+             * @brief Calculate instantaneous total kinetic energy
+             * @param[in] timeStep Current simulation time step
+             **/
+            __host__ void calculateInstantaneous() noexcept
+            {
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                 {
-                    // Set the cache config to prefer L1
-                    programCtrl.configure<0, false>(detail::instantaneous);
-                    programCtrl.configure<0, false>(detail::instantaneousAndMean);
-                    programCtrl.configure<0, false>(detail::mean);
-                };
+                    kineticEnergyDetail::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        {rho_.ptr(stream),
+                         u_.ptr(stream),
+                         v_.ptr(stream),
+                         w_.ptr(stream),
+                         mxx_.ptr(stream),
+                         mxy_.ptr(stream),
+                         mxz_.ptr(stream),
+                         myy_.ptr(stream),
+                         myz_.ptr(stream),
+                         mzz_.ptr(stream)},
+                        {k_.ptr(stream)});
+                }
+            }
 
-                /**
-                 * @brief Default destructor
-                 **/
-                ~scalar() {}
+            /**
+             * @brief Calculate time-averaged total kinetic energy
+             * @param[in] timeStep Current simulation time step
+             **/
+            __host__ void calculateMean() noexcept
+            {
+                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
 
-                /**
-                 * @brief Disable copying
-                 **/
-                __host__ [[nodiscard]] scalar(const scalar &) = delete;
-                __host__ [[nodiscard]] scalar &operator=(const scalar &) = delete;
-
-                /**
-                 * @brief Check if instantaneous calculation is enabled
-                 * @return True if instantaneous calculation is enabled
-                 **/
-                __host__ [[nodiscard]] inline constexpr bool doInstantaneous() const noexcept
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                 {
-                    return calculate_;
+                    kineticEnergyDetail::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        {rho_.ptr(stream),
+                         u_.ptr(stream),
+                         v_.ptr(stream),
+                         w_.ptr(stream),
+                         mxx_.ptr(stream),
+                         mxy_.ptr(stream),
+                         mxz_.ptr(stream),
+                         myy_.ptr(stream),
+                         myz_.ptr(stream),
+                         mzz_.ptr(stream)},
+                        {kMean_.ptr(stream)},
+                        invNewCount);
                 }
 
-                /**
-                 * @brief Check if mean calculation is enabled
-                 * @return True if mean calculation is enabled
-                 **/
-                __host__ [[nodiscard]] inline constexpr bool doMean() const noexcept
+                kMean_.meanCountRef()++;
+            }
+
+            /**
+             * @brief Calculate both the instantaneous and time-averaged total kinetic energy
+             * @param[in] timeStep Current simulation time step
+             **/
+            __host__ void calculateInstantaneousAndMean() noexcept
+            {
+                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
+
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                 {
-                    return calculateMean_;
+                    kineticEnergyDetail::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        {rho_.ptr(stream),
+                         u_.ptr(stream),
+                         v_.ptr(stream),
+                         w_.ptr(stream),
+                         mxx_.ptr(stream),
+                         mxy_.ptr(stream),
+                         mxz_.ptr(stream),
+                         myy_.ptr(stream),
+                         myz_.ptr(stream),
+                         mzz_.ptr(stream)},
+                        {k_.ptr(stream)},
+                        {kMean_.ptr(stream)},
+                        invNewCount);
                 }
 
-                /**
-                 * @brief Calculate instantaneous total kinetic energy
-                 * @param[in] timeStep Current simulation time step
-                 **/
-                __host__ void calculateInstantaneous() noexcept
+                kMean_.meanCountRef()++;
+            }
+
+            /**
+             * @brief Saves the instantaneous total kinetic energy to file
+             * @param[in] timeStep Current simulation time step
+             **/
+            __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
+            {
+                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < k_.programCtrl().deviceList().size(); virtualDeviceIndex++)
                 {
-                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
-                    {
-                        detail::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                            {rho_.ptr(stream),
-                             u_.ptr(stream),
-                             v_.ptr(stream),
-                             w_.ptr(stream),
-                             mxx_.ptr(stream),
-                             mxy_.ptr(stream),
-                             mxz_.ptr(stream),
-                             myy_.ptr(stream),
-                             myz_.ptr(stream),
-                             mzz_.ptr(stream)},
-                            {k_.ptr(stream)});
-                    }
-                }
-
-                /**
-                 * @brief Calculate time-averaged total kinetic energy
-                 * @param[in] timeStep Current simulation time step
-                 **/
-                __host__ void calculateMean() noexcept
-                {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
-
-                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
-                    {
-                        detail::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                            {rho_.ptr(stream),
-                             u_.ptr(stream),
-                             v_.ptr(stream),
-                             w_.ptr(stream),
-                             mxx_.ptr(stream),
-                             mxy_.ptr(stream),
-                             mxz_.ptr(stream),
-                             myy_.ptr(stream),
-                             myz_.ptr(stream),
-                             mzz_.ptr(stream)},
-                            {kMean_.ptr(stream)},
-                            invNewCount);
-                    }
-
-                    kMean_.meanCountRef()++;
-                }
-
-                /**
-                 * @brief Calculate both the instantaneous and time-averaged total kinetic energy
-                 * @param[in] timeStep Current simulation time step
-                 **/
-                __host__ void calculateInstantaneousAndMean() noexcept
-                {
-                    const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
-
-                    for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
-                    {
-                        detail::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                            {rho_.ptr(stream),
-                             u_.ptr(stream),
-                             v_.ptr(stream),
-                             w_.ptr(stream),
-                             mxx_.ptr(stream),
-                             mxy_.ptr(stream),
-                             mxz_.ptr(stream),
-                             myy_.ptr(stream),
-                             myz_.ptr(stream),
-                             mzz_.ptr(stream)},
-                            {k_.ptr(stream)},
-                            {kMean_.ptr(stream)},
-                            invNewCount);
-                    }
-
-                    kMean_.meanCountRef()++;
-                }
-
-                /**
-                 * @brief Saves the instantaneous total kinetic energy to file
-                 * @param[in] timeStep Current simulation time step
-                 **/
-                __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
-                {
-                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < k_.programCtrl().deviceList().size(); virtualDeviceIndex++)
-                    {
-                        hostWriteBuffer_.copy_from_device(
-                            device::ptrCollection<1, scalar_t>(k_.ptr(virtualDeviceIndex)),
-                            mesh_,
-                            virtualDeviceIndex);
-                    }
-
-                    postProcess::LBMBin::write<time::instantaneous>(
-                        fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                    hostWriteBuffer_.copy_from_device(
+                        device::ptrCollection<1, scalar_t>(k_.ptr(virtualDeviceIndex)),
                         mesh_,
-                        componentNames_,
-                        hostWriteBuffer_.data(),
-                        timeStep,
-                        0);
+                        virtualDeviceIndex);
                 }
 
-                /**
-                 * @brief Saves the mean total kinetic energy to file
-                 * @param[in] timeStep Current simulation time step
-                 **/
-                __host__ void saveMean(const host::label_t timeStep) noexcept
-                {
-                    for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < kMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
-                    {
-                        hostWriteBuffer_.copy_from_device(
-                            device::ptrCollection<1, scalar_t>(kMean_.ptr(virtualDeviceIndex)),
-                            mesh_,
-                            virtualDeviceIndex);
-                    }
+                postProcess::LBMBin::write<time::instantaneous>(
+                    fieldName_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                    mesh_,
+                    componentNames_,
+                    hostWriteBuffer_.data(),
+                    timeStep,
+                    0);
+            }
 
-                    postProcess::LBMBin::write<time::timeAverage>(
-                        fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
+            /**
+             * @brief Saves the mean total kinetic energy to file
+             * @param[in] timeStep Current simulation time step
+             **/
+            __host__ void saveMean(const host::label_t timeStep) noexcept
+            {
+                for (host::label_t virtualDeviceIndex = 0; virtualDeviceIndex < kMean_.programCtrl().deviceList().size(); virtualDeviceIndex++)
+                {
+                    hostWriteBuffer_.copy_from_device(
+                        device::ptrCollection<1, scalar_t>(kMean_.ptr(virtualDeviceIndex)),
                         mesh_,
-                        componentNamesMean_,
-                        hostWriteBuffer_.data(),
-                        timeStep,
-                        kMean_.meanCount());
+                        virtualDeviceIndex);
                 }
 
-                /**
-                 * @brief Get the field name for instantaneous components
-                 * @return Field name string
-                 **/
-                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldName() const noexcept
-                {
-                    return fieldName_;
-                }
+                postProcess::LBMBin::write<time::timeAverage>(
+                    fieldNameMean_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                    mesh_,
+                    componentNamesMean_,
+                    hostWriteBuffer_.data(),
+                    timeStep,
+                    kMean_.meanCount());
+            }
 
-                /**
-                 * @brief Get the field name for mean components
-                 * @return Field name string
-                 **/
-                __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldNameMean() const noexcept
-                {
-                    return fieldNameMean_;
-                }
+            /**
+             * @brief Get the field name for instantaneous components
+             * @return Field name string
+             **/
+            __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldName() const noexcept
+            {
+                return fieldName_;
+            }
 
-                /**
-                 * @brief Get the component names for instantaneous scalar
-                 * @return Vector of component names
-                 **/
-                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNames() const noexcept
-                {
-                    return componentNames_;
-                }
+            /**
+             * @brief Get the field name for mean components
+             * @return Field name string
+             **/
+            __device__ __host__ [[nodiscard]] inline constexpr const name_t &fieldNameMean() const noexcept
+            {
+                return fieldNameMean_;
+            }
 
-                /**
-                 * @brief Get the component names for mean scalar
-                 * @return Vector of component names
-                 **/
-                __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNamesMean() const noexcept
-                {
-                    return componentNamesMean_;
-                }
+            /**
+             * @brief Get the component names for instantaneous scalar
+             * @return Vector of component names
+             **/
+            __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNames() const noexcept
+            {
+                return componentNames_;
+            }
 
-            private:
-                host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer_;
+            /**
+             * @brief Get the component names for mean scalar
+             * @return Vector of component names
+             **/
+            __device__ __host__ [[nodiscard]] inline constexpr const words_t &componentNamesMean() const noexcept
+            {
+                return componentNamesMean_;
+            }
 
-                /**
-                 * @brief Field name for instantaneous scalar
-                 **/
-                const name_t fieldName_ = "k";
+        private:
+            host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer_;
 
-                /**
-                 * @brief Field name for mean scalar
-                 **/
-                const name_t fieldNameMean_ = fieldName_ + "Mean";
+            /**
+             * @brief Field name for instantaneous scalar
+             **/
+            const name_t fieldName_ = "k";
 
-                /**
-                 * @brief Instantaneous scalar name
-                 **/
-                const words_t componentNames_ = {"k"};
+            /**
+             * @brief Field name for mean scalar
+             **/
+            const name_t fieldNameMean_ = fieldName_ + "Mean";
 
-                /**
-                 * @brief Mean scalar name
-                 **/
-                const words_t componentNamesMean_ = string::catenate(componentNames_, "Mean");
+            /**
+             * @brief Instantaneous scalar name
+             **/
+            const words_t componentNames_ = {"k"};
 
-                /**
-                 * @brief Reference to lattice mesh
-                 **/
-                const host::latticeMesh &mesh_;
+            /**
+             * @brief Mean scalar name
+             **/
+            const words_t componentNamesMean_ = string::catenate(componentNames_, "Mean");
 
-                /**
-                 * @brief Device pointer collection
-                 **/
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz_;
-                const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz_;
+            /**
+             * @brief Reference to lattice mesh
+             **/
+            const host::latticeMesh &mesh_;
 
-                /**
-                 * @brief Stream handler for CUDA operations
-                 **/
-                const streamHandler &streamsLBM_;
+            /**
+             * @brief Device pointer collection
+             **/
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &rho_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &u_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &v_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &w_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxx_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxy_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mxz_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myy_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &myz_;
+            const device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> &mzz_;
 
-                /**
-                 * @brief Flag for instantaneous calculation
-                 **/
-                const bool calculate_;
+            /**
+             * @brief Stream handler for CUDA operations
+             **/
+            const streamHandler &streamsLBM_;
 
-                /**
-                 * @brief Flag for mean calculation
-                 **/
-                const bool calculateMean_;
+            /**
+             * @brief Flag for instantaneous calculation
+             **/
+            const bool calculate_;
 
-                /**
-                 * @brief Instantaneous total kinetic energy scalar
-                 **/
-                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> k_;
+            /**
+             * @brief Flag for mean calculation
+             **/
+            const bool calculateMean_;
 
-                /**
-                 * @brief Time-averaged total kinetic energy scalar
-                 **/
-                device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> kMean_;
-            };
-        }
+            /**
+             * @brief Instantaneous total kinetic energy scalar
+             **/
+            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> k_;
+
+            /**
+             * @brief Time-averaged total kinetic energy scalar
+             **/
+            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> kMean_;
+        };
     }
 }
 
