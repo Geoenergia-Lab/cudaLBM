@@ -54,119 +54,46 @@ namespace LBM
 {
     namespace functionObjects
     {
+        struct k
+        {
+            /**
+             * @brief Number of components of the kinetic energy
+             **/
+            static constexpr const host::label_t N = 1;
+
+            /**
+             * @brief Calculates the total kinetic energy
+             * @param[in] devPtrs Device pointer collection containing velocity and moment fields
+             * @param[in] idx Spatial index
+             * @return The calculated total kinetic energy
+             **/
+            __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(
+                const device::ptrCollection<10, const scalar_t> &devPtrs,
+                const device::label_t idx) noexcept
+            {
+                const thread::array<scalar_t, 3> U = read_from_moments<index::u, index::v, index::w>(devPtrs, idx);
+
+                if constexpr (std::is_same_v<scalar_t, float>)
+                {
+                    return sqrtf((U[0] * U[0]) + (U[1] * U[1]) + (U[2] * U[2])) * static_cast<scalar_t>(0.5);
+                }
+
+                if constexpr (std::is_same_v<scalar_t, double>)
+                {
+                    return sqrt((U[0] * U[0]) + (U[1] * U[1]) + (U[2] * U[2])) * static_cast<scalar_t>(0.5);
+                }
+            }
+
+            __host__ [[nodiscard]] static inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+        };
+
         namespace kineticEnergy
         {
-            namespace kernel
+            namespace detail
             {
-                __host__ [[nodiscard]] inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+                using This = k;
 
-                /**
-                 * @brief Calculates the total kinetic energy
-                 * @param[in] u Velocity component in x direction
-                 * @param[in] v Velocity component in y direction
-                 * @param[in] w Velocity component in z direction
-                 * @return The calculated total kinetic energy
-                 **/
-                template <typename T>
-                __device__ [[nodiscard]] inline constexpr T K(const T u, const T v, const T w) noexcept
-                {
-                    types::assertions::validate<T>();
-
-                    if constexpr (std::is_same_v<T, float>)
-                    {
-                        return sqrtf((u * u) + (v * v) + (w * w)) * static_cast<T>(0.5);
-                    }
-
-                    if constexpr (std::is_same_v<T, double>)
-                    {
-                        return sqrt((u * u) + (v * v) + (w * w)) * static_cast<T>(0.5);
-                    }
-                }
-
-                /**
-                 * @brief CUDA kernel for calculating time-averaged total kinetic energy
-                 * @param[in] devPtrs Device pointer collection containing velocity and moment fields
-                 * @param[in] KMeanPtrs Device pointer collection for mean total kinetic energy
-                 * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
-                 **/
-                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void mean(
-                    const device::ptrCollection<10, const scalar_t> devPtrs,
-                    const device::ptrCollection<1, scalar_t> KMeanPtrs,
-                    const scalar_t invNewCount)
-                {
-                    // Calculate the index
-                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
-
-                    // Read from global memory
-                    const scalar_t u = devPtrs.ptr<1>()[idx];
-                    const scalar_t v = devPtrs.ptr<2>()[idx];
-                    const scalar_t w = devPtrs.ptr<3>()[idx];
-
-                    // Calculate the instantaneous
-                    const scalar_t Ke = K(u, v, w);
-
-                    // Read the mean values from global memory
-                    const scalar_t Ke_Mean = KMeanPtrs.ptr<0>()[idx];
-
-                    // Update the mean value and write back to global
-                    const scalar_t Ke_MeanNew = timeAverage(Ke_Mean, Ke, invNewCount);
-                    KMeanPtrs.ptr<0>()[idx] = Ke_MeanNew;
-                }
-
-                /**
-                 * @brief CUDA kernel for calculating instantaneous and mean total kinetic energy
-                 * @param[in] devPtrs Device pointer collection containing velocity fields
-                 * @param[in] KPtrs Device pointer collection for instantaneous total kinetic energy
-                 * @param[in] KMeanPtrs Device pointer collection for mean total kinetic energy
-                 * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
-                 **/
-                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void instantaneousAndMean(
-                    const device::ptrCollection<10, const scalar_t> devPtrs,
-                    const device::ptrCollection<1, scalar_t> KPtrs,
-                    const device::ptrCollection<1, scalar_t> KMeanPtrs,
-                    const scalar_t invNewCount)
-                {
-                    // Calculate the index
-                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
-
-                    // Read from global memory
-                    const scalar_t u = devPtrs.ptr<1>()[idx];
-                    const scalar_t v = devPtrs.ptr<2>()[idx];
-                    const scalar_t w = devPtrs.ptr<3>()[idx];
-
-                    // Calculate the instantaneous and write back to global
-                    const scalar_t Ke = K(u, v, w);
-                    KPtrs.ptr<0>()[idx] = Ke;
-
-                    // Read the mean values from global memory
-                    const scalar_t Ke_Mean = KMeanPtrs.ptr<0>()[idx];
-
-                    // Update the mean value and write back to global
-                    const scalar_t Ke_MeanNew = timeAverage(Ke_Mean, Ke, invNewCount);
-                    KMeanPtrs.ptr<0>()[idx] = Ke_MeanNew;
-                }
-
-                /**
-                 * @brief CUDA kernel for calculating instantaneous total kinetic energy
-                 * @param[in] devPtrs Device pointer collection containing velocity fields
-                 * @param[in] KPtrs Device pointer collection for instantaneous total kinetic energy
-                 **/
-                __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP()) __global__ void instantaneous(
-                    const device::ptrCollection<10, const scalar_t> devPtrs,
-                    const device::ptrCollection<1, scalar_t> KPtrs)
-                {
-                    // Calculate the index
-                    const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
-
-                    // Read from global memory
-                    const scalar_t u = devPtrs.ptr<1>()[idx];
-                    const scalar_t v = devPtrs.ptr<2>()[idx];
-                    const scalar_t w = devPtrs.ptr<3>()[idx];
-
-                    // Calculate the instantaneous and write back to global
-                    const scalar_t Ke = K(u, v, w);
-                    KPtrs.ptr<0>()[idx] = Ke;
-                }
+#include "commonKernelDefinitions.cuh"
             }
 
             /**
@@ -218,7 +145,9 @@ namespace LBM
                       kMean_(objectAllocator<VelocitySet, time::timeAverage>(fieldNameMean_, mesh, programCtrl))
                 {
                     // Set the cache config to prefer L1
-                    errorHandler::check(cudaFuncSetCacheConfig(kernel::instantaneous, cudaFuncCachePreferL1));
+                    programCtrl.configure<0, false>(detail::instantaneous);
+                    programCtrl.configure<0, false>(detail::instantaneousAndMean);
+                    programCtrl.configure<0, false>(detail::mean);
                 };
 
                 /**
@@ -236,7 +165,7 @@ namespace LBM
                  * @brief Check if instantaneous calculation is enabled
                  * @return True if instantaneous calculation is enabled
                  **/
-                __host__ inline constexpr bool calculate() const noexcept
+                __host__ [[nodiscard]] inline constexpr bool doInstantaneous() const noexcept
                 {
                     return calculate_;
                 }
@@ -245,7 +174,7 @@ namespace LBM
                  * @brief Check if mean calculation is enabled
                  * @return True if mean calculation is enabled
                  **/
-                __host__ inline constexpr bool calculateMean() const noexcept
+                __host__ [[nodiscard]] inline constexpr bool doMean() const noexcept
                 {
                     return calculateMean_;
                 }
@@ -254,11 +183,11 @@ namespace LBM
                  * @brief Calculate instantaneous total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneous([[maybe_unused]] const host::label_t timeStep) noexcept
+                __host__ void calculateInstantaneous() noexcept
                 {
                     for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
-                        kineticEnergy::kernel::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        detail::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             {rho_.ptr(stream),
                              u_.ptr(stream),
                              v_.ptr(stream),
@@ -277,13 +206,13 @@ namespace LBM
                  * @brief Calculate time-averaged total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateMean([[maybe_unused]] const host::label_t timeStep) noexcept
+                __host__ void calculateMean() noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
 
                     for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
-                        kineticEnergy::kernel::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        detail::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             {rho_.ptr(stream),
                              u_.ptr(stream),
                              v_.ptr(stream),
@@ -305,13 +234,13 @@ namespace LBM
                  * @brief Calculate both the instantaneous and time-averaged total kinetic energy
                  * @param[in] timeStep Current simulation time step
                  **/
-                __host__ void calculateInstantaneousAndMean([[maybe_unused]] const host::label_t timeStep) noexcept
+                __host__ void calculateInstantaneousAndMean() noexcept
                 {
                     const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(kMean_.meanCount() + 1);
 
                     for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
                     {
-                        kineticEnergy::kernel::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
+                        detail::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
                             {rho_.ptr(stream),
                              u_.ptr(stream),
                              v_.ptr(stream),

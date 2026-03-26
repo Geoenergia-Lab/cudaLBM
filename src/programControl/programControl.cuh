@@ -310,7 +310,7 @@ namespace LBM
          * @tparam T The function type (e.g., a lambda or a function pointer)
          * @param[in] func The kernel function to configure
          **/
-        template <const host::label_t smem_alloc_size, class T>
+        template <const host::label_t smem_alloc_size, const bool PreferShared = true, class T>
         __host__ void configure(T *func) const
         {
             for (host::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < deviceList().size(); VirtualDeviceIndex++)
@@ -318,7 +318,14 @@ namespace LBM
                 errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaSetDevice(deviceList()[VirtualDeviceIndex]));
                 errorHandler::check(cudaDeviceSynchronize());
-                errorHandler::check(cudaFuncSetCacheConfig(func, cudaFuncCachePreferShared));
+                if constexpr (PreferShared)
+                {
+                    errorHandler::check(cudaFuncSetCacheConfig(func, cudaFuncCachePreferShared));
+                }
+                else
+                {
+                    errorHandler::check(cudaFuncSetCacheConfig(func, cudaFuncCachePreferL1));
+                }
                 errorHandler::check(cudaDeviceSynchronize());
                 errorHandler::check(cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_alloc_size));
                 errorHandler::check(cudaDeviceSynchronize());

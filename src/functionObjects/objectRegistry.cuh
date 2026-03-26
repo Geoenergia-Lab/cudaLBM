@@ -113,12 +113,11 @@ namespace LBM
          * @brief Executes all registered function object calculations for given time step
          * @param[in] timeStep The current simulation time step
          **/
-        inline void calculate(const host::label_t timeStep) noexcept
+        inline void calculate() noexcept
         {
-            // std::cout << "Length of functionVector_: " << functionVector_.size() << std::endl;
             for (const auto &func : functionVector_)
             {
-                func(timeStep); // Call each function with the timeStep
+                func(); // Call each function with the timeStep
             }
         }
 
@@ -160,19 +159,19 @@ namespace LBM
         /**
          * @brief Registry of function objects to invoke
          **/
-        const std::vector<functionObjects::save_function_signature> functionVector_;
+        const std::vector<functionObjects::calculateFunction> functionVector_;
 
         /**
          * @brief Initializes function calls based on strain rate tensor configuration
          * @param[in] S Reference to strain rate tensor object
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] const std::vector<functionObjects::save_function_signature> functionObjectCallInitialiser(
+        __host__ [[nodiscard]] const std::vector<functionObjects::calculateFunction> functionObjectCallInitialiser(
             functionObjects::moments::collection<VelocitySet> &moments,
             functionObjects::strainRate::tensor<VelocitySet> &S,
             functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
-            std::vector<functionObjects::save_function_signature> calls;
+            std::vector<functionObjects::calculateFunction> calls;
 
             addObjectCall(calls, moments);
             addObjectCall(calls, S);
@@ -182,57 +181,56 @@ namespace LBM
         }
 
         template <class C>
-        __host__ void addObjectCall(std::vector<functionObjects::save_function_signature> &calls, C &object) const noexcept
+        __host__ void addObjectCall(std::vector<functionObjects::calculateFunction> &calls, C &object) const noexcept
         {
             // If both instantaneous and mean calculations are enabled, calculate both in one call
             // Only do this for variables other than the 10 moments
             if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
-                if ((object.calculate()) && (object.calculateMean()))
+                if ((object.doInstantaneous()) && (object.doMean()))
                 {
                     calls.push_back(
-                        [&object](const host::label_t label)
-                        { object.calculateInstantaneousAndMean(label); });
+                        [&object]()
+                        { object.calculateInstantaneousAndMean(); });
                 }
             }
 
             // Must be only saving instantaneous, so just calculate instantaneous without saving mean
             if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
-                if (object.calculate() && !(object.calculateMean()))
+                if (object.doInstantaneous() && !(object.doMean()))
                 {
                     calls.push_back(
-                        [&object](const host::label_t label)
-                        { object.calculateInstantaneous(label); });
+                        [&object]()
+                        { object.calculateInstantaneous(); });
                 }
             }
 
             // Must be only saving the mean, so just calculate mean without saving instantaneous
-            if (object.calculateMean() && !(object.calculate()))
+            if (object.doMean() && !(object.doInstantaneous()))
             {
-                // std::cout << "Pushing back " << object.fieldName() << ".saveMean" << std::endl;
                 calls.push_back(
-                    [&object](const host::label_t label)
-                    { object.calculateMean(label); });
+                    [&object]()
+                    { object.calculateMean(); });
             }
         }
 
         /**
          * @brief Registry of function objects to save
          **/
-        const std::vector<functionObjects::save_function_signature> saveVector_;
+        const std::vector<functionObjects::saveFunction> saveVector_;
 
         /**
          * @brief Initializes save calls based on strain rate tensor configuration
          * @param[in] S Reference to strain rate tensor object
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] const std::vector<functionObjects::save_function_signature> functionObjectSaveInitialiser(
+        __host__ [[nodiscard]] const std::vector<functionObjects::saveFunction> functionObjectSaveInitialiser(
             functionObjects::moments::collection<VelocitySet> &moments,
             functionObjects::strainRate::tensor<VelocitySet> &S,
             functionObjects::kineticEnergy::scalar<VelocitySet> &k) const noexcept
         {
-            std::vector<functionObjects::save_function_signature> calls;
+            std::vector<functionObjects::saveFunction> calls;
 
             addSaveCall(calls, moments);
             addSaveCall(calls, S);
@@ -242,21 +240,19 @@ namespace LBM
         }
 
         template <class C>
-        __host__ void addSaveCall(std::vector<functionObjects::save_function_signature> &calls, C &object) const noexcept
+        __host__ void addSaveCall(std::vector<functionObjects::saveFunction> &calls, C &object) const noexcept
         {
             if constexpr (!std::is_same_v<C, functionObjects::moments::collection<VelocitySet>>)
             {
-                if (object.calculate())
+                if (object.doInstantaneous())
                 {
-                    // std::cout << "Pushing back saveInstantaneous" << std::endl;
                     calls.push_back(
                         [&object](const host::label_t label)
                         { object.saveInstantaneous(label); });
                 }
             }
-            if (object.calculateMean())
+            if (object.doMean())
             {
-                // std::cout << "Pushing back " << object.fieldName() << ".calculateMean" << std::endl;
                 calls.push_back(
                     [&object](const host::label_t label)
                     { object.saveMean(label); });

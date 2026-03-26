@@ -158,7 +158,7 @@ int main(const int argc, const char *const argv[])
             });
 
         // Calculate S kernel
-        runTimeObjects.calculate(timeStep);
+        runTimeObjects.calculate();
 
         // Halo pointer swap
         blockHalo.swap(VirtualDeviceIndex());

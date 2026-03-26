@@ -93,15 +93,15 @@ namespace LBM
              * @brief Fill constructor
              * @param[in] value Initial value for all array elements
              **/
-            template <std::enable_if_t<(N != 1), bool> = true>
-            __device__ __host__ [[nodiscard]] inline consteval array(const T value) noexcept
-            {
-                device::constexpr_for<0, N>(
-                    [&](const auto i)
-                    {
-                        data_[q_i<i>()] = value;
-                    });
-            }
+            // template <std::enable_if_t<(N != 1), bool> = true>
+            // __device__ __host__ [[nodiscard]] inline consteval array(const T value) noexcept
+            // {
+            //     device::constexpr_for<0, N>(
+            //         [&](const auto i)
+            //         {
+            //             data_[q_i<i>()] = value;
+            //         });
+            // }
 
             /**
              * @brief Default constructor (value-initializes all elements)
