@@ -62,7 +62,8 @@ namespace LBM
              * @brief Get number of discrete velocity directions
              * @return 7 (number of directions in D3Q19 lattice)
              **/
-            __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
+            template <typename T = host::label_t>
+            __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
             {
                 return 7;
             }
@@ -71,7 +72,8 @@ namespace LBM
              * @brief Get number of velocity components on a lattice face
              * @return 1 (number of directions crossing each face in D3Q19)
              **/
-            __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
+            template <typename T = host::label_t>
+            __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
             {
                 return 1;
             }
@@ -110,18 +112,20 @@ namespace LBM
          * @brief Get number of discrete velocity directions
          * @return 7 (number of directions in D3Q7 lattice)
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval label_t Q() noexcept
+        template <typename T = host::label_t>
+        __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
         {
-            return vs::Q();
+            return vs::Q<T>();
         }
 
         /**
          * @brief Get number of velocity components on a lattice face
          * @return 1 (number of directions crossing each face in D3Q7)
          **/
-        __device__ __host__ [[nodiscard]] static inline consteval label_t QF() noexcept
+        template <typename T = host::label_t>
+        __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
         {
-            return vs::QF();
+            return vs::QF<T>();
         }
 
         /**
@@ -159,7 +163,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return Weight for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T w_q(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
@@ -186,7 +190,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return x-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cx(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
@@ -209,11 +213,11 @@ namespace LBM
 
         /**
          * @brief Get y-component for specific direction
-         * @tparam q_ Direction index (0-18)
+         * @tparam q_ Direction index (0-6)
          * @param[in] q Direction index as compile-time constant
          * @return y-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cy(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
@@ -240,7 +244,7 @@ namespace LBM
          * @param[in] q Direction index as compile-time constant
          * @return z-component for specified direction
          **/
-        template <typename T, const label_t q_>
+        template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cz(const q_i<q_> q) noexcept
         {
             // Check that we are accessing a valid member
@@ -257,12 +261,12 @@ namespace LBM
         template <typename T, const axis::type alpha>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> c() noexcept
         {
-            assertions::axis::validate<alpha, axis::CAN_BE_NULL>();
+            axis::assertions::validate<alpha, axis::CAN_BE_NULL>();
 
             if constexpr (alpha == axis::NO_DIRECTION)
             {
                 thread::array<T, vs::Q()> result;
-                for (std::size_t i = 0; i < vs::Q(); i++)
+                for (host::label_t i = 0; i < vs::Q(); i++)
                 {
                     result[i] = 1;
                 }
@@ -371,19 +375,19 @@ namespace LBM
          * @brief Implementation of the print loop
          * @note This function effectively unrolls the loop at compile-time and checks for its bounds
          **/
-        template <const label_t q_ = 0>
+        template <const device::label_t q_ = 0>
         __host__ static inline void printAll(const q_i<q_> q = q_i<0>()) noexcept
         {
             // Loop over the velocity set, print to terminal
-            host::constexpr_for<q(), Q()>(
-                [&](const auto Q)
+            host::constexpr_for<q(), vs::Q()>(
+                [&](const auto i)
                 {
                     std::cout
-                        << "    [" << q_i<Q>() << "] = {"
-                        << w_q<double>()[q_i<Q>()] << ", "
-                        << cx<int>()[q_i<Q>()] << ", "
-                        << cy<int>()[q_i<Q>()] << ", "
-                        << cz<int>()[q_i<Q>()] << "};" << std::endl;
+                        << "    {w, cx, cy, cz}[" << q_i<i>() << "] = {"
+                        << w_q<double>()[q_i<i>()] << ", "
+                        << velocitySet::c<cx<int>()[q_i<i>()]>() << ", "
+                        << velocitySet::c<cy<int>()[q_i<i>()]>() << ", "
+                        << velocitySet::c<cz<int>()[q_i<i>()]>() << "};" << std::endl;
                 });
         }
     };

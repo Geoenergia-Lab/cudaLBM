@@ -374,9 +374,11 @@ namespace LBM
                     const host::label_t nzPointsPerDevice = dimensions.value<axis::Z>() / nDevices.value<axis::Z>();
                     const host::label_t nPointsPerDevice = nxPointsPerDevice * nyPointsPerDevice * nzPointsPerDevice;
 
+                    const host::label_t nMoments = programCtrl.isMultiphase() ? NUMBER_MOMENTS<true, host::label_t>() : NUMBER_MOMENTS<false, host::label_t>();
+
                     const cudaDeviceProp props = GPU::properties(programCtrl.deviceList()[virtualDeviceIndex]);
                     const host::label_t totalMemTemp = props.totalGlobalMem;
-                    const host::label_t allocationSize = nPointsPerDevice * static_cast<host::label_t>(sizeof(scalar_t)) * (NUMBER_MOMENTS<host::label_t>());
+                    const host::label_t allocationSize = nPointsPerDevice * static_cast<host::label_t>(sizeof(scalar_t)) * nMoments;
 
                     if (allocationSize >= totalMemTemp)
                     {

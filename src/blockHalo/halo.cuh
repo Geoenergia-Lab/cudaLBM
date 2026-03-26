@@ -161,6 +161,167 @@ namespace LBM
             }
 
             /**
+             * @brief Loads a scalar value from either local memory or a scalar halo face
+             * @tparam dx X-offset of the requested neighbor (-1, 0, +1)
+             * @tparam dy Y-offset of the requested neighbor (-1, 0, +1)
+             * @tparam dz Z-offset of the requested neighbor (-1, 0, +1)
+             * @param[in] scalarField Local scalar field array
+             * @param[in] readBuffer Collection of scalar halo-face pointers (x0, x1, y0, y1, z0, z1)
+             * @param[in] Tx Three-dimensional thread coordinates
+             * @param[in] Bx Three-dimensional block coordinates
+             * @param[in] point The global point coordinate
+             **/
+            template <const int dx, const int dy, const int dz>
+            __device__ static inline constexpr scalar_t pull_scalar(
+                const scalar_t *const ptrRestrict scalarField,
+                const device::ptrCollection<6, const scalar_t> &readBuffer,
+                const thread::coordinate &Tx,
+                const block::coordinate &Bx,
+                const device::pointCoordinate &point) noexcept
+            {
+                velocityCoefficient::assertions::validate<dx, velocityCoefficient::CAN_BE_NULL>();
+                velocityCoefficient::assertions::validate<dy, velocityCoefficient::CAN_BE_NULL>();
+                velocityCoefficient::assertions::validate<dz, velocityCoefficient::CAN_BE_NULL>();
+                static_assert(!(dx == 0 && dy == 0 && dz == 0), "Neighbor offset must be non-zero.");
+
+                const thread::array<device::label_t, 2> dBx{Bx.shifted_block<axis::X, -1>(), Bx.shifted_block<axis::X, +1>()};
+                const thread::array<device::label_t, 2> dBy{Bx.shifted_block<axis::Y, -1>(), Bx.shifted_block<axis::Y, +1>()};
+                const thread::array<device::label_t, 2> dBz{Bx.shifted_block<axis::Z, -1>(), Bx.shifted_block<axis::Z, +1>()};
+
+                const device::label_t tx = Tx.shifted_coordinate<axis::X, dx>();
+                const device::label_t ty = Tx.shifted_coordinate<axis::Y, dy>();
+                const device::label_t tz = Tx.shifted_coordinate<axis::Z, dz>();
+
+                const device::label_t bx = block_stencil<axis::X, dx>(
+                    Tx.value<axis::X>(),
+                    thread_stencil<dx>(dBx, Bx.value<axis::X>()),
+                    Bx.value<axis::X>());
+                const device::label_t by = block_stencil<axis::Y, dy>(
+                    Tx.value<axis::Y>(),
+                    thread_stencil<dy>(dBy, Bx.value<axis::Y>()),
+                    Bx.value<axis::Y>());
+                const device::label_t bz = block_stencil<axis::Z, dz>(
+                    Tx.value<axis::Z>(),
+                    thread_stencil<dz>(dBz, Bx.value<axis::Z>()),
+                    Bx.value<axis::Z>());
+
+                bool haloX = false;
+                bool haloY = false;
+                bool haloZ = false;
+
+                if constexpr (dx == -1)
+                {
+                    haloX = boundaryCheck<axis::X, -1, x_periodic>(point.value<axis::X>(), Tx);
+                }
+                else if constexpr (dx == +1)
+                {
+                    haloX = boundaryCheck<axis::X, +1, x_periodic>(point.value<axis::X>(), Tx);
+                }
+
+                if constexpr (dy == -1)
+                {
+                    haloY = boundaryCheck<axis::Y, -1, y_periodic>(point.value<axis::Y>(), Tx);
+                }
+                else if constexpr (dy == +1)
+                {
+                    haloY = boundaryCheck<axis::Y, +1, y_periodic>(point.value<axis::Y>(), Tx);
+                }
+
+                if constexpr (dz == -1)
+                {
+                    haloZ = boundaryCheck<axis::Z, -1, z_periodic>(point.value<axis::Z>(), Tx);
+                }
+                else if constexpr (dz == +1)
+                {
+                    haloZ = boundaryCheck<axis::Z, +1, z_periodic>(point.value<axis::Z>(), Tx);
+                }
+
+                if (!(haloX || haloY || haloZ))
+                {
+                    return __ldg(&(scalarField[device::idx(tx, ty, tz, bx, by, bz)]));
+                }
+
+                if (haloX)
+                {
+                    const device::label_t faceIdx = idxPop<axis::X, 0, 1>(ty, tz, bx, by, bz);
+                    if constexpr (dx == -1)
+                    {
+                        return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, +1>())>()[faceIdx]));
+                    }
+                    else
+                    {
+                        return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, -1>())>()[faceIdx]));
+                    }
+                }
+
+                if (haloY)
+                {
+                    const device::label_t faceIdx = idxPop<axis::Y, 0, 1>(tx, tz, bx, by, bz);
+                    if constexpr (dy == -1)
+                    {
+                        return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, +1>())>()[faceIdx]));
+                    }
+                    else
+                    {
+                        return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, -1>())>()[faceIdx]));
+                    }
+                }
+
+                const device::label_t faceIdx = idxPop<axis::Z, 0, 1>(tx, ty, bx, by, bz);
+                if constexpr (dz == -1)
+                {
+                    return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, +1>())>()[faceIdx]));
+                }
+                else
+                {
+                    return __ldg(&(readBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, -1>())>()[faceIdx]));
+                }
+            }
+
+            /**
+             * @brief Saves a scalar value to scalar halo faces when this thread is on a cover node
+             * @param[in] value Scalar value to save in halo faces
+             * @param[in] writeBuffer Collection of scalar halo-face pointers (x0, x1, y0, y1, z0, z1)
+             * @param[in] Tx Three-dimensional thread coordinates
+             * @param[in] Bx Three-dimensional block coordinates
+             * @param[in] point The global point coordinate
+             **/
+            __device__ static inline constexpr void save_scalar(
+                const scalar_t value,
+                const device::ptrCollection<6, scalar_t> &writeBuffer,
+                const thread::coordinate &Tx,
+                const block::coordinate &Bx,
+                const device::pointCoordinate &point) noexcept
+            {
+                if (boundaryCheck<axis::X, -1, x_periodic>(point.value<axis::X>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, -1>())>()[idxPop<axis::X, 0, 1>(Tx.value<axis::Y>(), Tx.value<axis::Z>(), Bx)] = value;
+                }
+                else if (boundaryCheck<axis::X, +1, x_periodic>(point.value<axis::X>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, +1>())>()[idxPop<axis::X, 0, 1>(Tx.value<axis::Y>(), Tx.value<axis::Z>(), Bx)] = value;
+                }
+
+                if (boundaryCheck<axis::Y, -1, y_periodic>(point.value<axis::Y>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, -1>())>()[idxPop<axis::Y, 0, 1>(Tx.value<axis::X>(), Tx.value<axis::Z>(), Bx)] = value;
+                }
+                else if (boundaryCheck<axis::Y, +1, y_periodic>(point.value<axis::Y>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, +1>())>()[idxPop<axis::Y, 0, 1>(Tx.value<axis::X>(), Tx.value<axis::Z>(), Bx)] = value;
+                }
+
+                if (boundaryCheck<axis::Z, -1, z_periodic>(point.value<axis::Z>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, -1>())>()[idxPop<axis::Z, 0, 1>(Tx.value<axis::X>(), Tx.value<axis::Y>(), Bx)] = value;
+                }
+                else if (boundaryCheck<axis::Z, +1, z_periodic>(point.value<axis::Z>(), Tx))
+                {
+                    writeBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, +1>())>()[idxPop<axis::Z, 0, 1>(Tx.value<axis::X>(), Tx.value<axis::Y>(), Bx)] = value;
+                }
+            }
+
+            /**
              * @brief Saves population data to halo regions for neighboring blocks
              * @param[in] pop Array containing population values to save
              * @param[out] writeBuffer Collection of pointers to the halo faces
@@ -213,7 +374,8 @@ namespace LBM
                     host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_yy", mesh, programCtrl),
                     host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_yz", mesh, programCtrl),
                     host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("m_zz", mesh, programCtrl),
-                    mesh);
+                    mesh,
+                    programCtrl);
             }
 
             /**
@@ -246,6 +408,7 @@ namespace LBM
                     m_yz,
                     m_zz,
                     mesh,
+                    programCtrl,
                     &phi);
             }
 

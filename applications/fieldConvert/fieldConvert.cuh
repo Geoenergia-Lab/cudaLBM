@@ -139,21 +139,12 @@ namespace LBM
         }
 
         const auto &fieldMap = functionObjects::fieldComponentsMap(isMultiphase);
-
         const auto it = fieldMap.find(fileNamePrefix);
+
         if (it == fieldMap.end())
         {
-            const std::unordered_map<name_t, words_t>::const_iterator namesIterator = functionObjects::fieldComponentsMap.find(fileNamePrefix);
-            const bool foundField = namesIterator != functionObjects::fieldComponentsMap.end();
-            if (!foundField)
-            {
-                // Throw an exception: invalid field name
-                throw std::runtime_error("Invalid argument passed to -fieldName");
-            }
-            else
-            {
-                return namesIterator->second;
-            }
+            // Throw an exception: invalid field name
+            throw std::runtime_error("Invalid argument passed to -fieldName: " + fileNamePrefix);
         }
 
         return it->second;

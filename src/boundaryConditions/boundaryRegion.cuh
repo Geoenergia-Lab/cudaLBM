@@ -136,7 +136,7 @@ namespace LBM
         }
         __host__ [[nodiscard]] inline constexpr scalar_t phi() const noexcept
         {
-            return values_[index::phi()]();
+            return values_[index::phi]();
         }
 
         /**
@@ -145,8 +145,7 @@ namespace LBM
          **/
         void print() const noexcept
         {
-            const words_t regionNames({"rho", "u", "v", "w", "m_xx", "m_xy", "m_xz", "m_yy", "m_yz", "m_zz"});
-            for (host::label_t field = 0; field < regionNames.size(); field++)
+            for (host::label_t field = 0; field < N_FIELDS; field++)
             {
                 std::cout << index::name(field) << ": " << values_[field]() << std::endl;
             }
@@ -161,7 +160,7 @@ namespace LBM
         /**
          * @brief Conditional number of fields
          **/
-        static constexpr label_t N_FIELDS = NUMBER_MOMENTS<isMultiphase>();
+        static constexpr host::label_t N_FIELDS = NUMBER_MOMENTS<isMultiphase>();
 
         /**
          * @brief Array of boundary values for all fields

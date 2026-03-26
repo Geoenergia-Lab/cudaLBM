@@ -48,7 +48,7 @@ Notes
 
 \*---------------------------------------------------------------------------*/
 
-case normalVector::WEST_NORTH():
+case normalVector::NORTH_WEST():
 {
     // Classic Neumann
     // moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];   // rho
@@ -84,7 +84,7 @@ case normalVector::WEST_NORTH():
     return;
 }
 
-case normalVector::EAST_NORTH():
+case normalVector::NORTH_EAST():
 {
     // Classic Neumann
     // moments[m_i<0>()] = shared_buffer[tid * (NUMBER_MOMENTS<true>() + 1) + m_i<0>()];   // rho

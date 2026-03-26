@@ -86,6 +86,7 @@ namespace LBM
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_yz,
                 const host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous> &m_zz,
                 const host::latticeMesh &mesh,
+                const programControl &programCtrl,
                 const host::array<host::PAGED, scalar_t, D3Q7, time::instantaneous> *phi = nullptr) noexcept
                 : West_(initialise_pop<axis::X, -1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, -1>()),
                   East_(initialise_pop<axis::X, 1>(rho, u, v, w, m_xx, m_xy, m_xz, m_yy, m_yz, m_zz, phi, mesh), mesh, programCtrl, integralConstant<axis::type, axis::X>(), integralConstant<int, +1>()),

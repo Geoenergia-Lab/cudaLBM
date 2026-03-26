@@ -168,8 +168,40 @@ namespace LBM
             xz = 6,
             yy = 7,
             yz = 8,
-            zz = 9
+            zz = 9,
+            phi = 10
         } type;
+
+        __device__ __host__ [[nodiscard]] static inline constexpr const char *name(const host::label_t field) noexcept
+        {
+            switch (field)
+            {
+            case rho:
+                return "rho";
+            case u:
+                return "u";
+            case v:
+                return "v";
+            case w:
+                return "w";
+            case xx:
+                return "m_xx";
+            case xy:
+                return "m_xy";
+            case xz:
+                return "m_xz";
+            case yy:
+                return "m_yy";
+            case yz:
+                return "m_yz";
+            case zz:
+                return "m_zz";
+            case phi:
+                return "phi";
+            default:
+                return "unknown";
+            }
+        }
     }
 
     namespace types

@@ -56,11 +56,12 @@ namespace LBM
     {
         namespace VTI
         {
-            __host__ [[nodiscard]] inline consteval bool hasFields() { return true; }
-            __host__ [[nodiscard]] inline consteval bool hasPoints() { return false; }
-            __host__ [[nodiscard]] inline consteval bool hasElements() { return false; }
-            __host__ [[nodiscard]] inline consteval bool hasOffsets() { return false; }
-            __host__ [[nodiscard]] inline consteval const char *fileExtension() { return ".vti"; }
+            __host__ [[nodiscard]] inline consteval fileSystem::format format() noexcept { return fileSystem::BINARY; }
+            __host__ [[nodiscard]] inline consteval fileSystem::fields::contained hasFields() noexcept { return fileSystem::fields::Yes; }
+            __host__ [[nodiscard]] inline consteval fileSystem::points::contained hasPoints() noexcept { return fileSystem::points::No; }
+            __host__ [[nodiscard]] inline consteval fileSystem::elements::contained hasElements() noexcept { return fileSystem::elements::No; }
+            __host__ [[nodiscard]] inline consteval fileSystem::offsets::contained hasOffsets() noexcept { return fileSystem::offsets::No; }
+            __host__ [[nodiscard]] inline consteval const char *fileExtension() noexcept { return ".vti"; }
 
             /**
              * @brief Auxiliary template function that performs the VTI file writing.
@@ -69,17 +70,17 @@ namespace LBM
                 const std::vector<std::vector<scalar_t>> &solutionVars,
                 std::ofstream &outFile,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames) noexcept
+                const words_t &solutionVarNames) noexcept
             {
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numVars = solutionVars.size();
 
                 std::stringstream xml;
-                uint64_t currentOffset = 0;
+                host::label_t currentOffset = 0;
 
                 // Calculate extents - note the -1 for the maximum indices
-                const std::size_t dimX = mesh.nx<std::size_t>() - 1;
-                const std::size_t dimY = mesh.ny<std::size_t>() - 1;
-                const std::size_t dimZ = mesh.nz<std::size_t>() - 1;
+                const host::label_t dimX = mesh.dimension<axis::X>() - 1;
+                const host::label_t dimY = mesh.dimension<axis::Y>() - 1;
+                const host::label_t dimZ = mesh.dimension<axis::Z>() - 1;
 
                 // ImageData coordinates are implicit
                 constexpr scalar_t ox = static_cast<scalar_t>(0);
@@ -98,10 +99,10 @@ namespace LBM
 
                 // Point data (same as before)
                 xml << "      <PointData Scalars=\"" << (solutionVarNames.empty() ? "" : solutionVarNames[0]) << "\">\n";
-                for (std::size_t i = 0; i < numVars; ++i)
+                for (host::label_t i = 0; i < numVars; ++i)
                 {
                     xml << "        <DataArray type=\"" << getVtkTypeName<scalar_t>() << "\" Name=\"" << solutionVarNames[i] << "\" format=\"appended\" offset=\"" << currentOffset << "\"/>\n";
-                    currentOffset += sizeof(std::size_t) + solutionVars[i].size() * sizeof(scalar_t);
+                    currentOffset += sizeof(host::label_t) + solutionVars[i].size() * sizeof(scalar_t);
                 }
                 xml << "      </PointData>\n";
 
@@ -133,23 +134,23 @@ namespace LBM
              */
             __host__ void write(
                 const std::vector<std::vector<scalar_t>> &solutionVars,
-                const std::string &fileName,
+                const name_t &fileName,
                 const host::latticeMesh &mesh,
-                const std::vector<std::string> &solutionVarNames)
+                const words_t &solutionVarNames)
             {
-                const std::size_t numNodes = static_cast<std::size_t>(mesh.nx()) * static_cast<std::size_t>(mesh.ny()) * static_cast<std::size_t>(mesh.nz());
-                const std::size_t numVars = solutionVars.size();
+                const host::label_t numNodes = (mesh.dimension<axis::X>()) * (mesh.dimension<axis::Y>()) * (mesh.dimension<axis::Z>());
+                const host::label_t numVars = solutionVars.size();
 
                 if (numVars != solutionVarNames.size())
                 {
-                    errorHandler(-1, "Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
+                    throw std::runtime_error("Error: The number of solution (" + std::to_string(numVars) + ") does not match the count of variable names (" + std::to_string(solutionVarNames.size()));
                 }
 
-                for (std::size_t i = 0; i < numVars; i++)
+                for (host::label_t i = 0; i < numVars; i++)
                 {
                     if (solutionVars[i].size() != numNodes)
                     {
-                        errorHandler(-1, "Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
+                        throw std::runtime_error("Error: The solution variable " + std::to_string(i) + " has " + std::to_string(solutionVars[i].size()) + " elements, expected " + std::to_string(numNodes));
                     }
                 }
 
@@ -164,7 +165,7 @@ namespace LBM
                         std::cout << "    directoryStatus: unable to create directory" << directoryPrefix() << ";" << std::endl;
                         std::cout << "    writeStatus: fail (unable to create directory)" << ";" << std::endl;
                         std::cout << "};" << std::endl;
-                        errorHandler(-1, "Error: unable to create directory" + std::string(directoryPrefix()));
+                        throw std::runtime_error("Error: unable to create directory" + name_t(directoryPrefix()));
                     }
                 }
                 else
@@ -172,25 +173,23 @@ namespace LBM
                     std::cout << "    directoryStatus: OK;" << std::endl;
                 }
 
-                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
+                std::cout << "    fileSize: " << fileSystem::to_mebibytes<double>(fileSystem::expectedDiskUsage<format(), hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size())) << " MiB;" << std::endl;
 
                 // Check if there is enough disk space to store the file
-                if (!fileSystem::diskSpaceCheck<fileSystem::ASCII, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size()))
-                {
-                    std::cout << "    diskSpace: insufficient (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                    std::cout << "    writeStatus: fail (insufficient disk space)" << ";" << std::endl;
-                    std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error: Insufficient disk space on drive " + fileSystem::diskName());
-                }
-                else
-                {
-                    std::cout << "    diskSpace: OK (" << fileSystem::to_mebibytes<double>(fileSystem::availableDiskSpace()) << " MiB);" << std::endl;
-                }
+                fileSystem::diskSpaceAssertion<
+                    format(),
+                    hasFields(),
+                    hasPoints(),
+                    hasElements(),
+                    hasOffsets()>(
+                    mesh,
+                    solutionVars.size(),
+                    fileName);
 
                 // Check if there is enough disk space to store the file
                 fileSystem::diskSpaceAssertion<fileSystem::BINARY, hasFields(), hasPoints(), hasElements(), hasOffsets()>(mesh, solutionVars.size(), fileName);
 
-                const std::string trueFileName(std::string(directoryPrefix()) + "/" + fileName + fileExtension());
+                const name_t trueFileName(name_t(directoryPrefix()) + "/" + fileName + fileExtension());
 
                 std::ofstream outFile(trueFileName, std::ios::binary);
                 if (outFile)
@@ -201,7 +200,7 @@ namespace LBM
                 {
                     std::cout << "    ofstreamStatus: Fail" << std::endl;
                     std::cout << "};" << std::endl;
-                    errorHandler(-1, "Error opening file: " + trueFileName);
+                    throw std::runtime_error("Error opening file: " + trueFileName);
                 }
 
                 VTIWriter(solutionVars, outFile, mesh, solutionVarNames);

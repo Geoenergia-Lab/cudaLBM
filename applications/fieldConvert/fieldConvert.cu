@@ -72,7 +72,7 @@ int main(const int argc, const char *const argv[])
     const host::latticeMesh newMesh = processMesh(mesh, programCtrl, doCutPlane);
 
     // Now get the std::vector of std::strings corresponding to the prefix
-    const words_t &fieldNames = getFieldNames(fileNamePrefix, doCustomField);
+    const words_t &fieldNames = getFieldNames(fileNamePrefix, doCustomField, isMultiphase);
 
     // Get the time indices
     const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
@@ -97,6 +97,48 @@ int main(const int argc, const char *const argv[])
                 timeStep);
 
             const std::vector<std::vector<scalar_t>> fields = processFields(hostMoments, mesh, programCtrl, doCutPlane);
+
+            // BRENO: infer correct output naming from what was actually read/produced
+            const std::vector<std::string> &fullLayout =
+                functionObjects::solutionVariableNames(isMultiphase);
+
+            std::vector<std::vector<scalar_t>> fieldsOut;
+            std::vector<std::string> fieldNamesOut;
+
+            if (doCustomField)
+            {
+                for (const auto &requested : fieldNames)
+                {
+                    auto itName = std::find(fullLayout.begin(), fullLayout.end(), requested);
+
+                    if (itName == fullLayout.end())
+                    {
+                        throw std::runtime_error("Requested variable not found in solution layout: " + requested);
+                    }
+
+                    const auto signedIdx = std::distance(fullLayout.begin(), itName);
+
+                    if (signedIdx < 0)
+                    {
+                        throw std::runtime_error("Negative index computed while filtering fields.");
+                    }
+
+                    const std::size_t idx = static_cast<std::size_t>(signedIdx);
+
+                    if (idx >= fields.size())
+                    {
+                        throw std::runtime_error("Field index out of bounds while filtering: " + requested);
+                    }
+
+                    fieldsOut.push_back(fields[idx]);
+                    fieldNamesOut.push_back(requested);
+                }
+            }
+            else
+            {
+                fieldsOut = fields;
+                fieldNamesOut = fullLayout;
+            }
 
             const name_t fileName = processName(programCtrl, fileNamePrefix, fileNameIndices[timeStep], doCutPlane);
 

@@ -177,6 +177,9 @@ namespace LBM
         template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T w_q(const q_i<q_> q) noexcept
         {
+            // Check that we are accessing a valid member
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function w(q)");
+
             // Return the component
             return w_q<T>()[q];
         }
@@ -188,6 +191,7 @@ namespace LBM
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval const thread::array<T, vs::Q()> cx() noexcept
         {
+            // Return the component
             return {static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(1), static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0)};
         }
 
@@ -200,6 +204,9 @@ namespace LBM
         template <typename T, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T cx(const q_i<q_> q) noexcept
         {
+            // Check that we are accessing a valid member
+            static_assert(q() < vs::Q(), "Invalid velocity set index in member function cx(q)");
+
             // Return the component
             return cx<T>()[q];
         }

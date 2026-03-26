@@ -85,7 +85,7 @@ namespace LBM
         const device::ptrCollection<6, const scalar_t> readBuffer,
         const device::ptrCollection<6, scalar_t> writeBuffer)
     {
-        __shared__ thread::array<scalar_t, block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<host::label_t>()>()> shared_buffer;
+        __shared__ thread::array<scalar_t, block::sharedMemoryBufferSize<VelocitySet, NUMBER_MOMENTS<false, host::label_t>()>()> shared_buffer;
 
         momentBasedLBM<BoundaryConditions, VelocitySet, Collision, BlockHalo>(devPtrs, readBuffer, writeBuffer, shared_buffer);
     }

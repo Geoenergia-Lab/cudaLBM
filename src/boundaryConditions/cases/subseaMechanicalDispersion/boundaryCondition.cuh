@@ -200,7 +200,7 @@ case normalVector::SOUTH():
 }
 
 // Lateral boundary faces and edges
-#include "include/lateralFacesAndEdges.cuh"
+#include "include/lateralFacesEdgesAndCorners.cuh"
 
 // Outlet face, edges and corners
 #include "include/outlet.cuh"
