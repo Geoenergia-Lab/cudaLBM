@@ -69,7 +69,7 @@ namespace LBM
          **/
         template <class BoundaryConditions, class VelocitySet, class Collision, class BlockHalo, class SharedBuffer>
         __device__ inline void momentBasedLBM(
-            const device::ptrCollection<10, scalar_t> &devPtrs,
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), scalar_t> &devPtrs,
             const device::ptrCollection<6, const scalar_t> &readBuffer,
             const device::ptrCollection<6, scalar_t> &writeBuffer,
             SharedBuffer &sharedBuffer)
@@ -229,7 +229,7 @@ namespace LBM
          **/
         __launch_bounds__(block::maxThreads(), MIN_BLOCKS_PER_MP<VelocitySet>())
             __global__ void momentBasedLBM(
-                const device::ptrCollection<10, scalar_t> devPtrs,
+                const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), scalar_t> devPtrs,
                 const device::ptrCollection<6, const scalar_t> readBuffer,
                 const device::ptrCollection<6, scalar_t> writeBuffer)
         {

@@ -96,10 +96,22 @@ namespace LBM
             const streamHandler &streamsLBM_;
 
             /**
+             * @brief Configures the kernels to allocate no dynamic shared memory and prefer L1 cache
+             * @param[in] programCtrl The program control object
+             **/
+            template <class Kernel>
+            __host__ static inline constexpr void configure(const programControl &programCtrl) noexcept
+            {
+                programCtrl.configure<0, false>(Kernel::instantaneous());
+                programCtrl.configure<0, false>(Kernel::instantaneousAndMean());
+                programCtrl.configure<0, false>(Kernel::mean());
+            }
+
+            /**
              * @brief Construct the component names from the field name
              * @param[in] name Name of the field
              **/
-            __host__ [[nodiscard]] static inline constexpr const words_t component_names(const name_t &name)
+            __host__ [[nodiscard]] static inline constexpr const words_t componentNames(const name_t &name)
             {
                 if constexpr (N == 1)
                 {
@@ -124,7 +136,7 @@ namespace LBM
              * @param[in] arrays The arrays to copy back to the host
              **/
             template <typename... Arrays>
-            __host__ void copy_from_device(
+            __host__ void copyFromDevice(
                 const host::label_t numDevices,
                 const Arrays &...arrays)
             {
@@ -134,7 +146,7 @@ namespace LBM
                     const auto pointers = std::make_tuple(arrays.ptr(virtualDeviceIndex)...);
 
                     // Build a ptrCollection from the tuple and copy from device
-                    hostWriteBuffer_.copy_from_device(
+                    hostWriteBuffer_.copyFromDevice(
                         std::apply([&](auto &&...args)
                                    { return device::ptrCollection<sizeof...(Arrays), const scalar_t>(std::forward<decltype(args)>(args)...); }, pointers),
                         mesh_,
@@ -161,7 +173,7 @@ namespace LBM
                 const host::label_t meanCount,
                 const Arrays &...arrays) noexcept
             {
-                copy_from_device(numDevices, arrays...);
+                copyFromDevice(numDevices, arrays...);
 
                 // Write to disk
                 postProcess::LBMBin::write(
@@ -190,7 +202,7 @@ namespace LBM
                 const host::label_t numDevices,
                 const Arrays &...arrays) noexcept
             {
-                copy_from_device(numDevices, arrays...);
+                copyFromDevice(numDevices, arrays...);
 
                 // Write to disk
                 postProcess::LBMBin::write(
@@ -199,6 +211,76 @@ namespace LBM
                     componentNames,
                     hostWriteBuffer_.data(),
                     timeStep);
+            }
+
+            /**
+             * @brief Return the pointers that correspond to a particular device partition
+             * @param[in] idx The device index
+             * @return Pointers to the 10 solution variables allocated on device idx
+             **/
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs(const host::label_t idx) const noexcept
+            {
+                return {rho_.ptr(idx), u_.ptr(idx), v_.ptr(idx), w_.ptr(idx), mxx_.ptr(idx), mxy_.ptr(idx), mxz_.ptr(idx), myy_.ptr(idx), myz_.ptr(idx), mzz_.ptr(idx)};
+            }
+
+            /**
+             * @brief Calculate a time-averaged quantity
+             * @param[in] func The kernel to execute
+             * @param[out] object The function object to calculate
+             * @param[out] meanCount Counter of time averaging steps
+             **/
+            template <class FunctionObject, class F>
+            __host__ inline void mean(
+                F *func,
+                FunctionObject &object,
+                host::label_t &meanCount)
+            {
+                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(meanCount + 1);
+
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                {
+                    func<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(devPtrs(stream), object.meanPtrs(stream), invNewCount);
+                }
+
+                meanCount++;
+            }
+
+            /**
+             * @brief Calculate an instantaneous quantity
+             * @param[in] func The kernel to execute
+             * @param[out] object The function object to calculate
+             **/
+            template <class FunctionObject, class F>
+            __host__ inline void instantaneous(
+                F *func,
+                FunctionObject &object)
+            {
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                {
+                    func<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(devPtrs(stream), object.meanPtrs(stream));
+                }
+            }
+
+            /**
+             * @brief Calculate both an instantaneous and a time-averaged quantity
+             * @param[in] func The kernel to execute
+             * @param[out] object The function object to calculate
+             * @param[out] meanCount Counter of time averaging steps
+             **/
+            template <class FunctionObject, class F>
+            __host__ inline void instantaneousAndMean(
+                F *func,
+                FunctionObject &object,
+                host::label_t &meanCount)
+            {
+                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(meanCount + 1);
+
+                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); stream++)
+                {
+                    func<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(devPtrs(stream), object.instantaneousPtrs(stream), object.meanPtrs(stream), invNewCount);
+                }
+
+                meanCount++;
             }
 
         public:
@@ -235,8 +317,8 @@ namespace LBM
                 const streamHandler &streamsLBM) noexcept
                 : name_(name),
                   nameMean_(name + "Mean"),
-                  componentNames_(component_names(name_)),
-                  componentNamesMean_(component_names(nameMean_)),
+                  componentNames_(componentNames(name_)),
+                  componentNamesMean_(componentNames(nameMean_)),
                   calculate_(initialiserSwitch(name_)),
                   calculateMean_(initialiserSwitch(nameMean_)),
                   hostWriteBuffer_(hostWriteBuffer),

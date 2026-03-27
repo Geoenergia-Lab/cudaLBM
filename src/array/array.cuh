@@ -208,4 +208,166 @@ namespace LBM
 #include "device/array.cuh"
 #include "hostArrayCollection.cuh"
 
+namespace LBM
+{
+    namespace device
+    {
+        template <class VelocitySet, const time::type TimeType>
+        class scalarField
+        {
+            using ComponentType = device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>;
+
+        public:
+            __host__ [[nodiscard]] scalarField(
+                const name_t &name,
+                const host::latticeMesh &mesh,
+                const scalar_t value,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : self_(name, mesh, value, programCtrl, allocate) {}
+
+            ~scalarField() {}
+
+            __host__ [[nodiscard]] inline constexpr const ComponentType &self() noexcept { return self_; }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<1, const scalar_t> ptr(const host::label_t idx) const noexcept
+            {
+                return {self_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<1, scalar_t> ptr(const host::label_t idx) noexcept
+            {
+                return {self_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept
+            {
+                return self_.meanCount();
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t &meanCountRef() noexcept
+            {
+                return self_.meanCountRef();
+            }
+
+        private:
+            /**
+             * @brief Components of the vector field
+             **/
+            ComponentType self_;
+        };
+
+        template <class VelocitySet, const time::type TimeType>
+        class vectorField
+        {
+            using ComponentType = device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>;
+
+        public:
+            __host__ [[nodiscard]] vectorField(
+                const name_t &name,
+                const host::latticeMesh &mesh,
+                const scalar_t value,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : x_(name + "_x", mesh, value, programCtrl, allocate),
+                  y_(name + "_y", mesh, value, programCtrl, allocate),
+                  z_(name + "_z", mesh, value, programCtrl, allocate) {}
+
+            ~vectorField() {}
+
+            __host__ [[nodiscard]] inline constexpr const ComponentType &x() noexcept { return x_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &y() noexcept { return y_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &z() noexcept { return z_; }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<3, const scalar_t> ptr(const host::label_t idx) const noexcept
+            {
+                return {x_.ptr(idx), y_.ptr(idx), z_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<3, scalar_t> ptr(const host::label_t idx) noexcept
+            {
+                return {x_.ptr(idx), y_.ptr(idx), z_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept
+            {
+                return x_.meanCount();
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t &meanCountRef() noexcept
+            {
+                return x_.meanCountRef();
+            }
+
+        private:
+            /**
+             * @brief Components of the vector field
+             **/
+            ComponentType x_;
+            ComponentType y_;
+            ComponentType z_;
+        };
+
+        template <class VelocitySet, const time::type TimeType>
+        class symmetricTensorField
+        {
+            using ComponentType = device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>;
+
+        public:
+            __host__ [[nodiscard]] symmetricTensorField(
+                const name_t &name,
+                const host::latticeMesh &mesh,
+                const scalar_t value,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : xx_(name + "_xx", mesh, value, programCtrl, allocate),
+                  xy_(name + "_xy", mesh, value, programCtrl, allocate),
+                  xz_(name + "_xz", mesh, value, programCtrl, allocate),
+                  yy_(name + "_yy", mesh, value, programCtrl, allocate),
+                  yz_(name + "_yz", mesh, value, programCtrl, allocate),
+                  zz_(name + "_zz", mesh, value, programCtrl, allocate) {}
+
+            ~symmetricTensorField() {}
+
+            __host__ [[nodiscard]] inline constexpr const ComponentType &xx() noexcept { return xx_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &xy() noexcept { return xy_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &xz() noexcept { return xz_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &yy() noexcept { return yy_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &yz() noexcept { return yz_; }
+            __host__ [[nodiscard]] inline constexpr const ComponentType &zz() noexcept { return zz_; }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, const scalar_t> ptr(const host::label_t idx) const noexcept
+            {
+                return {xx_.ptr(idx), xy_.ptr(idx), xz_.ptr(idx), yy_.ptr(idx), yz_.ptr(idx), zz_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<6, scalar_t> ptr(const host::label_t idx) noexcept
+            {
+                return {xx_.ptr(idx), xy_.ptr(idx), xz_.ptr(idx), yy_.ptr(idx), yz_.ptr(idx), zz_.ptr(idx)};
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t meanCount() const noexcept
+            {
+                return xx_.meanCount();
+            }
+
+            __host__ [[nodiscard]] inline constexpr host::label_t &meanCountRef() noexcept
+            {
+                return xx_.meanCountRef();
+            }
+
+        private:
+            /**
+             * @brief Components of the vector field
+             **/
+            ComponentType xx_;
+            ComponentType xy_;
+            ComponentType xz_;
+            ComponentType yy_;
+            ComponentType yz_;
+            ComponentType zz_;
+        };
+    }
+}
+
 #endif

@@ -161,7 +161,7 @@ namespace LBM
              * @param[in] virtualDeviceIndex Index of the GPU whose segment is being copied.
              **/
             template <const host::label_t N>
-            __host__ void copy_from_device(
+            __host__ void copyFromDevice(
                 const device::ptrCollection<N, const T> &devPtrs,
                 const host::latticeMesh &mesh,
                 const host::label_t virtualDeviceIndex)

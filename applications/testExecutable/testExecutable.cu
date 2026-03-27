@@ -106,8 +106,8 @@ int main(const int argc, const char *const argv[])
             // Do this in a loop
             for (host::label_t VirtualDeviceIndex = 0; VirtualDeviceIndex < mesh.nDevices().size(); VirtualDeviceIndex++)
             {
-                hostWriteBuffer.copy_from_device(
-                    device::ptrCollection<10, const scalar_t>{
+                hostWriteBuffer.copyFromDevice(
+                    device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t>{
                         rho.ptr(VirtualDeviceIndex),
                         u.ptr(VirtualDeviceIndex),
                         v.ptr(VirtualDeviceIndex),
@@ -145,7 +145,7 @@ int main(const int argc, const char *const argv[])
             errorHandler::checkInline(cudaSetDevice(programCtrl.deviceList()[VirtualDeviceIndex]));
             streamsLBM.synchronize(VirtualDeviceIndex);
 
-            const device::ptrCollection<10, scalar_t> devPtrs{
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), scalar_t> devPtrs{
                 rho.ptr(VirtualDeviceIndex),
                 u.ptr(VirtualDeviceIndex),
                 v.ptr(VirtualDeviceIndex),

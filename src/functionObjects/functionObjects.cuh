@@ -81,7 +81,7 @@ namespace LBM
          **/
         template <const host::label_t... ptrIndices>
         __device__ [[nodiscard]] inline constexpr const thread::array<scalar_t, sizeof...(ptrIndices)> read_from_moments(
-            const device::ptrCollection<10, const scalar_t> &devPtrs,
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
             const device::label_t idx) noexcept
         {
             return {devPtrs.ptr<ptrIndices>()[idx]...};
@@ -174,7 +174,7 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void mean(
-            const device::ptrCollection<10, const scalar_t> devPtrs,
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<FunctionObject::N, scalar_t> resultMeanPtrs,
             const scalar_t invNewCount)
         {
@@ -203,7 +203,7 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void instantaneousAndMean(
-            const device::ptrCollection<10, const scalar_t> devPtrs,
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<FunctionObject::N, scalar_t> resultPtrs,
             const device::ptrCollection<FunctionObject::N, scalar_t> resultMeanPtrs,
             const scalar_t invNewCount)
@@ -235,7 +235,7 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void instantaneous(
-            const device::ptrCollection<10, const scalar_t> devPtrs,
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<FunctionObject::N, scalar_t> resultPtrs)
         {
             // Calculate the index

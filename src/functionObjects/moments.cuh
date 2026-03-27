@@ -68,13 +68,16 @@ namespace LBM
              * @return The moments
              **/
             __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(
-                const device::ptrCollection<10, const scalar_t> &devPtrs,
+                const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
                 const device::label_t idx) noexcept
             {
                 return read_from_moments<0, 1, 2, 3, 4, 5, 6, 7, 8, 9>(devPtrs, idx);
             }
 
-            __host__ [[nodiscard]] static inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+            /**
+             * @brief Number of blocks per streaming microprocessor
+             **/
+            static constexpr const host::label_t MIN_BLOCKS_PER_MP = 3;
         };
 
         namespace momentsDetail
@@ -92,7 +95,35 @@ namespace LBM
         class moments : public FunctionObjectBase<VelocitySet, M::N>
         {
         public:
-            using BaseType = FunctionObjectBase<VelocitySet, M::N>;
+            /**
+             * @brief Alias for the base type
+             **/
+            using ObjectType = M;
+            using BaseType = FunctionObjectBase<VelocitySet, ObjectType::N>;
+            using Kernel = momentsDetail::kernel;
+
+            /**
+             * @brief Bring base members into scope
+             **/
+            using BaseType::calculate_;
+            using BaseType::calculateMean_;
+            using BaseType::componentNames_;
+            using BaseType::componentNamesMean_;
+            using BaseType::hostWriteBuffer_;
+            using BaseType::mesh_;
+            using BaseType::mxx_;
+            using BaseType::mxy_;
+            using BaseType::mxz_;
+            using BaseType::myy_;
+            using BaseType::myz_;
+            using BaseType::mzz_;
+            using BaseType::name_;
+            using BaseType::nameMean_;
+            using BaseType::rho_;
+            using BaseType::streamsLBM_;
+            using BaseType::u_;
+            using BaseType::v_;
+            using BaseType::w_;
 
             /**
              * @brief Constructs a collection of the solution variables object
@@ -132,38 +163,13 @@ namespace LBM
                   myzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[8], mesh, calculateMean_, programCtrl)),
                   mzzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[9], mesh, calculateMean_, programCtrl))
             {
-                programCtrl.configure<0, false>(momentsDetail::instantaneous);
-                programCtrl.configure<0, false>(momentsDetail::instantaneousAndMean);
-                programCtrl.configure<0, false>(momentsDetail::mean);
+                BaseType::template configure<Kernel>(programCtrl);
             }
-
-            /**
-             * @brief Bring base members into scope
-             **/
-            using BaseType::calculate_;
-            using BaseType::calculateMean_;
-            using BaseType::componentNames_;
-            using BaseType::componentNamesMean_;
-            using BaseType::hostWriteBuffer_;
-            using BaseType::mesh_;
-            using BaseType::mxx_;
-            using BaseType::mxy_;
-            using BaseType::mxz_;
-            using BaseType::myy_;
-            using BaseType::myz_;
-            using BaseType::mzz_;
-            using BaseType::name_;
-            using BaseType::nameMean_;
-            using BaseType::rho_;
-            using BaseType::streamsLBM_;
-            using BaseType::u_;
-            using BaseType::v_;
-            using BaseType::w_;
 
             /**
              * @brief Disable copying
              **/
-            ~moments() = default;
+            ~moments() {}
             __host__ [[nodiscard]] moments(const moments &) = delete;
             __host__ [[nodiscard]] moments &operator=(const moments &) = delete;
 
@@ -172,19 +178,7 @@ namespace LBM
              **/
             __host__ void calculateMean() noexcept
             {
-                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(rhoMean_.meanCount() + 1);
-                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); ++stream)
-                {
-                    momentsDetail::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                        {rho_.ptr(stream), u_.ptr(stream), v_.ptr(stream), w_.ptr(stream),
-                         mxx_.ptr(stream), mxy_.ptr(stream), mxz_.ptr(stream),
-                         myy_.ptr(stream), myz_.ptr(stream), mzz_.ptr(stream)},
-                        {rhoMean_.ptr(stream), uMean_.ptr(stream), vMean_.ptr(stream), wMean_.ptr(stream),
-                         mxxMean_.ptr(stream), mxyMean_.ptr(stream), mxzMean_.ptr(stream),
-                         myyMean_.ptr(stream), myzMean_.ptr(stream), mzzMean_.ptr(stream)},
-                        invNewCount);
-                }
-                rhoMean_.meanCountRef()++;
+                BaseType::mean(Kernel::mean(), *this, rhoMean_.meanCountRef());
             }
 
             /**
@@ -192,15 +186,7 @@ namespace LBM
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                BaseType::saveMean(
-                    timeStep,
-                    nameMean_,
-                    componentNamesMean_,
-                    rhoMean_.programCtrl().deviceList().size(),
-                    rhoMean_.meanCount(),
-                    rhoMean_,
-                    uMean_, vMean_, wMean_,
-                    mxxMean_, mxyMean_, mxzMean_, myyMean_, myzMean_, mzzMean_);
+                BaseType::saveMean(timeStep, nameMean_, componentNamesMean_, rhoMean_.programCtrl().deviceList().size(), rhoMean_.meanCount(), rhoMean_, uMean_, vMean_, wMean_, mxxMean_, mxyMean_, mxzMean_, myyMean_, myzMean_, mzzMean_);
             }
 
             /**
@@ -209,6 +195,11 @@ namespace LBM
             __host__ static void calculateInstantaneous() noexcept {}
             __host__ static void calculateInstantaneousAndMean() noexcept {}
             __host__ static void saveInstantaneous([[maybe_unused]] const host::label_t timeStep) noexcept {}
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept
+            {
+                return {rhoMean_.ptr(idx), uMean_.ptr(idx), vMean_.ptr(idx), wMean_.ptr(idx), mxxMean_.ptr(idx), mxyMean_.ptr(idx), mxzMean_.ptr(idx), myyMean_.ptr(idx), myzMean_.ptr(idx), mzzMean_.ptr(idx)};
+            }
 
         private:
             /**

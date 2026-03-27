@@ -90,7 +90,7 @@ namespace LBM
              * @return The calculated strain rate tensor
              **/
             __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(
-                const device::ptrCollection<10, const scalar_t> &devPtrs,
+                const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
                 const device::label_t idx) noexcept
             {
                 const thread::array<scalar_t, 3> U = read_from_moments<index::u, index::v, index::w>(devPtrs, idx);
@@ -100,7 +100,10 @@ namespace LBM
                 return {calculate<index::xx>(U[0], U[0], M[0]), calculate<index::xy>(U[0], U[1], M[1]), calculate<index::xz>(U[0], U[2], M[2]), calculate<index::yy>(U[1], U[1], M[3]), calculate<index::yz>(U[1], U[2], M[4]), calculate<index::zz>(U[2], U[2], M[5])};
             }
 
-            __host__ [[nodiscard]] static inline consteval host::label_t MIN_BLOCKS_PER_MP() noexcept { return 3; }
+            /**
+             * @brief Number of blocks per streaming microprocessor
+             **/
+            static constexpr const host::label_t MIN_BLOCKS_PER_MP = 3;
         };
 
         namespace strainRateTensorDetail
@@ -118,7 +121,35 @@ namespace LBM
         class strainRateTensor : public FunctionObjectBase<VelocitySet, S::N>
         {
         public:
-            using BaseType = FunctionObjectBase<VelocitySet, S::N>;
+            /**
+             * @brief Alias for the base type and required namespace
+             **/
+            using ObjectType = S;
+            using BaseType = FunctionObjectBase<VelocitySet, ObjectType::N>;
+            using Kernel = strainRateTensorDetail::kernel;
+
+            /**
+             * @brief Bring base members into scope
+             **/
+            using BaseType::calculate_;
+            using BaseType::calculateMean_;
+            using BaseType::componentNames_;
+            using BaseType::componentNamesMean_;
+            using BaseType::hostWriteBuffer_;
+            using BaseType::mesh_;
+            using BaseType::mxx_;
+            using BaseType::mxy_;
+            using BaseType::mxz_;
+            using BaseType::myy_;
+            using BaseType::myz_;
+            using BaseType::mzz_;
+            using BaseType::name_;
+            using BaseType::nameMean_;
+            using BaseType::rho_;
+            using BaseType::streamsLBM_;
+            using BaseType::u_;
+            using BaseType::v_;
+            using BaseType::w_;
 
             /**
              * @brief Constructs a strain rate tensor object
@@ -147,51 +178,16 @@ namespace LBM
                       "S",
                       hostWriteBuffer, mesh, rho, u, v, w,
                       mxx, mxy, mxz, myy, myz, mzz, streamsLBM),
-                  xx_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[0], mesh, calculate_, programCtrl)),
-                  xy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[1], mesh, calculate_, programCtrl)),
-                  xz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[2], mesh, calculate_, programCtrl)),
-                  yy_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[3], mesh, calculate_, programCtrl)),
-                  yz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[4], mesh, calculate_, programCtrl)),
-                  zz_(objectAllocator<VelocitySet, time::instantaneous>(componentNames_[5], mesh, calculate_, programCtrl)),
-                  xxMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[0], mesh, calculateMean_, programCtrl)),
-                  xyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[1], mesh, calculateMean_, programCtrl)),
-                  xzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[2], mesh, calculateMean_, programCtrl)),
-                  yyMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[3], mesh, calculateMean_, programCtrl)),
-                  yzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[4], mesh, calculateMean_, programCtrl)),
-                  zzMean_(objectAllocator<VelocitySet, time::timeAverage>(componentNamesMean_[5], mesh, calculateMean_, programCtrl))
+                  S_(name_, mesh_, calculate_, programCtrl),
+                  SMean_(nameMean_, mesh_, calculate_, programCtrl)
             {
-                programCtrl.configure<0, false>(strainRateTensorDetail::instantaneous);
-                programCtrl.configure<0, false>(strainRateTensorDetail::instantaneousAndMean);
-                programCtrl.configure<0, false>(strainRateTensorDetail::mean);
+                BaseType::template configure<Kernel>(programCtrl);
             }
-
-            /**
-             * @brief Bring base members into scope
-             **/
-            using BaseType::calculate_;
-            using BaseType::calculateMean_;
-            using BaseType::componentNames_;
-            using BaseType::componentNamesMean_;
-            using BaseType::hostWriteBuffer_;
-            using BaseType::mesh_;
-            using BaseType::mxx_;
-            using BaseType::mxy_;
-            using BaseType::mxz_;
-            using BaseType::myy_;
-            using BaseType::myz_;
-            using BaseType::mzz_;
-            using BaseType::name_;
-            using BaseType::nameMean_;
-            using BaseType::rho_;
-            using BaseType::streamsLBM_;
-            using BaseType::u_;
-            using BaseType::v_;
-            using BaseType::w_;
 
             /**
              * @brief Disable copying
              **/
-            ~strainRateTensor() {};
+            ~strainRateTensor() {}
             __host__ [[nodiscard]] strainRateTensor(const strainRateTensor &) = delete;
             __host__ [[nodiscard]] strainRateTensor &operator=(const strainRateTensor &) = delete;
 
@@ -200,14 +196,7 @@ namespace LBM
              **/
             __host__ void calculateInstantaneous() noexcept
             {
-                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); ++stream)
-                {
-                    strainRateTensorDetail::instantaneous<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                        {rho_.ptr(stream), u_.ptr(stream), v_.ptr(stream), w_.ptr(stream),
-                         mxx_.ptr(stream), mxy_.ptr(stream), mxz_.ptr(stream),
-                         myy_.ptr(stream), myz_.ptr(stream), mzz_.ptr(stream)},
-                        {xx_.ptr(stream), xy_.ptr(stream), xz_.ptr(stream), yy_.ptr(stream), yz_.ptr(stream), zz_.ptr(stream)});
-                }
+                BaseType::instantaneous(Kernel::instantaneous(), *this);
             }
 
             /**
@@ -215,17 +204,7 @@ namespace LBM
              **/
             __host__ void calculateMean() noexcept
             {
-                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
-                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); ++stream)
-                {
-                    strainRateTensorDetail::mean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                        {rho_.ptr(stream), u_.ptr(stream), v_.ptr(stream), w_.ptr(stream),
-                         mxx_.ptr(stream), mxy_.ptr(stream), mxz_.ptr(stream),
-                         myy_.ptr(stream), myz_.ptr(stream), mzz_.ptr(stream)},
-                        {xxMean_.ptr(stream), xyMean_.ptr(stream), xzMean_.ptr(stream), yyMean_.ptr(stream), yzMean_.ptr(stream), zzMean_.ptr(stream)},
-                        invNewCount);
-                }
-                xxMean_.meanCountRef()++;
+                BaseType::mean(Kernel::mean(), *this, SMean_.meanCountRef());
             }
 
             /**
@@ -233,18 +212,7 @@ namespace LBM
              **/
             __host__ void calculateInstantaneousAndMean() noexcept
             {
-                const scalar_t invNewCount = static_cast<scalar_t>(1) / static_cast<scalar_t>(xxMean_.meanCount() + 1);
-                for (host::label_t stream = 0; stream < streamsLBM_.streams().size(); ++stream)
-                {
-                    strainRateTensorDetail::instantaneousAndMean<<<mesh_.gridBlock(), host::latticeMesh::threadBlock(), 0, streamsLBM_.streams()[stream]>>>(
-                        {rho_.ptr(stream), u_.ptr(stream), v_.ptr(stream), w_.ptr(stream),
-                         mxx_.ptr(stream), mxy_.ptr(stream), mxz_.ptr(stream),
-                         myy_.ptr(stream), myz_.ptr(stream), mzz_.ptr(stream)},
-                        {xx_.ptr(stream), xy_.ptr(stream), xz_.ptr(stream), yy_.ptr(stream), yz_.ptr(stream), zz_.ptr(stream)},
-                        {xxMean_.ptr(stream), xyMean_.ptr(stream), xzMean_.ptr(stream), yyMean_.ptr(stream), yzMean_.ptr(stream), zzMean_.ptr(stream)},
-                        invNewCount);
-                }
-                xxMean_.meanCountRef()++;
+                BaseType::instantaneousAndMean(Kernel::instantaneousAndMean(), *this, SMean_.meanCountRef());
             }
 
             /**
@@ -253,11 +221,9 @@ namespace LBM
             __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
             {
                 BaseType::saveInstantaneous(
-                    timeStep,
-                    name_,
-                    componentNames_,
-                    xx_.programCtrl().deviceList().size(),
-                    xx_, xy_, xz_, yy_, yz_, zz_);
+                    timeStep, name_, componentNames_,
+                    S_.xx().programCtrl().deviceList().size(),
+                    S_.xx(), S_.xy(), S_.xz(), S_.yy(), S_.yz(), S_.zz());
             }
 
             /**
@@ -266,34 +232,32 @@ namespace LBM
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
                 BaseType::saveMean(
-                    timeStep,
-                    nameMean_,
-                    componentNamesMean_,
-                    xxMean_.programCtrl().deviceList().size(),
-                    xxMean_.meanCount(),
-                    xxMean_, xyMean_, xzMean_, yyMean_, yzMean_, zzMean_);
+                    timeStep, nameMean_, componentNamesMean_,
+                    SMean_.xx().programCtrl().deviceList().size(),
+                    SMean_.meanCountRef(),
+                    SMean_.xx(), SMean_.xy(), SMean_.xz(), SMean_.yy(), SMean_.yz(), SMean_.zz());
+            }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> instantaneousPtrs(const host::label_t idx) noexcept
+            {
+                return S_.ptr(idx);
+            }
+
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept
+            {
+                return SMean_.ptr(idx);
             }
 
         private:
             /**
              * @brief Instantaneous strain rate tensor
              **/
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xx_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xy_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> xz_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yy_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> yz_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::instantaneous> zz_;
+            device::symmetricTensorField<VelocitySet, time::instantaneous> S_;
 
             /**
              * @brief Time-averaged strain rate tensor
              **/
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xxMean_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xyMean_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> xzMean_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yyMean_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> yzMean_;
-            device::array<field::FULL_FIELD, scalar_t, VelocitySet, time::timeAverage> zzMean_;
+            device::symmetricTensorField<VelocitySet, time::timeAverage> SMean_;
         };
     }
 }

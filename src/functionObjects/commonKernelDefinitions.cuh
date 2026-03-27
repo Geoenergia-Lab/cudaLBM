@@ -57,8 +57,8 @@ SourceFiles
  * @param[out] resultMeanPtrs Device pointer collection for the time averaged quantity
  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
  **/
-__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP()) __global__ static void mean(
-    const device::ptrCollection<10, const scalar_t> devPtrs,
+__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP) __global__ static void meanKernel(
+    const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
     const device::ptrCollection<This::N, scalar_t> resultMeanPtrs,
     const scalar_t invNewCount)
 {
@@ -72,8 +72,8 @@ __launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP()) __global__ sta
  * @param[out] resultMeanPtrs Device pointer collection for the time averaged quantity
  * @param[in] invNewCount Reciprocal of (nTimeSteps + 1) for time averaging
  **/
-__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP()) __global__ static void instantaneousAndMean(
-    const device::ptrCollection<10, const scalar_t> devPtrs,
+__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP) __global__ static void instantaneousAndMeanKernel(
+    const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
     const device::ptrCollection<This::N, scalar_t> resultPtrs,
     const device::ptrCollection<This::N, scalar_t> resultMeanPtrs,
     const scalar_t invNewCount)
@@ -86,9 +86,27 @@ __launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP()) __global__ sta
  * @param[in] devPtrs Device pointer collection containing density, velocity and moment fields
  * @param[out] resulPtrs Device pointer collection for the instantaneous quantity
  **/
-__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP()) __global__ static void instantaneous(
-    const device::ptrCollection<10, const scalar_t> devPtrs,
+__launch_bounds__(block::maxThreads(), This::MIN_BLOCKS_PER_MP) __global__ static void instantaneousKernel(
+    const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
     const device::ptrCollection<This::N, scalar_t> resultPtrs)
 {
     functionObjects::instantaneous<This>(devPtrs, resultPtrs);
 }
+
+struct kernel
+{
+    /**
+     * @brief Returns a function pointer to the instantaneous kernel
+     **/
+    __host__ [[nodiscard]] static inline constexpr auto instantaneous() noexcept { return instantaneousKernel; }
+
+    /**
+     * @brief Returns a function pointer to the time average kernel
+     **/
+    __host__ [[nodiscard]] static inline constexpr auto mean() noexcept { return meanKernel; }
+
+    /**
+     * @brief Returns a function pointer to the instantaneous and time average kernel
+     **/
+    __host__ [[nodiscard]] static inline constexpr auto instantaneousAndMean() noexcept { return instantaneousAndMeanKernel; }
+};
