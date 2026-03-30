@@ -185,11 +185,11 @@ namespace LBM
      * @param[in] programCtrl The program control object
      * @returns The mean counter as a device::label_t.
      **/
-    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const programControl &programCtrl)
+    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const name_t &fieldName)
     {
-        if (fileIO::hasIndexedFiles(programCtrl.caseName()))
+        if (fileIO::hasIndexedFiles(fieldName))
         {
-            const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
+            const name_t fileName = fieldName + "_" + std::to_string(fileIO::latestTime(fieldName)) + ".LBMBin";
 
             const words_t lines = read_until(fileName, "fieldData");
 
@@ -201,6 +201,11 @@ namespace LBM
         {
             return 0;
         }
+    }
+
+    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const programControl &programCtrl)
+    {
+        return initialiseMeanCount(programCtrl.caseName());
     }
 }
 
@@ -286,9 +291,9 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl,
                 const bool allocate = true)
-                : x_(name + "_x", mesh, programCtrl, allocate),
-                  y_(name + "_y", mesh, programCtrl, allocate),
-                  z_(name + "_z", mesh, programCtrl, allocate) {}
+                : x_(name, name + "_x", mesh, programCtrl, allocate),
+                  y_(name, name + "_y", mesh, programCtrl, allocate),
+                  z_(name, name + "_z", mesh, programCtrl, allocate) {}
 
             ~vectorField() {}
 
@@ -353,12 +358,12 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl,
                 const bool allocate = true)
-                : xx_(name + "_xx", mesh, programCtrl, allocate),
-                  xy_(name + "_xy", mesh, programCtrl, allocate),
-                  xz_(name + "_xz", mesh, programCtrl, allocate),
-                  yy_(name + "_yy", mesh, programCtrl, allocate),
-                  yz_(name + "_yz", mesh, programCtrl, allocate),
-                  zz_(name + "_zz", mesh, programCtrl, allocate) {}
+                : xx_(name, name + "_xx", mesh, programCtrl, allocate),
+                  xy_(name, name + "_xy", mesh, programCtrl, allocate),
+                  xz_(name, name + "_xz", mesh, programCtrl, allocate),
+                  yy_(name, name + "_yy", mesh, programCtrl, allocate),
+                  yz_(name, name + "_yz", mesh, programCtrl, allocate),
+                  zz_(name, name + "_zz", mesh, programCtrl, allocate) {}
 
             ~symmetricTensorField() {}
 

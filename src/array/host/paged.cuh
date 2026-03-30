@@ -90,12 +90,29 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] programCtrl The program control object
              **/
+            // __host__ [[nodiscard]] array(
+            //     const name_t &name,
+            //     const host::latticeMesh &mesh,
+            //     const programControl &programCtrl)
+            //     : arrayBase<T, VelocitySet, TimeType>(name, mesh),
+            //       arr_(initialise_array(mesh, name, programCtrl)),
+            //       meanCount_(initialiseMeanCount(programCtrl)) {}
+
             __host__ [[nodiscard]] array(
                 const name_t &name,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
                 : arrayBase<T, VelocitySet, TimeType>(name, mesh),
-                  arr_(initialise_array(mesh, name, programCtrl)),
+                  arr_(initialise_array(mesh, name, name)),
+                  meanCount_(initialiseMeanCount(programCtrl)) {}
+
+            __host__ [[nodiscard]] array(
+                const name_t &name,
+                const name_t &componentName,
+                const host::latticeMesh &mesh,
+                const programControl &programCtrl)
+                : arrayBase<T, VelocitySet, TimeType>(name, mesh),
+                  arr_(initialise_array(mesh, componentName, name)),
                   meanCount_(initialiseMeanCount(programCtrl)) {}
 
             /**
@@ -160,20 +177,28 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @return Initialised vector.
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialise_array(
+            __host__ [[nodiscard]] static const std::vector<T> initialise_array(
+                const host::latticeMesh &mesh,
+                const name_t &fieldName,
+                const name_t &fileName)
+            {
+                if (fileIO::hasIndexedFiles(fileName))
+                {
+                    return fileIO::readFieldByName<T>(fileName + "_" + std::to_string(fileIO::latestTime(fileName)) + ".LBMBin", fieldName);
+                }
+                else
+                {
+                    std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
+                    return initialConditions(mesh, fieldName);
+                }
+            }
+
+            __host__ [[nodiscard]] static const std::vector<T> initialise_array(
                 const host::latticeMesh &mesh,
                 const name_t &fieldName,
                 const programControl &programCtrl)
             {
-                if (fileIO::hasIndexedFiles(programCtrl.caseName()))
-                {
-                    const name_t fileName = programCtrl.caseName() + "_" + std::to_string(fileIO::latestTime(programCtrl.caseName())) + ".LBMBin";
-                    return fileIO::readFieldByName<T>(fileName, fieldName);
-                }
-                else
-                {
-                    return initialConditions(mesh, fieldName);
-                }
+                return initialise_array(mesh, fieldName, programCtrl.caseName());
             }
 
             /**
@@ -182,7 +207,7 @@ namespace LBM
              * @param[in] fieldName Field name (for boundary look‑up).
              * @return Vector containing the initial field.
              **/
-            __host__ [[nodiscard]] const std::vector<T> initialConditions(
+            __host__ [[nodiscard]] static const std::vector<T> initialConditions(
                 const host::latticeMesh &mesh,
                 const name_t &fieldName)
             {

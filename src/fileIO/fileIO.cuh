@@ -224,19 +224,17 @@ namespace LBM
          * @param[in] isLatestTime Flag indicating whether to start from latest time
          * @return Starting index (0 for earliest, last index for latest)
          **/
-        template <class ProgramControl>
-        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl, const bool isLatestTime)
-        {
-            const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(programCtrl.caseName());
-
-            return isLatestTime ? static_cast<host::label_t>(fileNameIndices.size() - 1) : 0;
-        }
-
         __host__ [[nodiscard]] host::label_t getStartIndex(const name_t &fileNamePrefix, const bool isLatestTime)
         {
             const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
 
             return isLatestTime ? static_cast<host::label_t>(fileNameIndices.size() - 1) : 0;
+        }
+
+        template <class ProgramControl>
+        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl, const bool isLatestTime)
+        {
+            return getStartIndex(programCtrl.caseName(), isLatestTime);
         }
 
         /**

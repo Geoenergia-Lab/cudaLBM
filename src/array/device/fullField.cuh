@@ -162,6 +162,24 @@ namespace LBM
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             }
 
+            __host__ [[nodiscard]] array(
+                const name_t &name,
+                const name_t &componentName,
+                const host::latticeMesh &mesh,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : arrayBase<T>(
+                      This::allocate_on_devices(
+                          host::array<host::PAGED, T, VelocitySet, TimeType>(name, componentName, mesh, programCtrl),
+                          allocate, programCtrl),
+                      mesh,
+                      programCtrl),
+                  name_(name),
+                  meanCount_(initialiseMeanCount(programCtrl))
+            {
+                initialise_boundary_condition(name_, programCtrl.deviceList());
+            }
+
             /**
              * @brief Get read-only pointer to device memory for a given GPU.
              * @tparam Idx Type that can be converted to device::label_t.
