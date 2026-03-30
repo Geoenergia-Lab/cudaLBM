@@ -188,7 +188,7 @@ namespace LBM
                 }
                 else
                 {
-                    std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
+                    // std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
                     return initialConditions(mesh, fieldName);
                 }
             }

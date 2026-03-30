@@ -47,7 +47,7 @@ field rho
     };
 };
 
-field u
+field U_x
 {
     internalField
     {
@@ -85,7 +85,7 @@ field u
     };
 };
 
-field v
+field U_y
 {
     internalField
     {
@@ -123,7 +123,7 @@ field v
     };
 };
 
-field w
+field U_z
 {
     internalField
     {
@@ -161,45 +161,7 @@ field w
     };
 };
 
-field m_xx
-{
-    internalField
-    {
-        value   0;
-    };
-
-    North
-    {
-        value   0;
-    };
-
-    South
-    {
-        value   0;
-    };
-
-    East
-    {
-        value   0;
-    };
-
-    West
-    {
-        value   0;
-    };
-    
-    Front
-    {
-        value   0;
-    };
-
-    Back
-    {
-        value   0;
-    };
-};
-
-field m_xy
+field Pi_xx
 {
     internalField
     {
@@ -237,7 +199,7 @@ field m_xy
     };
 };
 
-field m_xz
+field Pi_xy
 {
     internalField
     {
@@ -275,7 +237,7 @@ field m_xz
     };
 };
 
-field m_yy
+field Pi_xz
 {
     internalField
     {
@@ -313,7 +275,7 @@ field m_yy
     };
 };
 
-field m_yz
+field Pi_yy
 {
     internalField
     {
@@ -351,7 +313,45 @@ field m_yz
     };
 };
 
-field m_zz
+field Pi_yz
+{
+    internalField
+    {
+        value   0;
+    };
+
+    North
+    {
+        value   0;
+    };
+
+    South
+    {
+        value   0;
+    };
+
+    East
+    {
+        value   0;
+    };
+
+    West
+    {
+        value   0;
+    };
+    
+    Front
+    {
+        value   0;
+    };
+
+    Back
+    {
+        value   0;
+    };
+};
+
+field Pi_zz
 {
     internalField
     {

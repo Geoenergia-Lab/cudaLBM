@@ -177,9 +177,9 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void mean(
-            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
-            const device::ptrCollection<FunctionObject::N, scalar_t> resultMeanPtrs,
-            const scalar_t invNewCount)
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
+            const device::ptrCollection<FunctionObject::N, scalar_t> &resultMeanPtrs,
+            const scalar_t invNewCount) noexcept
         {
             // Calculate the index
             const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
@@ -206,10 +206,10 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void instantaneousAndMean(
-            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
-            const device::ptrCollection<FunctionObject::N, scalar_t> resultPtrs,
-            const device::ptrCollection<FunctionObject::N, scalar_t> resultMeanPtrs,
-            const scalar_t invNewCount)
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
+            const device::ptrCollection<FunctionObject::N, scalar_t> &resultPtrs,
+            const device::ptrCollection<FunctionObject::N, scalar_t> &resultMeanPtrs,
+            const scalar_t invNewCount) noexcept
         {
             // Calculate the index
             const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
@@ -238,8 +238,8 @@ namespace LBM
          **/
         template <class FunctionObject>
         __device__ inline void instantaneous(
-            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
-            const device::ptrCollection<FunctionObject::N, scalar_t> resultPtrs)
+            const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
+            const device::ptrCollection<FunctionObject::N, scalar_t> &resultPtrs) noexcept
         {
             // Calculate the index
             const device::label_t idx = device::idx(thread::coordinate(), block::coordinate());
@@ -259,24 +259,6 @@ namespace LBM
         __host__ [[nodiscard]] bool initialiserSwitch(const name_t &objectName) noexcept
         {
             return std::filesystem::exists("functionObjects") ? string::containsString(string::trim<true>(string::eraseBraces(string::extractBlock(string::readFile("functionObjects"), "functionObjectList"))), objectName) : false;
-        }
-
-        /**
-         * @brief Allocates either a regular or zero-initialized device array based on the allocate flag
-         * @return A device::array either allocated to a uniform value or non-allocated
-         * @param[in] name The name of the variable to construct
-         * @param[in] mesh The lattice mesh
-         * @param[in] allocate Determines whether or not to allocate the variable
-         * @param[in] programCtrl The program control object
-         **/
-        template <class VelocitySet, const time::type TimeType>
-        __host__ [[nodiscard]] device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType> objectAllocator(
-            const name_t &name,
-            const host::latticeMesh &mesh,
-            const bool allocate,
-            const programControl &programCtrl)
-        {
-            return device::array<field::FULL_FIELD, scalar_t, VelocitySet, TimeType>(name, mesh, 0, programCtrl, allocate);
         }
     }
 }

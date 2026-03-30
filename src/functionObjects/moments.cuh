@@ -162,9 +162,9 @@ namespace LBM
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                BaseType::saveMean(timeStep, nameMean_, componentNamesMean_, rhoMean_.self().programCtrl().deviceList().size(), rhoMean_.meanCount(), rhoMean_);
-                BaseType::saveMean(timeStep, nameMean_, componentNamesMean_, UMean_.x().programCtrl().deviceList().size(), UMean_.meanCount(), UMean_.x(), UMean_.y(), UMean_.z());
-                BaseType::saveMean(timeStep, nameMean_, componentNamesMean_, PiMean_.xx().programCtrl().deviceList().size(), PiMean_.meanCount(), PiMean_.xx(), PiMean_.xy(), PiMean_.xz(), PiMean_.yy(), PiMean_.yz(), PiMean_.zz());
+                rhoMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
+                UMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
+                PiMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
             }
 
             /**

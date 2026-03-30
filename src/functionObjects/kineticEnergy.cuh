@@ -187,7 +187,7 @@ namespace LBM
              **/
             __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
             {
-                BaseType::saveInstantaneous(timeStep, name_, componentNames_, k_.self().programCtrl().deviceList().size(), k_);
+                k_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
             }
 
             /**
@@ -195,7 +195,7 @@ namespace LBM
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                BaseType::saveMean(timeStep, nameMean_, componentNamesMean_, kMean_.self().programCtrl().deviceList().size(), kMean_.meanCount(), kMean_);
+                kMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
             }
 
             __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> instantaneousPtrs(const host::label_t idx) noexcept
