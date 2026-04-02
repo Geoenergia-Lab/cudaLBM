@@ -88,7 +88,7 @@ SourceFiles
 #include <unordered_set>
 #include <vector>
 
-#define MULTI_GPU
+// #define MULTI_GPU
 
 #define MULTI_GPU_HALO
 

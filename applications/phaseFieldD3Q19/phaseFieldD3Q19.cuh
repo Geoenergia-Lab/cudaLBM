@@ -73,7 +73,7 @@ namespace LBM
     using PhaseHalo = device::halo<PhaseVelocitySet, BoundaryConditions::periodicX(), BoundaryConditions::periodicY(), BoundaryConditions::periodicZ()>;
 
 #ifndef launchBoundsD3Q19
-#define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), 1)
+#define launchBoundsD3Q19 __launch_bounds__(block::maxThreads(), 2)
 #endif
 
     /**

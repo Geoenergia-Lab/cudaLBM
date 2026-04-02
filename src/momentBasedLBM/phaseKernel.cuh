@@ -126,6 +126,34 @@ namespace LBM
     }
 
     /**
+     * @brief Load a neighboring phase value directly from global/halo storage (no shared-memory fast path)
+     * @tparam dx Neighbor offset in x-direction
+     * @tparam dy Neighbor offset in y-direction
+     * @tparam dz Neighbor offset in z-direction
+     * @tparam PhaseHalo Halo type used to fetch off-block neighbors
+     **/
+    template <const int dx, const int dy, const int dz, class PhaseHalo>
+    __device__ [[nodiscard]] inline scalar_t load_phase_neighbor_direct(
+        const scalar_t *const ptrRestrict phi,
+        const device::ptrCollection<6, const scalar_t> &phiBuffer,
+        const thread::coordinate &Tx,
+        const block::coordinate &Bx,
+        const device::pointCoordinate &point) noexcept
+    {
+        constexpr int maxOffset = 2;
+        static_assert((dx >= -maxOffset) && (dx <= maxOffset), "dx must be in [-2, 2].");
+        static_assert((dy >= -maxOffset) && (dy <= maxOffset), "dy must be in [-2, 2].");
+        static_assert((dz >= -maxOffset) && (dz <= maxOffset), "dz must be in [-2, 2].");
+
+#ifdef MULTI_GPU
+        return PhaseHalo::template pull_scalar<dx, dy, dz>(phi, phiBuffer, Tx, Bx, point);
+#else
+        (void)phiBuffer;
+        return PhaseHalo::template pull_scalar_local<dx, dy, dz>(phi, Tx, Bx, point);
+#endif
+    }
+
+    /**
      * @brief Compute isotropic phase gradient at a shifted lattice point
      * @tparam ox,oy,oz Shift of the evaluation point relative to current thread point
      **/
@@ -390,8 +418,7 @@ namespace LBM
             {
                 const scalar_t *const hydroSharedPtr = hydroShared;
 
-                if constexpr (requires
-                              {
+                if constexpr (requires {
                                   BoundaryConditions::template calculate_moments<VelocitySet, PhaseVelocitySet, const scalar_t *>(
                                       pop,
                                       moments,
@@ -409,8 +436,7 @@ namespace LBM
                         Tx,
                         point);
                 }
-                else if constexpr (requires
-                                   {
+                else if constexpr (requires {
                                        BoundaryConditions::template calculate_moments<VelocitySet, PhaseVelocitySet>(
                                            pop,
                                            moments,
@@ -550,14 +576,195 @@ namespace LBM
         scalar_t normy_ = static_cast<scalar_t>(0);
         scalar_t normz_ = static_cast<scalar_t>(0);
         scalar_t ind_ = static_cast<scalar_t>(0);
+        scalar_t centerNormx = static_cast<scalar_t>(0);
+        scalar_t centerNormy = static_cast<scalar_t>(0);
+        scalar_t centerNormz = static_cast<scalar_t>(0);
+        scalar_t centerInd = static_cast<scalar_t>(0);
 
         const scalar_t *const ptrRestrict phi = devPtrs.ptr<10>();
 
-        constexpr device::label_t sharedStride = label_constant<NUMBER_MOMENTS<true>() + 1>();
-        constexpr device::label_t phiSharedOffset = label_constant<NUMBER_MOMENTS<true>()>();
+        constexpr device::label_t phiTileNx = block::n<axis::X>() + static_cast<device::label_t>(4);
+        constexpr device::label_t phiTileNy = block::n<axis::Y>() + static_cast<device::label_t>(4);
+        constexpr device::label_t phiTileNz = block::n<axis::Z>() + static_cast<device::label_t>(4);
+        constexpr device::label_t phiTileSize = phiTileNx * phiTileNy * phiTileNz;
+        constexpr device::label_t normalNx = block::n<axis::X>() + static_cast<device::label_t>(2);
+        constexpr device::label_t normalNy = block::n<axis::Y>() + static_cast<device::label_t>(2);
+        constexpr device::label_t normalNz = block::n<axis::Z>() + static_cast<device::label_t>(2);
+        constexpr device::label_t normalTileSize = normalNx * normalNy * normalNz;
 
-        __shared__ scalar_t phiShared[block::size() * (NUMBER_MOMENTS<true>() + 1)];
-        phiShared[tid * sharedStride + phiSharedOffset] = phi[idx];
+        __shared__ scalar_t phiShared[phiTileSize];
+        __shared__ scalar_t normSharedX[normalTileSize];
+        __shared__ scalar_t normSharedY[normalTileSize];
+        __shared__ scalar_t normSharedZ[normalTileSize];
+
+        const auto phiSharedIdx = [](const device::label_t sx, const device::label_t sy, const device::label_t sz) noexcept -> device::label_t
+        {
+            return (sz * phiTileNy + sy) * phiTileNx + sx;
+        };
+
+        const auto normalSharedIdx = [](const device::label_t sx, const device::label_t sy, const device::label_t sz) noexcept -> device::label_t
+        {
+            return (sz * normalNy + sy) * normalNx + sx;
+        };
+
+        const auto ownsPhiOffsetX = [&Tx](const int ox) noexcept -> bool
+        {
+            return (ox == 0) ||
+                   (((ox == -1) || (ox == -2)) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
+                   (((ox == 1) || (ox == 2)) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
+        };
+
+        const auto ownsPhiOffsetY = [&Tx](const int oy) noexcept -> bool
+        {
+            return (oy == 0) ||
+                   (((oy == -1) || (oy == -2)) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
+                   (((oy == 1) || (oy == 2)) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
+        };
+
+        const auto ownsPhiOffsetZ = [&Tx](const int oz) noexcept -> bool
+        {
+            return (oz == 0) ||
+                   (((oz == -1) || (oz == -2)) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
+                   (((oz == 1) || (oz == 2)) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
+        };
+
+        const auto ownsNormalOffsetX = [&Tx](const int ox) noexcept -> bool
+        {
+            return (ox == 0) ||
+                   ((ox == -1) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
+                   ((ox == 1) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
+        };
+
+        const auto ownsNormalOffsetY = [&Tx](const int oy) noexcept -> bool
+        {
+            return (oy == 0) ||
+                   ((oy == -1) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
+                   ((oy == 1) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
+        };
+
+        const auto ownsNormalOffsetZ = [&Tx](const int oz) noexcept -> bool
+        {
+            return (oz == 0) ||
+                   ((oz == -1) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
+                   ((oz == 1) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
+        };
+
+        // Load phi in a (block + 2-cell halo) shared tile so each stencil point is fetched only once.
+        device::constexpr_for<0, 5>(
+            [&](const auto oxIdx)
+            {
+                constexpr int ox = static_cast<int>(oxIdx()) - 2;
+
+                device::constexpr_for<0, 5>(
+                    [&](const auto oyIdx)
+                    {
+                        constexpr int oy = static_cast<int>(oyIdx()) - 2;
+
+                        device::constexpr_for<0, 5>(
+                            [&](const auto ozIdx)
+                            {
+                                constexpr int oz = static_cast<int>(ozIdx()) - 2;
+
+                                if (!(ownsPhiOffsetX(ox) && ownsPhiOffsetY(oy) && ownsPhiOffsetZ(oz)))
+                                {
+                                    return;
+                                }
+
+                                const scalar_t phiCandidate = load_phase_neighbor_direct<ox, oy, oz, PhaseHalo>(
+                                    phi,
+                                    phiBuffer,
+                                    Tx,
+                                    Bx,
+                                    point);
+
+                                const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
+                                const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
+                                const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
+                                const device::label_t sid = phiSharedIdx(sx, sy, sz);
+
+                                phiShared[sid] = phiCandidate;
+                            });
+                    });
+            });
+
+        block::sync();
+
+        // Precompute interface normals in a shared tile (block + 1-cell halo).
+        device::constexpr_for<0, 3>(
+            [&](const auto oxIdx)
+            {
+                constexpr int ox = static_cast<int>(oxIdx()) - 1;
+
+                device::constexpr_for<0, 3>(
+                    [&](const auto oyIdx)
+                    {
+                        constexpr int oy = static_cast<int>(oyIdx()) - 1;
+
+                        device::constexpr_for<0, 3>(
+                            [&](const auto ozIdx)
+                            {
+                                constexpr int oz = static_cast<int>(ozIdx()) - 1;
+
+                                if (!(ownsNormalOffsetX(ox) && ownsNormalOffsetY(oy) && ownsNormalOffsetZ(oz)))
+                                {
+                                    return;
+                                }
+
+                                const device::label_t sxPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
+                                const device::label_t syPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
+                                const device::label_t szPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
+
+                                scalar_t sgx = static_cast<scalar_t>(0);
+                                scalar_t sgy = static_cast<scalar_t>(0);
+                                scalar_t sgz = static_cast<scalar_t>(0);
+
+                                device::constexpr_for<1, VelocitySet::Q()>(
+                                    [&](const auto q)
+                                    {
+                                        constexpr device::label_t qi = q();
+                                        constexpr int cx = VelocitySet::template c<int, axis::X>()[qi];
+                                        constexpr int cy = VelocitySet::template c<int, axis::Y>()[qi];
+                                        constexpr int cz = VelocitySet::template c<int, axis::Z>()[qi];
+
+                                        const device::label_t sqx = static_cast<device::label_t>(static_cast<int>(sxPhi) + cx);
+                                        const device::label_t sqy = static_cast<device::label_t>(static_cast<int>(syPhi) + cy);
+                                        const device::label_t sqz = static_cast<device::label_t>(static_cast<int>(szPhi) + cz);
+                                        const scalar_t phi_q = phiShared[phiSharedIdx(sqx, sqy, sqz)];
+                                        const scalar_t wq = VelocitySet::template w_q<scalar_t>(q_i<qi>());
+
+                                        sgx += wq * static_cast<scalar_t>(cx) * phi_q;
+                                        sgy += wq * static_cast<scalar_t>(cy) * phi_q;
+                                        sgz += wq * static_cast<scalar_t>(cz) * phi_q;
+                                    });
+
+                                const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
+                                const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
+                                const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
+                                const scalar_t indCandidate = sqrtf(gx * gx + gy * gy + gz * gz);
+                                const scalar_t invInd = static_cast<scalar_t>(1) / (indCandidate + static_cast<scalar_t>(1e-9));
+                                const scalar_t nxCandidate = gx * invInd;
+                                const scalar_t nyCandidate = gy * invInd;
+                                const scalar_t nzCandidate = gz * invInd;
+
+                                const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 1 + ox);
+                                const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 1 + oy);
+                                const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 1 + oz);
+                                const device::label_t sid = normalSharedIdx(sx, sy, sz);
+
+                                normSharedX[sid] = nxCandidate;
+                                normSharedY[sid] = nyCandidate;
+                                normSharedZ[sid] = nzCandidate;
+
+                                if constexpr ((ox == 0) && (oy == 0) && (oz == 0))
+                                {
+                                    centerNormx = nxCandidate;
+                                    centerNormy = nyCandidate;
+                                    centerNormz = nzCandidate;
+                                    centerInd = indCandidate;
+                                }
+                            });
+                    });
+            });
 
         block::sync();
 
@@ -571,16 +778,45 @@ namespace LBM
 
         if (isInterior)
         {
-            compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo>(phi, phiBuffer, phiShared, Tx, Bx, point, normx_, normy_, normz_, ind_);
-            const scalar_t curvature = compute_phase_curvature<VelocitySet, PhaseHalo>(phi, phiBuffer, phiShared, Tx, Bx, point);
+            normx_ = centerNormx;
+            normy_ = centerNormy;
+            normz_ = centerNormz;
+            ind_ = centerInd;
+
+            scalar_t scx = static_cast<scalar_t>(0);
+            scalar_t scy = static_cast<scalar_t>(0);
+            scalar_t scz = static_cast<scalar_t>(0);
+
+            device::constexpr_for<1, VelocitySet::Q()>(
+                [&](const auto q)
+                {
+                    constexpr device::label_t qi = q();
+                    constexpr int cx = VelocitySet::template c<int, axis::X>()[qi];
+                    constexpr int cy = VelocitySet::template c<int, axis::Y>()[qi];
+                    constexpr int cz = VelocitySet::template c<int, axis::Z>()[qi];
+
+                    const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 1 + cx);
+                    const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 1 + cy);
+                    const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 1 + cz);
+                    const device::label_t sid = normalSharedIdx(sx, sy, sz);
+
+                    const scalar_t nx_q = normSharedX[sid];
+                    const scalar_t ny_q = normSharedY[sid];
+                    const scalar_t nz_q = normSharedZ[sid];
+
+                    const scalar_t wq = VelocitySet::template w_q<scalar_t>(q_i<qi>());
+                    scx += wq * static_cast<scalar_t>(cx) * nx_q;
+                    scy += wq * static_cast<scalar_t>(cy) * ny_q;
+                    scz += wq * static_cast<scalar_t>(cz) * nz_q;
+                });
+
+            const scalar_t curvature = velocitySet::as2<scalar_t>() * (scx + scy + scz);
             const scalar_t stCurv = -device::sigma * curvature * ind_;
 
             Fsx = stCurv * normx_;
             Fsy = stCurv * normy_;
             Fsz = stCurv * normz_;
         }
-
-        block::sync();
 
         // Scale the moments correctly
         velocitySet::scale(moments);
