@@ -112,7 +112,7 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
                 : arrayBase<T, VelocitySet, TimeType>(name, mesh),
-                  arr_(initialise_array(mesh, componentName, name)),
+                  arr_(initialise_array(mesh, name, componentName, name)),
                   meanCount_(initialiseMeanCount(programCtrl)) {}
 
             /**
@@ -188,8 +188,28 @@ namespace LBM
                 }
                 else
                 {
-                    // std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
+                    std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
                     return initialConditions(mesh, fieldName);
+                }
+            }
+
+            __host__ [[nodiscard]] static const std::vector<T> initialise_array(
+                const host::latticeMesh &mesh,
+                [[maybe_unused]] const name_t &fieldName,
+                const name_t &componentName,
+                const name_t &fileName)
+            {
+                std::cout << "Doing new initialise array for " << componentName << std::endl;
+                if (fileIO::hasIndexedFiles(fileName))
+                {
+                    std::cout << "Reading " << componentName << " from file " << fileName << std::endl;
+                    return fileIO::readFieldByName<T>(fileName + "_" + std::to_string(fileIO::latestTime(fileName)) + ".LBMBin", componentName);
+                }
+                else
+                {
+                    std::cout << "Did not find file " << fileName << " for component " << componentName << std::endl;
+                    // std::cout << "Did not find file " << fileName << " for field " << componentName << std::endl;
+                    return initialConditions(mesh, componentName);
                 }
             }
 

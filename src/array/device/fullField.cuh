@@ -174,10 +174,10 @@ namespace LBM
                           allocate, programCtrl),
                       mesh,
                       programCtrl),
-                  name_(name),
+                  name_(componentName),
                   meanCount_(initialiseMeanCount(programCtrl))
             {
-                initialise_boundary_condition(name_, programCtrl.deviceList());
+                initialise_boundary_condition(componentName, programCtrl.deviceList());
             }
 
             /**

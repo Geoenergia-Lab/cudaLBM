@@ -73,31 +73,45 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] programCtrl The program control object
              **/
+            // __host__ [[nodiscard]] halo(const host::latticeMesh &mesh, const programControl &programCtrl) noexcept
+            //     : readBuffer_(haloFace<VelocitySet>(
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_x", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_y", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_z", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xx", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xy", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xz", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yy", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yz", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_zz", mesh, programCtrl),
+            //           mesh,
+            //           programCtrl)),
+            //       writeBuffer_(haloFace<VelocitySet>(
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_x", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_y", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_z", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xx", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xy", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xz", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yy", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yz", mesh, programCtrl),
+            //           host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_zz", mesh, programCtrl),
+            //           mesh,
+            //           programCtrl)) {}
+
             __host__ [[nodiscard]] halo(const host::latticeMesh &mesh, const programControl &programCtrl) noexcept
                 : readBuffer_(haloFace<VelocitySet>(
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_x", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_y", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_z", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xx", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xy", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xz", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yy", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yz", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_zz", mesh, programCtrl),
+                      host::scalarField<host::PAGED, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
+                      host::vectorField<host::PAGED, VelocitySet, time::instantaneous>("U", mesh, programCtrl),
+                      host::symmetricTensorField<host::PAGED, VelocitySet, time::instantaneous>("Pi", mesh, programCtrl),
                       mesh,
                       programCtrl)),
                   writeBuffer_(haloFace<VelocitySet>(
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_x", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_y", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("U_z", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xx", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xy", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_xz", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yy", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_yz", mesh, programCtrl),
-                      host::array<host::PAGED, scalar_t, VelocitySet, time::instantaneous>("Pi_zz", mesh, programCtrl),
+                      host::scalarField<host::PAGED, VelocitySet, time::instantaneous>("rho", mesh, programCtrl),
+                      host::vectorField<host::PAGED, VelocitySet, time::instantaneous>("U", mesh, programCtrl),
+                      host::symmetricTensorField<host::PAGED, VelocitySet, time::instantaneous>("Pi", mesh, programCtrl),
                       mesh,
                       programCtrl)) {}
 
