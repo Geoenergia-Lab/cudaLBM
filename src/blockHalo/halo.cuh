@@ -276,6 +276,66 @@ namespace LBM
                 const device::label_t bz =
                     crossMinusZ ? Bx.shifted_block<axis::Z, -1>() : (crossPlusZ ? Bx.shifted_block<axis::Z, +1>() : Bx.value<axis::Z>());
 
+                int pointShiftX = static_cast<int>(point.value<axis::X>()) + dx;
+                int pointShiftY = static_cast<int>(point.value<axis::Y>()) + dy;
+                int pointShiftZ = static_cast<int>(point.value<axis::Z>()) + dz;
+
+                if constexpr (x_periodic)
+                {
+                    if (pointShiftX < 0)
+                    {
+                        pointShiftX += static_cast<int>(device::n<axis::X>());
+                    }
+                    else if (pointShiftX >= static_cast<int>(device::n<axis::X>()))
+                    {
+                        pointShiftX -= static_cast<int>(device::n<axis::X>());
+                    }
+                }
+
+                if constexpr (y_periodic)
+                {
+                    if (pointShiftY < 0)
+                    {
+                        pointShiftY += static_cast<int>(device::n<axis::Y>());
+                    }
+                    else if (pointShiftY >= static_cast<int>(device::n<axis::Y>()))
+                    {
+                        pointShiftY -= static_cast<int>(device::n<axis::Y>());
+                    }
+                }
+
+                if constexpr (z_periodic)
+                {
+                    if (pointShiftZ < 0)
+                    {
+                        pointShiftZ += static_cast<int>(device::n<axis::Z>());
+                    }
+                    else if (pointShiftZ >= static_cast<int>(device::n<axis::Z>()))
+                    {
+                        pointShiftZ -= static_cast<int>(device::n<axis::Z>());
+                    }
+                }
+
+#ifndef FORCE_MULTI_GPU_SCALAR_HALO_TEST
+                const int localSizeX = static_cast<int>(block::n<axis::X>() * device::NUM_BLOCK<axis::X>());
+                const int localSizeY = static_cast<int>(block::n<axis::Y>() * device::NUM_BLOCK<axis::Y>());
+                const int localSizeZ = static_cast<int>(block::n<axis::Z>() * device::NUM_BLOCK<axis::Z>());
+
+                const int localStartX = static_cast<int>(block::n<axis::X>() * device::BLOCK_OFFSET_X);
+                const int localStartY = static_cast<int>(block::n<axis::Y>() * device::BLOCK_OFFSET_Y);
+                const int localStartZ = static_cast<int>(block::n<axis::Z>() * device::BLOCK_OFFSET_Z);
+
+                const bool withinLocalSubdomain =
+                    (pointShiftX >= localStartX) && (pointShiftX < (localStartX + localSizeX)) &&
+                    (pointShiftY >= localStartY) && (pointShiftY < (localStartY + localSizeY)) &&
+                    (pointShiftZ >= localStartZ) && (pointShiftZ < (localStartZ + localSizeZ));
+
+                if (withinLocalSubdomain)
+                {
+                    return __ldg(&(scalarField[device::idx(tx, ty, tz, bx, by, bz)]));
+                }
+#endif
+
                 if (!(haloX || haloY || haloZ))
                 {
                     return __ldg(&(scalarField[device::idx(tx, ty, tz, bx, by, bz)]));
@@ -424,6 +484,19 @@ namespace LBM
                 const device::pointCoordinate &point) noexcept
             {
                 constexpr device::label_t scalarHaloDepth = static_cast<device::label_t>(2);
+
+#ifndef FORCE_MULTI_GPU_SCALAR_HALO_TEST
+                const device::label_t localSizeX = block::n<axis::X>() * device::NUM_BLOCK<axis::X>();
+                const device::label_t localSizeY = block::n<axis::Y>() * device::NUM_BLOCK<axis::Y>();
+                const device::label_t localSizeZ = block::n<axis::Z>() * device::NUM_BLOCK<axis::Z>();
+
+                if ((localSizeX == device::n<axis::X>()) &&
+                    (localSizeY == device::n<axis::Y>()) &&
+                    (localSizeZ == device::n<axis::Z>()))
+                {
+                    return;
+                }
+#endif
 
                 if ((Tx.value<axis::X>() == static_cast<device::label_t>(0)) &&
                     (x_periodic || (point.value<axis::X>() > static_cast<device::label_t>(0))))

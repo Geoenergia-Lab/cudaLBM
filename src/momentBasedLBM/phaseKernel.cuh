@@ -80,7 +80,7 @@ namespace LBM
      * @tparam dz Neighbor offset in z-direction
      * @tparam PhaseHalo Halo type used to fetch off-block neighbors
      **/
-    template <const int dx, const int dy, const int dz, class PhaseHalo, class HydroShared>
+    template <const int dx, const int dy, const int dz, class PhaseHalo, const bool useScalarHalo = true, class HydroShared>
     __device__ [[nodiscard]] inline scalar_t load_phase_neighbor(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -117,12 +117,15 @@ namespace LBM
             return hydroShared[tid * sharedStride + phiSharedOffset];
         }
 
-#ifdef MULTI_GPU
-        return PhaseHalo::template pull_scalar<dx, dy, dz>(phi, phiBuffer, Tx, Bx, point);
-#else
-        (void)phiBuffer;
-        return PhaseHalo::template pull_scalar_local<dx, dy, dz>(phi, Tx, Bx, point);
-#endif
+        if constexpr (useScalarHalo)
+        {
+            return PhaseHalo::template pull_scalar<dx, dy, dz>(phi, phiBuffer, Tx, Bx, point);
+        }
+        else
+        {
+            (void)phiBuffer;
+            return PhaseHalo::template pull_scalar_local<dx, dy, dz>(phi, Tx, Bx, point);
+        }
     }
 
     /**
@@ -132,7 +135,7 @@ namespace LBM
      * @tparam dz Neighbor offset in z-direction
      * @tparam PhaseHalo Halo type used to fetch off-block neighbors
      **/
-    template <const int dx, const int dy, const int dz, class PhaseHalo>
+    template <const int dx, const int dy, const int dz, class PhaseHalo, const bool useScalarHalo = true>
     __device__ [[nodiscard]] inline scalar_t load_phase_neighbor_direct(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -145,18 +148,21 @@ namespace LBM
         static_assert((dy >= -maxOffset) && (dy <= maxOffset), "dy must be in [-2, 2].");
         static_assert((dz >= -maxOffset) && (dz <= maxOffset), "dz must be in [-2, 2].");
 
-#ifdef MULTI_GPU
-        return PhaseHalo::template pull_scalar<dx, dy, dz>(phi, phiBuffer, Tx, Bx, point);
-#else
-        (void)phiBuffer;
-        return PhaseHalo::template pull_scalar_local<dx, dy, dz>(phi, Tx, Bx, point);
-#endif
+        if constexpr (useScalarHalo)
+        {
+            return PhaseHalo::template pull_scalar<dx, dy, dz>(phi, phiBuffer, Tx, Bx, point);
+        }
+        else
+        {
+            (void)phiBuffer;
+            return PhaseHalo::template pull_scalar_local<dx, dy, dz>(phi, Tx, Bx, point);
+        }
     }
 
     /**
      * @brief Runtime scalar neighbor fetch (offsets in [-2,2]) using local field and optional scalar halo faces
      **/
-    template <class PhaseHalo>
+    template <class PhaseHalo, const bool useScalarHalo = true>
     __device__ [[nodiscard]] inline scalar_t load_phase_neighbor_direct_runtime(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -230,8 +236,6 @@ namespace LBM
 
         const bool haloX = crossMinusX || crossPlusX;
         const bool haloY = crossMinusY || crossPlusY;
-        const bool haloZ = crossMinusZ || crossPlusZ;
-
         const int bxShift = crossMinusX ? -1 : (crossPlusX ? +1 : 0);
         const int byShift = crossMinusY ? -1 : (crossPlusY ? +1 : 0);
         const int bzShift = crossMinusZ ? -1 : (crossPlusZ ? +1 : 0);
@@ -244,60 +248,118 @@ namespace LBM
         const device::label_t by = static_cast<device::label_t>((static_cast<int>(Bx.value<axis::Y>()) + nBlockY + byShift) % nBlockY);
         const device::label_t bz = static_cast<device::label_t>((static_cast<int>(Bx.value<axis::Z>()) + nBlockZ + bzShift) % nBlockZ);
 
-        if (!(haloX || haloY || haloZ))
+        int pointShiftX = static_cast<int>(point.value<axis::X>()) + dx;
+        int pointShiftY = static_cast<int>(point.value<axis::Y>()) + dy;
+        int pointShiftZ = static_cast<int>(point.value<axis::Z>()) + dz;
+
+        if constexpr (PhaseHalo::periodicX())
+        {
+            if (pointShiftX < 0)
+            {
+                pointShiftX += static_cast<int>(device::n<axis::X>());
+            }
+            else if (pointShiftX >= static_cast<int>(device::n<axis::X>()))
+            {
+                pointShiftX -= static_cast<int>(device::n<axis::X>());
+            }
+        }
+
+        if constexpr (PhaseHalo::periodicY())
+        {
+            if (pointShiftY < 0)
+            {
+                pointShiftY += static_cast<int>(device::n<axis::Y>());
+            }
+            else if (pointShiftY >= static_cast<int>(device::n<axis::Y>()))
+            {
+                pointShiftY -= static_cast<int>(device::n<axis::Y>());
+            }
+        }
+
+        if constexpr (PhaseHalo::periodicZ())
+        {
+            if (pointShiftZ < 0)
+            {
+                pointShiftZ += static_cast<int>(device::n<axis::Z>());
+            }
+            else if (pointShiftZ >= static_cast<int>(device::n<axis::Z>()))
+            {
+                pointShiftZ -= static_cast<int>(device::n<axis::Z>());
+            }
+        }
+
+#ifndef FORCE_MULTI_GPU_SCALAR_HALO_TEST
+        const int localSizeX = static_cast<int>(block::n<axis::X>() * device::NUM_BLOCK<axis::X>());
+        const int localSizeY = static_cast<int>(block::n<axis::Y>() * device::NUM_BLOCK<axis::Y>());
+        const int localSizeZ = static_cast<int>(block::n<axis::Z>() * device::NUM_BLOCK<axis::Z>());
+
+        const int localStartX = static_cast<int>(block::n<axis::X>() * device::BLOCK_OFFSET_X);
+        const int localStartY = static_cast<int>(block::n<axis::Y>() * device::BLOCK_OFFSET_Y);
+        const int localStartZ = static_cast<int>(block::n<axis::Z>() * device::BLOCK_OFFSET_Z);
+
+        const bool withinLocalSubdomain =
+            (pointShiftX >= localStartX) && (pointShiftX < (localStartX + localSizeX)) &&
+            (pointShiftY >= localStartY) && (pointShiftY < (localStartY + localSizeY)) &&
+            (pointShiftZ >= localStartZ) && (pointShiftZ < (localStartZ + localSizeZ));
+
+        if (withinLocalSubdomain)
         {
             return __ldg(&(phi[device::idx(tx, ty, tz, bx, by, bz)]));
         }
-
-#ifdef MULTI_GPU
-        if (haloX)
-        {
-            const device::label_t layer = static_cast<device::label_t>(crossMinusX ? (-shiftedX - 1) : (shiftedX - nX));
-            const device::label_t faceIdx =
-                (layer == static_cast<device::label_t>(0))
-                    ? idxPop<axis::X, 0, scalarHaloDepth>(ty, tz, bx, by, bz)
-                    : idxPop<axis::X, 1, scalarHaloDepth>(ty, tz, bx, by, bz);
-
-            if (crossMinusX)
-            {
-                return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, +1>())>()[faceIdx]));
-            }
-
-            return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::X, -1>())>()[faceIdx]));
-        }
-
-        if (haloY)
-        {
-            const device::label_t layer = static_cast<device::label_t>(crossMinusY ? (-shiftedY - 1) : (shiftedY - nY));
-            const device::label_t faceIdx =
-                (layer == static_cast<device::label_t>(0))
-                    ? idxPop<axis::Y, 0, scalarHaloDepth>(tx, tz, bx, by, bz)
-                    : idxPop<axis::Y, 1, scalarHaloDepth>(tx, tz, bx, by, bz);
-
-            if (crossMinusY)
-            {
-                return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, +1>())>()[faceIdx]));
-            }
-
-            return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Y, -1>())>()[faceIdx]));
-        }
-
-        const device::label_t layer = static_cast<device::label_t>(crossMinusZ ? (-shiftedZ - 1) : (shiftedZ - nZ));
-        const device::label_t faceIdx =
-            (layer == static_cast<device::label_t>(0))
-                ? idxPop<axis::Z, 0, scalarHaloDepth>(tx, ty, bx, by, bz)
-                : idxPop<axis::Z, 1, scalarHaloDepth>(tx, ty, bx, by, bz);
-
-        if (crossMinusZ)
-        {
-            return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, +1>())>()[faceIdx]));
-        }
-
-        return __ldg(&(phiBuffer.ptr<static_cast<host::label_t>(pointerIndex<axis::Z, -1>())>()[faceIdx]));
-#else
-        (void)phiBuffer;
-        return __ldg(&(phi[device::idx(tx, ty, tz, bx, by, bz)]));
 #endif
+
+        if constexpr (useScalarHalo)
+        {
+            if (haloX)
+            {
+                const device::label_t layer = static_cast<device::label_t>(crossMinusX ? (-shiftedX - 1) : (shiftedX - nX));
+                const device::label_t faceIdx =
+                    (layer == static_cast<device::label_t>(0))
+                        ? device::idxPop<axis::X, 0, scalarHaloDepth>(ty, tz, bx, by, bz)
+                        : device::idxPop<axis::X, 1, scalarHaloDepth>(ty, tz, bx, by, bz);
+
+                if (crossMinusX)
+                {
+                    return __ldg(&(phiBuffer.ptr<1>()[faceIdx]));
+                }
+
+                return __ldg(&(phiBuffer.ptr<0>()[faceIdx]));
+            }
+
+            if (haloY)
+            {
+                const device::label_t layer = static_cast<device::label_t>(crossMinusY ? (-shiftedY - 1) : (shiftedY - nY));
+                const device::label_t faceIdx =
+                    (layer == static_cast<device::label_t>(0))
+                        ? device::idxPop<axis::Y, 0, scalarHaloDepth>(tx, tz, bx, by, bz)
+                        : device::idxPop<axis::Y, 1, scalarHaloDepth>(tx, tz, bx, by, bz);
+
+                if (crossMinusY)
+                {
+                    return __ldg(&(phiBuffer.ptr<3>()[faceIdx]));
+                }
+
+                return __ldg(&(phiBuffer.ptr<2>()[faceIdx]));
+            }
+
+            const device::label_t layer = static_cast<device::label_t>(crossMinusZ ? (-shiftedZ - 1) : (shiftedZ - nZ));
+            const device::label_t faceIdx =
+                (layer == static_cast<device::label_t>(0))
+                    ? device::idxPop<axis::Z, 0, scalarHaloDepth>(tx, ty, bx, by, bz)
+                    : device::idxPop<axis::Z, 1, scalarHaloDepth>(tx, ty, bx, by, bz);
+
+            if (crossMinusZ)
+            {
+                return __ldg(&(phiBuffer.ptr<5>()[faceIdx]));
+            }
+
+            return __ldg(&(phiBuffer.ptr<4>()[faceIdx]));
+        }
+        else
+        {
+            (void)phiBuffer;
+            return __ldg(&(phi[device::idx(tx, ty, tz, bx, by, bz)]));
+        }
     }
 
     /**
@@ -743,7 +805,7 @@ namespace LBM
      * @brief Compute isotropic phase gradient at a shifted lattice point
      * @tparam ox,oy,oz Shift of the evaluation point relative to current thread point
      **/
-    template <const int ox, const int oy, const int oz, class VelocitySet, class PhaseHalo, class HydroShared>
+    template <const int ox, const int oy, const int oz, class VelocitySet, class PhaseHalo, const bool useScalarHalo = true, class HydroShared>
     __device__ inline void compute_phase_gradient(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -761,40 +823,40 @@ namespace LBM
 
         if constexpr (VelocitySet::Q() == 19)
         {
-            const scalar_t phiXpYpZ = load_phase_neighbor<ox + 1, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYmZ = load_phase_neighbor<ox + 1, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYpZ = load_phase_neighbor<ox - 1, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYmZ = load_phase_neighbor<ox - 1, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYpZ = load_phase_neighbor<ox + 1, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYmZ = load_phase_neighbor<ox + 1, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYpZ = load_phase_neighbor<ox - 1, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYmZ = load_phase_neighbor<ox - 1, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
-            const scalar_t phiXpYZp = load_phase_neighbor<ox + 1, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYZm = load_phase_neighbor<ox + 1, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZp = load_phase_neighbor<ox - 1, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZm = load_phase_neighbor<ox - 1, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYZp = load_phase_neighbor<ox + 1, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYZm = load_phase_neighbor<ox + 1, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYZp = load_phase_neighbor<ox - 1, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYZm = load_phase_neighbor<ox - 1, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
-            const scalar_t phiXYpZp = load_phase_neighbor<ox + 0, oy + 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYpZm = load_phase_neighbor<ox + 0, oy + 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZp = load_phase_neighbor<ox + 0, oy - 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZm = load_phase_neighbor<ox + 0, oy - 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYpZp = load_phase_neighbor<ox + 0, oy + 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYpZm = load_phase_neighbor<ox + 0, oy + 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYmZp = load_phase_neighbor<ox + 0, oy - 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYmZm = load_phase_neighbor<ox + 0, oy - 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
             sgx =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 1, oy + 0, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox - 1, oy + 0, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 1, oy + 0, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox - 1, oy + 0, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
                                                          phiXpYZp - phiXmYZm +
                                                          phiXpYmZ - phiXmYpZ +
                                                          phiXpYZm - phiXmYZp);
 
             sgy =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox + 0, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox + 0, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
                                                          phiXYpZp - phiXYmZm +
                                                          phiXmYpZ - phiXpYmZ +
                                                          phiXYpZm - phiXYmZp);
 
             sgz =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox + 0, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox + 0, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
                                                          phiXYpZp - phiXYmZm +
                                                          phiXmYZp - phiXpYZm +
@@ -802,33 +864,33 @@ namespace LBM
         }
         else if constexpr (VelocitySet::Q() == 27)
         {
-            const scalar_t phiXpYpZ = load_phase_neighbor<ox + 1, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYmZ = load_phase_neighbor<ox + 1, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYpZ = load_phase_neighbor<ox - 1, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYmZ = load_phase_neighbor<ox - 1, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYpZ = load_phase_neighbor<ox + 1, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYmZ = load_phase_neighbor<ox + 1, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYpZ = load_phase_neighbor<ox - 1, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYmZ = load_phase_neighbor<ox - 1, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
-            const scalar_t phiXpYZp = load_phase_neighbor<ox + 1, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYZm = load_phase_neighbor<ox + 1, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZp = load_phase_neighbor<ox - 1, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZm = load_phase_neighbor<ox - 1, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYZp = load_phase_neighbor<ox + 1, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYZm = load_phase_neighbor<ox + 1, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYZp = load_phase_neighbor<ox - 1, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYZm = load_phase_neighbor<ox - 1, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
-            const scalar_t phiXYpZp = load_phase_neighbor<ox + 0, oy + 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYpZm = load_phase_neighbor<ox + 0, oy + 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZp = load_phase_neighbor<ox + 0, oy - 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZm = load_phase_neighbor<ox + 0, oy - 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYpZp = load_phase_neighbor<ox + 0, oy + 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYpZm = load_phase_neighbor<ox + 0, oy + 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYmZp = load_phase_neighbor<ox + 0, oy - 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXYmZm = load_phase_neighbor<ox + 0, oy - 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
-            const scalar_t phiXpYpZp = load_phase_neighbor<ox + 1, oy + 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYpZm = load_phase_neighbor<ox + 1, oy + 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYmZp = load_phase_neighbor<ox + 1, oy - 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYmZm = load_phase_neighbor<ox + 1, oy - 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYpZp = load_phase_neighbor<ox - 1, oy + 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYpZm = load_phase_neighbor<ox - 1, oy + 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYmZp = load_phase_neighbor<ox - 1, oy - 1, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYmZm = load_phase_neighbor<ox - 1, oy - 1, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYpZp = load_phase_neighbor<ox + 1, oy + 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYpZm = load_phase_neighbor<ox + 1, oy + 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYmZp = load_phase_neighbor<ox + 1, oy - 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXpYmZm = load_phase_neighbor<ox + 1, oy - 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYpZp = load_phase_neighbor<ox - 1, oy + 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYpZm = load_phase_neighbor<ox - 1, oy + 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYmZp = load_phase_neighbor<ox - 1, oy - 1, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+            const scalar_t phiXmYmZm = load_phase_neighbor<ox - 1, oy - 1, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
 
             sgx =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 1, oy + 0, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox - 1, oy + 0, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 1, oy + 0, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox - 1, oy + 0, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
                                                          phiXpYZp - phiXmYZm +
                                                          phiXpYmZ - phiXmYpZ +
@@ -839,8 +901,8 @@ namespace LBM
                                                          phiXpYmZm - phiXmYpZp);
 
             sgy =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox + 0, oy - 1, oz + 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox + 0, oy - 1, oz + 0, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
                                                          phiXYpZp - phiXYmZm +
                                                          phiXmYpZ - phiXpYmZ +
@@ -851,8 +913,8 @@ namespace LBM
                                                          phiXmYpZp - phiXpYmZm);
 
             sgz =
-                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 0, oz + 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                         load_phase_neighbor<ox + 0, oy + 0, oz - 1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
+                VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<ox + 0, oy + 0, oz + 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
+                                                         load_phase_neighbor<ox + 0, oy + 0, oz - 1, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
                 VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
                                                          phiXYpZp - phiXYmZm +
                                                          phiXmYZp - phiXpYZm +
@@ -872,7 +934,7 @@ namespace LBM
                     constexpr int cy = VelocitySet::template c<int, axis::Y>()[qi];
                     constexpr int cz = VelocitySet::template c<int, axis::Z>()[qi];
 
-                    const scalar_t phi_q = load_phase_neighbor<ox + cx, oy + cy, oz + cz, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+                    const scalar_t phi_q = load_phase_neighbor<ox + cx, oy + cy, oz + cz, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
                     const scalar_t wq = VelocitySet::template w_q<scalar_t>(q_i<qi>());
 
                     sgx += wq * static_cast<scalar_t>(cx) * phi_q;
@@ -889,7 +951,7 @@ namespace LBM
     /**
      * @brief Compute interface normal and indicator at a shifted lattice point
      **/
-    template <const int ox, const int oy, const int oz, class VelocitySet, class PhaseHalo, class HydroShared>
+    template <const int ox, const int oy, const int oz, class VelocitySet, class PhaseHalo, const bool useScalarHalo = true, class HydroShared>
     __device__ inline void compute_phase_normal(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -905,7 +967,7 @@ namespace LBM
         scalar_t gx = static_cast<scalar_t>(0);
         scalar_t gy = static_cast<scalar_t>(0);
         scalar_t gz = static_cast<scalar_t>(0);
-        compute_phase_gradient<ox, oy, oz, VelocitySet, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point, gx, gy, gz);
+        compute_phase_gradient<ox, oy, oz, VelocitySet, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point, gx, gy, gz);
 
         ind = sqrtf(gx * gx + gy * gy + gz * gz);
         const scalar_t invInd = static_cast<scalar_t>(1) / (ind + static_cast<scalar_t>(1e-9));
@@ -918,7 +980,7 @@ namespace LBM
     /**
      * @brief Compute curvature from divergence of normals using the current VelocitySet stencil
      **/
-    template <class VelocitySet, class PhaseHalo, class HydroShared>
+    template <class VelocitySet, class PhaseHalo, const bool useScalarHalo = true, class HydroShared>
     __device__ [[nodiscard]] inline scalar_t compute_phase_curvature(
         const scalar_t *const ptrRestrict phi,
         const device::ptrCollection<6, const scalar_t> &phiBuffer,
@@ -944,7 +1006,7 @@ namespace LBM
                 scalar_t nz_q = static_cast<scalar_t>(0);
                 scalar_t ind_q = static_cast<scalar_t>(0);
 
-                compute_phase_normal<cx, cy, cz, VelocitySet, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point, nx_q, ny_q, nz_q, ind_q);
+                compute_phase_normal<cx, cy, cz, VelocitySet, PhaseHalo, useScalarHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point, nx_q, ny_q, nz_q, ind_q);
 
                 const scalar_t wq = VelocitySet::template w_q<scalar_t>(q_i<qi>());
                 scx += wq * static_cast<scalar_t>(cx) * nx_q;
@@ -970,7 +1032,7 @@ namespace LBM
      * @param[in] phiWriteBuffer Collection of writable pointers to scalar phase-field halo faces for next-step neighbor stencils
      * @param[in] hydroShared Inline or externally stored shared memory buffer
      **/
-    template <class BoundaryConditions, class VelocitySet, class PhaseVelocitySet, class HydroHalo, class PhaseHalo, class HydroShared, class PhaseShared>
+    template <class BoundaryConditions, class VelocitySet, class PhaseVelocitySet, class HydroHalo, class PhaseHalo, const bool useScalarHalo = true, class HydroShared, class PhaseShared>
     __device__ inline void phaseStream(
         const device::ptrCollection<11, scalar_t> &devPtrs,
         const device::ptrCollection<6, const scalar_t> &hydroBuffer,
@@ -1010,14 +1072,15 @@ namespace LBM
 
         const scalar_t *const ptrRestrict phi = devPtrs.ptr<10>();
 
-#ifdef MULTI_GPU
-        constexpr device::label_t sharedStride = label_constant<NUMBER_MOMENTS<true>() + 1>();
-        constexpr device::label_t phiSharedOffset = label_constant<NUMBER_MOMENTS<true>()>();
+        if constexpr (useScalarHalo)
+        {
+            constexpr device::label_t sharedStride = label_constant<NUMBER_MOMENTS<true>() + 1>();
+            constexpr device::label_t phiSharedOffset = label_constant<NUMBER_MOMENTS<true>()>();
 
-        hydroShared[tid * sharedStride + phiSharedOffset] = phi[idx];
+            hydroShared[tid * sharedStride + phiSharedOffset] = phi[idx];
 
-        block::sync();
-#endif
+            block::sync();
+        }
 
         const bool isInterior =
             (point.value<axis::X>() > static_cast<device::label_t>(0)) &&
@@ -1029,267 +1092,313 @@ namespace LBM
 
         if (isInterior)
         {
-#ifdef MULTI_GPU
-            const scalar_t phiXpYpZ = load_phase_neighbor<+1, +1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYmZ = load_phase_neighbor<+1, -1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYpZ = load_phase_neighbor<-1, +1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYmZ = load_phase_neighbor<-1, -1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-
-            const scalar_t phiXpYZp = load_phase_neighbor<+1, 0, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXpYZm = load_phase_neighbor<+1, 0, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZp = load_phase_neighbor<-1, 0, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXmYZm = load_phase_neighbor<-1, 0, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-
-            const scalar_t phiXYpZp = load_phase_neighbor<0, +1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYpZm = load_phase_neighbor<0, +1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZp = load_phase_neighbor<0, -1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-            const scalar_t phiXYmZm = load_phase_neighbor<0, -1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-
-            scalar_t sgx = static_cast<scalar_t>(0);
-            scalar_t sgy = static_cast<scalar_t>(0);
-            scalar_t sgz = static_cast<scalar_t>(0);
-
-            if constexpr (VelocitySet::Q() == 19)
+            if constexpr (useScalarHalo)
             {
-                sgx =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<+1, 0, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<-1, 0, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXpYZp - phiXmYZm +
-                                                             phiXpYmZ - phiXmYpZ +
-                                                             phiXpYZm - phiXmYZp);
+                constexpr device::label_t sharedStride = label_constant<NUMBER_MOMENTS<true>() + 1>();
+                constexpr device::label_t phiSharedOffset = label_constant<NUMBER_MOMENTS<true>()>();
 
-                sgy =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<0, +1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<0, -1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYpZ - phiXpYmZ +
-                                                             phiXYpZm - phiXYmZp);
+                const bool isBlockInterior =
+                    (Tx.value<axis::X>() > static_cast<device::label_t>(0)) &&
+                    (Tx.value<axis::X>() < (block::n<axis::X>() - static_cast<device::label_t>(1))) &&
+                    (Tx.value<axis::Y>() > static_cast<device::label_t>(0)) &&
+                    (Tx.value<axis::Y>() < (block::n<axis::Y>() - static_cast<device::label_t>(1))) &&
+                    (Tx.value<axis::Z>() > static_cast<device::label_t>(0)) &&
+                    (Tx.value<axis::Z>() < (block::n<axis::Z>() - static_cast<device::label_t>(1)));
 
-                sgz =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<0, 0, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<0, 0, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYZp - phiXpYZm +
-                                                             phiXYmZp - phiXYpZm);
-            }
-            else if constexpr (VelocitySet::Q() == 27)
-            {
-                const scalar_t phiXpYpZp = load_phase_neighbor<+1, +1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXpYpZm = load_phase_neighbor<+1, +1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXpYmZp = load_phase_neighbor<+1, -1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXpYmZm = load_phase_neighbor<+1, -1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXmYpZp = load_phase_neighbor<-1, +1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXmYpZm = load_phase_neighbor<-1, +1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXmYmZp = load_phase_neighbor<-1, -1, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
-                const scalar_t phiXmYmZm = load_phase_neighbor<-1, -1, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point);
+                if (isBlockInterior)
+                {
+                    constexpr device::label_t dy = block::n<axis::X>();
+                    constexpr device::label_t dz = block::stride_z();
 
-                sgx =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<+1, 0, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<-1, 0, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXpYZp - phiXmYZm +
-                                                             phiXpYmZ - phiXmYpZ +
-                                                             phiXpYZm - phiXmYZp) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXpYpZm - phiXmYmZp +
-                                                             phiXpYmZp - phiXmYpZm +
-                                                             phiXpYmZm - phiXmYpZp);
+                    const device::label_t iXp = tid + static_cast<device::label_t>(1);
+                    const device::label_t iXm = tid - static_cast<device::label_t>(1);
+                    const device::label_t iYp = tid + dy;
+                    const device::label_t iYm = tid - dy;
+                    const device::label_t iZp = tid + dz;
+                    const device::label_t iZm = tid - dz;
 
-                sgy =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<0, +1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<0, -1, 0, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYpZ - phiXpYmZ +
-                                                             phiXYpZm - phiXYmZp) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXpYpZm - phiXmYmZp +
-                                                             phiXmYpZm - phiXpYmZp +
-                                                             phiXmYpZp - phiXpYmZm);
+                    scalar_t sgx = static_cast<scalar_t>(0);
+                    scalar_t sgy = static_cast<scalar_t>(0);
+                    scalar_t sgz = static_cast<scalar_t>(0);
 
-                sgz =
-                    VelocitySet::template w_1<scalar_t>() * (load_phase_neighbor<0, 0, +1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point) -
-                                                             load_phase_neighbor<0, 0, -1, PhaseHalo>(phi, phiBuffer, hydroShared, Tx, Bx, point)) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYZp - phiXpYZm +
-                                                             phiXYmZp - phiXYpZm) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXmYmZp - phiXpYpZm +
-                                                             phiXpYmZp - phiXmYpZm +
-                                                             phiXmYpZp - phiXpYmZm);
-            }
-            else
-            {
-                scalar_t indDummy = static_cast<scalar_t>(0);
-                compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo>(
-                    phi,
-                    phiBuffer,
-                    hydroShared,
-                    Tx,
-                    Bx,
-                    point,
-                    normx_,
-                    normy_,
-                    normz_,
-                    indDummy);
-            }
+                    if constexpr (VelocitySet::Q() == 19)
+                    {
+                        const scalar_t phiXp = hydroShared[iXp * sharedStride + phiSharedOffset];
+                        const scalar_t phiXm = hydroShared[iXm * sharedStride + phiSharedOffset];
+                        const scalar_t phiYp = hydroShared[iYp * sharedStride + phiSharedOffset];
+                        const scalar_t phiYm = hydroShared[iYm * sharedStride + phiSharedOffset];
+                        const scalar_t phiZp = hydroShared[iZp * sharedStride + phiSharedOffset];
+                        const scalar_t phiZm = hydroShared[iZm * sharedStride + phiSharedOffset];
 
-            if constexpr ((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27))
-            {
-                const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
-                const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
-                const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
+                        sgx =
+                            VelocitySet::template w_1<scalar_t>() * (phiXp - phiXm) +
+                            VelocitySet::template w_2<scalar_t>() * ((hydroShared[(iXp + dy) * sharedStride + phiSharedOffset] - hydroShared[(iXm - dy) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iXp + dz) * sharedStride + phiSharedOffset] - hydroShared[(iXm - dz) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iXp - dy) * sharedStride + phiSharedOffset] - hydroShared[(iXm + dy) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iXp - dz) * sharedStride + phiSharedOffset] - hydroShared[(iXm + dz) * sharedStride + phiSharedOffset]));
 
-                const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
-                const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
-                normx_ = gx * invInd;
-                normy_ = gy * invInd;
-                normz_ = gz * invInd;
-            }
-#else
-            // Single-GPU fast path: explicit stencil with direct local indexing (no scalar-halo checks)
-            const device::label_t strideBy = block::size() * device::NUM_BLOCK<axis::X>();
-            const device::label_t strideBz = block::size() * device::NUM_BLOCK<axis::X>() * device::NUM_BLOCK<axis::Y>();
+                        sgy =
+                            VelocitySet::template w_1<scalar_t>() * (phiYp - phiYm) +
+                            VelocitySet::template w_2<scalar_t>() * ((hydroShared[(iXp + dy) * sharedStride + phiSharedOffset] - hydroShared[(iXm - dy) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iYp + dz) * sharedStride + phiSharedOffset] - hydroShared[(iYm - dz) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iXm + dy) * sharedStride + phiSharedOffset] - hydroShared[(iXp - dy) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iYp - dz) * sharedStride + phiSharedOffset] - hydroShared[(iYm + dz) * sharedStride + phiSharedOffset]));
 
-            const device::label_t wrapX = block::size() - (block::n<axis::X>() - static_cast<device::label_t>(1)) * static_cast<device::label_t>(1);
-            const device::label_t wrapY = strideBy - (block::n<axis::Y>() - static_cast<device::label_t>(1)) * block::n<axis::X>();
-            const device::label_t wrapZ = strideBz - (block::n<axis::Z>() - static_cast<device::label_t>(1)) * block::stride_z();
+                        sgz =
+                            VelocitySet::template w_1<scalar_t>() * (phiZp - phiZm) +
+                            VelocitySet::template w_2<scalar_t>() * ((hydroShared[(iXp + dz) * sharedStride + phiSharedOffset] - hydroShared[(iXm - dz) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iYp + dz) * sharedStride + phiSharedOffset] - hydroShared[(iYm - dz) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iXm + dz) * sharedStride + phiSharedOffset] - hydroShared[(iXp - dz) * sharedStride + phiSharedOffset]) +
+                                                                     (hydroShared[(iYm + dz) * sharedStride + phiSharedOffset] - hydroShared[(iYp - dz) * sharedStride + phiSharedOffset]));
+                    }
+                    else if constexpr (VelocitySet::Q() == 27)
+                    {
+                        const scalar_t phiXpYpZ = hydroShared[(iXp + dy) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXpYmZ = hydroShared[(iXp - dy) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYpZ = hydroShared[(iXm + dy) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYmZ = hydroShared[(iXm - dy) * sharedStride + phiSharedOffset];
 
-            const device::label_t dxp = (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))) ? wrapX : static_cast<device::label_t>(1);
-            const device::label_t dxm = (Tx.value<axis::X>() == static_cast<device::label_t>(0)) ? wrapX : static_cast<device::label_t>(1);
+                        const scalar_t phiXpYZp = hydroShared[(iXp + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXpYZm = hydroShared[(iXp - dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYZp = hydroShared[(iXm + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYZm = hydroShared[(iXm - dz) * sharedStride + phiSharedOffset];
 
-            const device::label_t dyp = (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))) ? wrapY : block::n<axis::X>();
-            const device::label_t dym = (Tx.value<axis::Y>() == static_cast<device::label_t>(0)) ? wrapY : block::n<axis::X>();
+                        const scalar_t phiXYpZp = hydroShared[(iYp + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXYpZm = hydroShared[(iYp - dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXYmZp = hydroShared[(iYm + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXYmZm = hydroShared[(iYm - dz) * sharedStride + phiSharedOffset];
 
-            const device::label_t dzp = (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))) ? wrapZ : block::stride_z();
-            const device::label_t dzm = (Tx.value<axis::Z>() == static_cast<device::label_t>(0)) ? wrapZ : block::stride_z();
+                        const scalar_t phiXpYpZp = hydroShared[(iXp + dy + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXpYpZm = hydroShared[(iXp + dy - dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXpYmZp = hydroShared[(iXp - dy + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXpYmZm = hydroShared[(iXp - dy - dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYpZp = hydroShared[(iXm + dy + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYpZm = hydroShared[(iXm + dy - dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYmZp = hydroShared[(iXm - dy + dz) * sharedStride + phiSharedOffset];
+                        const scalar_t phiXmYmZm = hydroShared[(iXm - dy - dz) * sharedStride + phiSharedOffset];
 
-            const device::label_t iXp = idx + dxp;
-            const device::label_t iXm = idx - dxm;
-            const device::label_t iYp = idx + dyp;
-            const device::label_t iYm = idx - dym;
-            const device::label_t iZp = idx + dzp;
-            const device::label_t iZm = idx - dzm;
+                        sgx =
+                            VelocitySet::template w_1<scalar_t>() * (hydroShared[iXp * sharedStride + phiSharedOffset] -
+                                                                     hydroShared[iXm * sharedStride + phiSharedOffset]) +
+                            VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                     phiXpYZp - phiXmYZm +
+                                                                     phiXpYmZ - phiXmYpZ +
+                                                                     phiXpYZm - phiXmYZp) +
+                            VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                     phiXpYpZm - phiXmYmZp +
+                                                                     phiXpYmZp - phiXmYpZm +
+                                                                     phiXpYmZm - phiXmYpZp);
 
-            const scalar_t phiXpYpZ = phi[iXp + dyp];
-            const scalar_t phiXpYmZ = phi[iXp - dym];
-            const scalar_t phiXmYpZ = phi[iXm + dyp];
-            const scalar_t phiXmYmZ = phi[iXm - dym];
+                        sgy =
+                            VelocitySet::template w_1<scalar_t>() * (hydroShared[iYp * sharedStride + phiSharedOffset] -
+                                                                     hydroShared[iYm * sharedStride + phiSharedOffset]) +
+                            VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                     phiXYpZp - phiXYmZm +
+                                                                     phiXmYpZ - phiXpYmZ +
+                                                                     phiXYpZm - phiXYmZp) +
+                            VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                     phiXpYpZm - phiXmYmZp +
+                                                                     phiXmYpZm - phiXpYmZp +
+                                                                     phiXmYpZp - phiXpYmZm);
 
-            const scalar_t phiXpYZp = phi[iXp + dzp];
-            const scalar_t phiXpYZm = phi[iXp - dzm];
-            const scalar_t phiXmYZp = phi[iXm + dzp];
-            const scalar_t phiXmYZm = phi[iXm - dzm];
+                        sgz =
+                            VelocitySet::template w_1<scalar_t>() * (hydroShared[iZp * sharedStride + phiSharedOffset] -
+                                                                     hydroShared[iZm * sharedStride + phiSharedOffset]) +
+                            VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
+                                                                     phiXYpZp - phiXYmZm +
+                                                                     phiXmYZp - phiXpYZm +
+                                                                     phiXYmZp - phiXYpZm) +
+                            VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                     phiXmYmZp - phiXpYpZm +
+                                                                     phiXpYmZp - phiXmYpZm +
+                                                                     phiXmYpZp - phiXpYmZm);
+                    }
+                    else
+                    {
+                        scalar_t indDummy = static_cast<scalar_t>(0);
+                        compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo, useScalarHalo>(
+                            phi,
+                            phiBuffer,
+                            hydroShared,
+                            Tx,
+                            Bx,
+                            point,
+                            normx_,
+                            normy_,
+                            normz_,
+                            indDummy);
+                    }
 
-            const scalar_t phiXYpZp = phi[iYp + dzp];
-            const scalar_t phiXYpZm = phi[iYp - dzm];
-            const scalar_t phiXYmZp = phi[iYm + dzp];
-            const scalar_t phiXYmZm = phi[iYm - dzm];
+                    if constexpr ((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27))
+                    {
+                        const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
+                        const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
+                        const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
 
-            scalar_t sgx = static_cast<scalar_t>(0);
-            scalar_t sgy = static_cast<scalar_t>(0);
-            scalar_t sgz = static_cast<scalar_t>(0);
-
-            if constexpr (VelocitySet::Q() == 19)
-            {
-                sgx =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iXp] - phi[iXm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXpYZp - phiXmYZm +
-                                                             phiXpYmZ - phiXmYpZ +
-                                                             phiXpYZm - phiXmYZp);
-
-                sgy =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iYp] - phi[iYm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYpZ - phiXpYmZ +
-                                                             phiXYpZm - phiXYmZp);
-
-                sgz =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iZp] - phi[iZm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYZp - phiXpYZm +
-                                                             phiXYmZp - phiXYpZm);
-            }
-            else if constexpr (VelocitySet::Q() == 27)
-            {
-                const scalar_t phiXpYpZp = phi[iXp + dyp + dzp];
-                const scalar_t phiXpYpZm = phi[iXp + dyp - dzm];
-                const scalar_t phiXpYmZp = phi[iXp - dym + dzp];
-                const scalar_t phiXpYmZm = phi[iXp - dym - dzm];
-                const scalar_t phiXmYpZp = phi[iXm + dyp + dzp];
-                const scalar_t phiXmYpZm = phi[iXm + dyp - dzm];
-                const scalar_t phiXmYmZp = phi[iXm - dym + dzp];
-                const scalar_t phiXmYmZm = phi[iXm - dym - dzm];
-
-                sgx =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iXp] - phi[iXm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXpYZp - phiXmYZm +
-                                                             phiXpYmZ - phiXmYpZ +
-                                                             phiXpYZm - phiXmYZp) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXpYpZm - phiXmYmZp +
-                                                             phiXpYmZp - phiXmYpZm +
-                                                             phiXpYmZm - phiXmYpZp);
-
-                sgy =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iYp] - phi[iYm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYpZ - phiXpYmZ +
-                                                             phiXYpZm - phiXYmZp) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXpYpZm - phiXmYmZp +
-                                                             phiXmYpZm - phiXpYmZp +
-                                                             phiXmYpZp - phiXpYmZm);
-
-                sgz =
-                    VelocitySet::template w_1<scalar_t>() * (phi[iZp] - phi[iZm]) +
-                    VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
-                                                             phiXYpZp - phiXYmZm +
-                                                             phiXmYZp - phiXpYZm +
-                                                             phiXYmZp - phiXYpZm) +
-                    VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
-                                                             phiXmYmZp - phiXpYpZm +
-                                                             phiXpYmZp - phiXmYpZm +
-                                                             phiXmYpZp - phiXpYmZm);
+                        const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
+                        const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
+                        normx_ = gx * invInd;
+                        normy_ = gy * invInd;
+                        normz_ = gz * invInd;
+                    }
+                }
+                else
+                {
+                    scalar_t indDummy = static_cast<scalar_t>(0);
+                    compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo, useScalarHalo>(
+                        phi,
+                        phiBuffer,
+                        hydroShared,
+                        Tx,
+                        Bx,
+                        point,
+                        normx_,
+                        normy_,
+                        normz_,
+                        indDummy);
+                }
             }
             else
             {
-                scalar_t indDummy = static_cast<scalar_t>(0);
-                compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo>(
-                    phi,
-                    phiBuffer,
-                    hydroShared,
-                    Tx,
-                    Bx,
-                    point,
-                    normx_,
-                    normy_,
-                    normz_,
-                    indDummy);
-            }
+                // Single-GPU fast path: explicit stencil with direct local indexing (no scalar-halo checks)
+                const device::label_t strideBy = block::size() * device::NUM_BLOCK<axis::X>();
+                const device::label_t strideBz = block::size() * device::NUM_BLOCK<axis::X>() * device::NUM_BLOCK<axis::Y>();
 
-            if constexpr ((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27))
-            {
-                const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
-                const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
-                const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
+                const device::label_t wrapX = block::size() - (block::n<axis::X>() - static_cast<device::label_t>(1)) * static_cast<device::label_t>(1);
+                const device::label_t wrapY = strideBy - (block::n<axis::Y>() - static_cast<device::label_t>(1)) * block::n<axis::X>();
+                const device::label_t wrapZ = strideBz - (block::n<axis::Z>() - static_cast<device::label_t>(1)) * block::stride_z();
 
-                const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
-                const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
-                normx_ = gx * invInd;
-                normy_ = gy * invInd;
-                normz_ = gz * invInd;
+                const device::label_t dxp = (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))) ? wrapX : static_cast<device::label_t>(1);
+                const device::label_t dxm = (Tx.value<axis::X>() == static_cast<device::label_t>(0)) ? wrapX : static_cast<device::label_t>(1);
+
+                const device::label_t dyp = (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))) ? wrapY : block::n<axis::X>();
+                const device::label_t dym = (Tx.value<axis::Y>() == static_cast<device::label_t>(0)) ? wrapY : block::n<axis::X>();
+
+                const device::label_t dzp = (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))) ? wrapZ : block::stride_z();
+                const device::label_t dzm = (Tx.value<axis::Z>() == static_cast<device::label_t>(0)) ? wrapZ : block::stride_z();
+
+                const device::label_t iXp = idx + dxp;
+                const device::label_t iXm = idx - dxm;
+                const device::label_t iYp = idx + dyp;
+                const device::label_t iYm = idx - dym;
+                const device::label_t iZp = idx + dzp;
+                const device::label_t iZm = idx - dzm;
+
+                const scalar_t phiXpYpZ = phi[iXp + dyp];
+                const scalar_t phiXpYmZ = phi[iXp - dym];
+                const scalar_t phiXmYpZ = phi[iXm + dyp];
+                const scalar_t phiXmYmZ = phi[iXm - dym];
+
+                const scalar_t phiXpYZp = phi[iXp + dzp];
+                const scalar_t phiXpYZm = phi[iXp - dzm];
+                const scalar_t phiXmYZp = phi[iXm + dzp];
+                const scalar_t phiXmYZm = phi[iXm - dzm];
+
+                const scalar_t phiXYpZp = phi[iYp + dzp];
+                const scalar_t phiXYpZm = phi[iYp - dzm];
+                const scalar_t phiXYmZp = phi[iYm + dzp];
+                const scalar_t phiXYmZm = phi[iYm - dzm];
+
+                scalar_t sgx = static_cast<scalar_t>(0);
+                scalar_t sgy = static_cast<scalar_t>(0);
+                scalar_t sgz = static_cast<scalar_t>(0);
+
+                if constexpr (VelocitySet::Q() == 19)
+                {
+                    sgx =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iXp] - phi[iXm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                 phiXpYZp - phiXmYZm +
+                                                                 phiXpYmZ - phiXmYpZ +
+                                                                 phiXpYZm - phiXmYZp);
+
+                    sgy =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iYp] - phi[iYm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                 phiXYpZp - phiXYmZm +
+                                                                 phiXmYpZ - phiXpYmZ +
+                                                                 phiXYpZm - phiXYmZp);
+
+                    sgz =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iZp] - phi[iZm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
+                                                                 phiXYpZp - phiXYmZm +
+                                                                 phiXmYZp - phiXpYZm +
+                                                                 phiXYmZp - phiXYpZm);
+                }
+                else if constexpr (VelocitySet::Q() == 27)
+                {
+                    const scalar_t phiXpYpZp = phi[iXp + dyp + dzp];
+                    const scalar_t phiXpYpZm = phi[iXp + dyp - dzm];
+                    const scalar_t phiXpYmZp = phi[iXp - dym + dzp];
+                    const scalar_t phiXpYmZm = phi[iXp - dym - dzm];
+                    const scalar_t phiXmYpZp = phi[iXm + dyp + dzp];
+                    const scalar_t phiXmYpZm = phi[iXm + dyp - dzm];
+                    const scalar_t phiXmYmZp = phi[iXm - dym + dzp];
+                    const scalar_t phiXmYmZm = phi[iXm - dym - dzm];
+
+                    sgx =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iXp] - phi[iXm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                 phiXpYZp - phiXmYZm +
+                                                                 phiXpYmZ - phiXmYpZ +
+                                                                 phiXpYZm - phiXmYZp) +
+                        VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                 phiXpYpZm - phiXmYmZp +
+                                                                 phiXpYmZp - phiXmYpZm +
+                                                                 phiXpYmZm - phiXmYpZp);
+
+                    sgy =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iYp] - phi[iYm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYpZ - phiXmYmZ +
+                                                                 phiXYpZp - phiXYmZm +
+                                                                 phiXmYpZ - phiXpYmZ +
+                                                                 phiXYpZm - phiXYmZp) +
+                        VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                 phiXpYpZm - phiXmYmZp +
+                                                                 phiXmYpZm - phiXpYmZp +
+                                                                 phiXmYpZp - phiXpYmZm);
+
+                    sgz =
+                        VelocitySet::template w_1<scalar_t>() * (phi[iZp] - phi[iZm]) +
+                        VelocitySet::template w_2<scalar_t>() * (phiXpYZp - phiXmYZm +
+                                                                 phiXYpZp - phiXYmZm +
+                                                                 phiXmYZp - phiXpYZm +
+                                                                 phiXYmZp - phiXYpZm) +
+                        VelocitySet::template w_3<scalar_t>() * (phiXpYpZp - phiXmYmZm +
+                                                                 phiXmYmZp - phiXpYpZm +
+                                                                 phiXpYmZp - phiXmYpZm +
+                                                                 phiXmYpZp - phiXpYmZm);
+                }
+                else
+                {
+                    scalar_t indDummy = static_cast<scalar_t>(0);
+                    compute_phase_normal<0, 0, 0, VelocitySet, PhaseHalo, useScalarHalo>(
+                        phi,
+                        phiBuffer,
+                        hydroShared,
+                        Tx,
+                        Bx,
+                        point,
+                        normx_,
+                        normy_,
+                        normz_,
+                        indDummy);
+                }
+
+                if constexpr ((VelocitySet::Q() == 19) || (VelocitySet::Q() == 27))
+                {
+                    const scalar_t gx = velocitySet::as2<scalar_t>() * sgx;
+                    const scalar_t gy = velocitySet::as2<scalar_t>() * sgy;
+                    const scalar_t gz = velocitySet::as2<scalar_t>() * sgz;
+
+                    const scalar_t ind_ = sqrtf(gx * gx + gy * gy + gz * gz);
+                    const scalar_t invInd = static_cast<scalar_t>(1) / (ind_ + static_cast<scalar_t>(1e-9));
+                    normx_ = gx * invInd;
+                    normy_ = gy * invInd;
+                    normz_ = gz * invInd;
+                }
             }
-#endif
         }
 
         block::sync();
@@ -1449,11 +1558,14 @@ namespace LBM
             });
 
         // Save scalar phi for neighbor-gradient stencils used by the next collide/stream step
-#ifdef MULTI_GPU
-        PhaseHalo::save_scalar(moments[m_i<10>()], phiWriteBuffer, Tx, Bx, point);
-#else
-        (void)phiWriteBuffer;
-#endif
+        if constexpr (useScalarHalo)
+        {
+            PhaseHalo::save_scalar(moments[m_i<10>()], phiWriteBuffer, Tx, Bx, point);
+        }
+        else
+        {
+            (void)phiWriteBuffer;
+        }
     }
 
     /**
@@ -1468,7 +1580,7 @@ namespace LBM
      * @param[in] phaseBuffer Collection of writable pointers to phase-population halo faces
      * @param[in] phiBuffer Collection of read-only pointers to scalar phase-field halo faces (freshly written in phaseStream)
      **/
-    template <class BoundaryConditions, class VelocitySet, class PhaseVelocitySet, class Collision, class HydroHalo, class PhaseHalo>
+    template <class BoundaryConditions, class VelocitySet, class PhaseVelocitySet, class Collision, class HydroHalo, class PhaseHalo, const bool useScalarHalo = true>
     __device__ inline void phaseCollide(
         const device::ptrCollection<11, scalar_t> &devPtrs,
         const device::ptrCollection<6, scalar_t> &hydroBuffer,
@@ -1563,256 +1675,259 @@ namespace LBM
 
         // Build shared tiles for phi (+/-2 halo) and normals (+/-1 halo).
         // Single-GPU uses direct strided loads (fast path); multi-GPU uses halo-aware scalar pulls.
-#ifdef MULTI_GPU
-        const auto ownsPhiOffsetX = [&Tx](const int ox) noexcept -> bool
+        if constexpr (useScalarHalo)
         {
-            return (ox == 0) ||
-                   (((ox == -1) || (ox == -2)) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
-                   (((ox == 1) || (ox == 2)) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
-        };
-
-        const auto ownsPhiOffsetY = [&Tx](const int oy) noexcept -> bool
-        {
-            return (oy == 0) ||
-                   (((oy == -1) || (oy == -2)) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
-                   (((oy == 1) || (oy == 2)) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
-        };
-
-        const auto ownsPhiOffsetZ = [&Tx](const int oz) noexcept -> bool
-        {
-            return (oz == 0) ||
-                   (((oz == -1) || (oz == -2)) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
-                   (((oz == 1) || (oz == 2)) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
-        };
-
-        const auto ownsNormalOffsetX = [&Tx](const int ox) noexcept -> bool
-        {
-            return (ox == 0) ||
-                   ((ox == -1) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
-                   ((ox == 1) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
-        };
-
-        const auto ownsNormalOffsetY = [&Tx](const int oy) noexcept -> bool
-        {
-            return (oy == 0) ||
-                   ((oy == -1) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
-                   ((oy == 1) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
-        };
-
-        const auto ownsNormalOffsetZ = [&Tx](const int oz) noexcept -> bool
-        {
-            return (oz == 0) ||
-                   ((oz == -1) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
-                   ((oz == 1) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
-        };
-
-        for (int ox = -2; ox <= 2; ++ox)
-        {
-            for (int oy = -2; oy <= 2; ++oy)
+            const auto ownsPhiOffsetX = [&Tx](const int ox) noexcept -> bool
             {
-                for (int oz = -2; oz <= 2; ++oz)
+                return (ox == 0) ||
+                       (((ox == -1) || (ox == -2)) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
+                       (((ox == 1) || (ox == 2)) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
+            };
+
+            const auto ownsPhiOffsetY = [&Tx](const int oy) noexcept -> bool
+            {
+                return (oy == 0) ||
+                       (((oy == -1) || (oy == -2)) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
+                       (((oy == 1) || (oy == 2)) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
+            };
+
+            const auto ownsPhiOffsetZ = [&Tx](const int oz) noexcept -> bool
+            {
+                return (oz == 0) ||
+                       (((oz == -1) || (oz == -2)) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
+                       (((oz == 1) || (oz == 2)) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
+            };
+
+            const auto ownsNormalOffsetX = [&Tx](const int ox) noexcept -> bool
+            {
+                return (ox == 0) ||
+                       ((ox == -1) && (Tx.value<axis::X>() == static_cast<device::label_t>(0))) ||
+                       ((ox == 1) && (Tx.value<axis::X>() == (block::n<axis::X>() - static_cast<device::label_t>(1))));
+            };
+
+            const auto ownsNormalOffsetY = [&Tx](const int oy) noexcept -> bool
+            {
+                return (oy == 0) ||
+                       ((oy == -1) && (Tx.value<axis::Y>() == static_cast<device::label_t>(0))) ||
+                       ((oy == 1) && (Tx.value<axis::Y>() == (block::n<axis::Y>() - static_cast<device::label_t>(1))));
+            };
+
+            const auto ownsNormalOffsetZ = [&Tx](const int oz) noexcept -> bool
+            {
+                return (oz == 0) ||
+                       ((oz == -1) && (Tx.value<axis::Z>() == static_cast<device::label_t>(0))) ||
+                       ((oz == 1) && (Tx.value<axis::Z>() == (block::n<axis::Z>() - static_cast<device::label_t>(1))));
+            };
+
+            for (int ox = -2; ox <= 2; ++ox)
+            {
+                for (int oy = -2; oy <= 2; ++oy)
                 {
-                    if (!(ownsPhiOffsetX(ox) && ownsPhiOffsetY(oy) && ownsPhiOffsetZ(oz)))
+                    for (int oz = -2; oz <= 2; ++oz)
                     {
-                        continue;
+                        if (!(ownsPhiOffsetX(ox) && ownsPhiOffsetY(oy) && ownsPhiOffsetZ(oz)))
+                        {
+                            continue;
+                        }
+
+                        const scalar_t phiCandidate = load_phase_neighbor_direct_runtime<PhaseHalo, useScalarHalo>(
+                            phi,
+                            phiBuffer,
+                            Tx,
+                            Bx,
+                            point,
+                            ox,
+                            oy,
+                            oz);
+
+                        const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
+                        const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
+                        const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
+                        phiShared[phiSharedIdx(sx, sy, sz)] = phiCandidate;
                     }
-
-                    const scalar_t phiCandidate = load_phase_neighbor_direct_runtime<PhaseHalo>(
-                        phi,
-                        phiBuffer,
-                        Tx,
-                        Bx,
-                        point,
-                        ox,
-                        oy,
-                        oz);
-
-                    const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
-                    const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
-                    const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
-                    phiShared[phiSharedIdx(sx, sy, sz)] = phiCandidate;
                 }
             }
-        }
 
-        block::sync();
+            block::sync();
 
-        for (int ox = -1; ox <= 1; ++ox)
-        {
-            for (int oy = -1; oy <= 1; ++oy)
+            for (int ox = -1; ox <= 1; ++ox)
             {
-                for (int oz = -1; oz <= 1; ++oz)
+                for (int oy = -1; oy <= 1; ++oy)
                 {
-                    if (!(ownsNormalOffsetX(ox) && ownsNormalOffsetY(oy) && ownsNormalOffsetZ(oz)))
+                    for (int oz = -1; oz <= 1; ++oz)
                     {
-                        continue;
+                        if (!(ownsNormalOffsetX(ox) && ownsNormalOffsetY(oy) && ownsNormalOffsetZ(oz)))
+                        {
+                            continue;
+                        }
+
+                        const device::label_t sxPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
+                        const device::label_t syPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
+                        const device::label_t szPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
+
+                        scalar_t nxCandidate = static_cast<scalar_t>(0);
+                        scalar_t nyCandidate = static_cast<scalar_t>(0);
+                        scalar_t nzCandidate = static_cast<scalar_t>(0);
+                        scalar_t indCandidate = static_cast<scalar_t>(0);
+
+                        compute_phase_normal_from_tile<VelocitySet, phiTileNx, phiTileNy>(
+                            phiShared,
+                            sxPhi,
+                            syPhi,
+                            szPhi,
+                            nxCandidate,
+                            nyCandidate,
+                            nzCandidate,
+                            indCandidate);
+
+                        const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 1 + ox);
+                        const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 1 + oy);
+                        const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 1 + oz);
+                        const device::label_t sid = normalSharedIdx(sx, sy, sz);
+
+                        normSharedX[sid] = nxCandidate;
+                        normSharedY[sid] = nyCandidate;
+                        normSharedZ[sid] = nzCandidate;
+                        indShared[sid] = indCandidate;
                     }
-
-                    const device::label_t sxPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 2 + ox);
-                    const device::label_t syPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 2 + oy);
-                    const device::label_t szPhi = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 2 + oz);
-
-                    scalar_t nxCandidate = static_cast<scalar_t>(0);
-                    scalar_t nyCandidate = static_cast<scalar_t>(0);
-                    scalar_t nzCandidate = static_cast<scalar_t>(0);
-                    scalar_t indCandidate = static_cast<scalar_t>(0);
-
-                    compute_phase_normal_from_tile<VelocitySet, phiTileNx, phiTileNy>(
-                        phiShared,
-                        sxPhi,
-                        syPhi,
-                        szPhi,
-                        nxCandidate,
-                        nyCandidate,
-                        nzCandidate,
-                        indCandidate);
-
-                    const device::label_t sx = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 1 + ox);
-                    const device::label_t sy = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 1 + oy);
-                    const device::label_t sz = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Z>()) + 1 + oz);
-                    const device::label_t sid = normalSharedIdx(sx, sy, sz);
-
-                    normSharedX[sid] = nxCandidate;
-                    normSharedY[sid] = nyCandidate;
-                    normSharedZ[sid] = nzCandidate;
-                    indShared[sid] = indCandidate;
                 }
             }
+
+            block::sync();
         }
-
-        block::sync();
-#else
-        const int nX = static_cast<int>(device::n<axis::X>());
-        const int nY = static_cast<int>(device::n<axis::Y>());
-        const int nZ = static_cast<int>(device::n<axis::Z>());
-
-        const int bnx = static_cast<int>(block::n<axis::X>());
-        const int bny = static_cast<int>(block::n<axis::Y>());
-        const int bnz = static_cast<int>(block::n<axis::Z>());
-
-        const int x0 = static_cast<int>(Bx.value<axis::X>()) * bnx;
-        const int y0 = static_cast<int>(Bx.value<axis::Y>()) * bny;
-        const int z0 = static_cast<int>(Bx.value<axis::Z>()) * bnz;
-
-        for (int sz = static_cast<int>(Tx.value<axis::Z>()); sz < static_cast<int>(phiTileNz); sz += bnz)
+        else
         {
-            const int gz = z0 + sz - 2;
-            for (int sy = static_cast<int>(Tx.value<axis::Y>()); sy < static_cast<int>(phiTileNy); sy += bny)
+            const int nX = static_cast<int>(device::n<axis::X>());
+            const int nY = static_cast<int>(device::n<axis::Y>());
+            const int nZ = static_cast<int>(device::n<axis::Z>());
+
+            const int bnx = static_cast<int>(block::n<axis::X>());
+            const int bny = static_cast<int>(block::n<axis::Y>());
+            const int bnz = static_cast<int>(block::n<axis::Z>());
+
+            const int x0 = static_cast<int>(Bx.value<axis::X>()) * bnx;
+            const int y0 = static_cast<int>(Bx.value<axis::Y>()) * bny;
+            const int z0 = static_cast<int>(Bx.value<axis::Z>()) * bnz;
+
+            for (int sz = static_cast<int>(Tx.value<axis::Z>()); sz < static_cast<int>(phiTileNz); sz += bnz)
             {
-                const int gy = y0 + sy - 2;
-                for (int sx = static_cast<int>(Tx.value<axis::X>()); sx < static_cast<int>(phiTileNx); sx += bnx)
+                const int gz = z0 + sz - 2;
+                for (int sy = static_cast<int>(Tx.value<axis::Y>()); sy < static_cast<int>(phiTileNy); sy += bny)
                 {
-                    int gx = x0 + sx - 2;
-                    int gyWrapped = gy;
-                    int gzWrapped = gz;
-                    bool validPoint = true;
+                    const int gy = y0 + sy - 2;
+                    for (int sx = static_cast<int>(Tx.value<axis::X>()); sx < static_cast<int>(phiTileNx); sx += bnx)
+                    {
+                        int gx = x0 + sx - 2;
+                        int gyWrapped = gy;
+                        int gzWrapped = gz;
+                        bool validPoint = true;
 
-                    if constexpr (PhaseHalo::periodicX())
-                    {
-                        if (gx < 0)
+                        if constexpr (PhaseHalo::periodicX())
                         {
-                            gx += nX;
+                            if (gx < 0)
+                            {
+                                gx += nX;
+                            }
+                            else if (gx >= nX)
+                            {
+                                gx -= nX;
+                            }
                         }
-                        else if (gx >= nX)
+                        else if ((gx < 0) || (gx >= nX))
                         {
-                            gx -= nX;
+                            validPoint = false;
                         }
-                    }
-                    else if ((gx < 0) || (gx >= nX))
-                    {
-                        validPoint = false;
-                    }
 
-                    if constexpr (PhaseHalo::periodicY())
-                    {
-                        if (gyWrapped < 0)
+                        if constexpr (PhaseHalo::periodicY())
                         {
-                            gyWrapped += nY;
+                            if (gyWrapped < 0)
+                            {
+                                gyWrapped += nY;
+                            }
+                            else if (gyWrapped >= nY)
+                            {
+                                gyWrapped -= nY;
+                            }
                         }
-                        else if (gyWrapped >= nY)
+                        else if ((gyWrapped < 0) || (gyWrapped >= nY))
                         {
-                            gyWrapped -= nY;
+                            validPoint = false;
                         }
-                    }
-                    else if ((gyWrapped < 0) || (gyWrapped >= nY))
-                    {
-                        validPoint = false;
-                    }
 
-                    if constexpr (PhaseHalo::periodicZ())
-                    {
-                        if (gzWrapped < 0)
+                        if constexpr (PhaseHalo::periodicZ())
                         {
-                            gzWrapped += nZ;
+                            if (gzWrapped < 0)
+                            {
+                                gzWrapped += nZ;
+                            }
+                            else if (gzWrapped >= nZ)
+                            {
+                                gzWrapped -= nZ;
+                            }
                         }
-                        else if (gzWrapped >= nZ)
+                        else if ((gzWrapped < 0) || (gzWrapped >= nZ))
                         {
-                            gzWrapped -= nZ;
+                            validPoint = false;
                         }
-                    }
-                    else if ((gzWrapped < 0) || (gzWrapped >= nZ))
-                    {
-                        validPoint = false;
-                    }
 
-                    scalar_t phiCandidate = static_cast<scalar_t>(0);
-                    if (validPoint)
-                    {
-                        phiCandidate = __ldg(&(phi[GPU::idxGlobalFromIdx(
-                            static_cast<device::label_t>(gx),
-                            static_cast<device::label_t>(gyWrapped),
-                            static_cast<device::label_t>(gzWrapped))]));
-                    }
+                        scalar_t phiCandidate = static_cast<scalar_t>(0);
+                        if (validPoint)
+                        {
+                            phiCandidate = __ldg(&(phi[GPU::idxGlobalFromIdx(
+                                static_cast<device::label_t>(gx),
+                                static_cast<device::label_t>(gyWrapped),
+                                static_cast<device::label_t>(gzWrapped))]));
+                        }
 
-                    phiShared[phiSharedIdx(
-                        static_cast<device::label_t>(sx),
-                        static_cast<device::label_t>(sy),
-                        static_cast<device::label_t>(sz))] = phiCandidate;
+                        phiShared[phiSharedIdx(
+                            static_cast<device::label_t>(sx),
+                            static_cast<device::label_t>(sy),
+                            static_cast<device::label_t>(sz))] = phiCandidate;
+                    }
                 }
             }
-        }
 
-        block::sync();
+            block::sync();
 
-        for (int sz = static_cast<int>(Tx.value<axis::Z>()); sz < static_cast<int>(normalNz); sz += bnz)
-        {
-            const device::label_t szLabel = static_cast<device::label_t>(sz);
-            const device::label_t szPhi = static_cast<device::label_t>(sz + 1);
-            for (int sy = static_cast<int>(Tx.value<axis::Y>()); sy < static_cast<int>(normalNy); sy += bny)
+            for (int sz = static_cast<int>(Tx.value<axis::Z>()); sz < static_cast<int>(normalNz); sz += bnz)
             {
-                const device::label_t syLabel = static_cast<device::label_t>(sy);
-                const device::label_t syPhi = static_cast<device::label_t>(sy + 1);
-                for (int sx = static_cast<int>(Tx.value<axis::X>()); sx < static_cast<int>(normalNx); sx += bnx)
+                const device::label_t szLabel = static_cast<device::label_t>(sz);
+                const device::label_t szPhi = static_cast<device::label_t>(sz + 1);
+                for (int sy = static_cast<int>(Tx.value<axis::Y>()); sy < static_cast<int>(normalNy); sy += bny)
                 {
-                    const device::label_t sxLabel = static_cast<device::label_t>(sx);
-                    const device::label_t sxPhi = static_cast<device::label_t>(sx + 1);
+                    const device::label_t syLabel = static_cast<device::label_t>(sy);
+                    const device::label_t syPhi = static_cast<device::label_t>(sy + 1);
+                    for (int sx = static_cast<int>(Tx.value<axis::X>()); sx < static_cast<int>(normalNx); sx += bnx)
+                    {
+                        const device::label_t sxLabel = static_cast<device::label_t>(sx);
+                        const device::label_t sxPhi = static_cast<device::label_t>(sx + 1);
 
-                    scalar_t nxCandidate = static_cast<scalar_t>(0);
-                    scalar_t nyCandidate = static_cast<scalar_t>(0);
-                    scalar_t nzCandidate = static_cast<scalar_t>(0);
-                    scalar_t indCandidate = static_cast<scalar_t>(0);
+                        scalar_t nxCandidate = static_cast<scalar_t>(0);
+                        scalar_t nyCandidate = static_cast<scalar_t>(0);
+                        scalar_t nzCandidate = static_cast<scalar_t>(0);
+                        scalar_t indCandidate = static_cast<scalar_t>(0);
 
-                    compute_phase_normal_from_tile<VelocitySet, phiTileNx, phiTileNy>(
-                        phiShared,
-                        sxPhi,
-                        syPhi,
-                        szPhi,
-                        nxCandidate,
-                        nyCandidate,
-                        nzCandidate,
-                        indCandidate);
+                        compute_phase_normal_from_tile<VelocitySet, phiTileNx, phiTileNy>(
+                            phiShared,
+                            sxPhi,
+                            syPhi,
+                            szPhi,
+                            nxCandidate,
+                            nyCandidate,
+                            nzCandidate,
+                            indCandidate);
 
-                    const device::label_t sid = normalSharedIdx(sxLabel, syLabel, szLabel);
-                    normSharedX[sid] = nxCandidate;
-                    normSharedY[sid] = nyCandidate;
-                    normSharedZ[sid] = nzCandidate;
-                    indShared[sid] = indCandidate;
+                        const device::label_t sid = normalSharedIdx(sxLabel, syLabel, szLabel);
+                        normSharedX[sid] = nxCandidate;
+                        normSharedY[sid] = nyCandidate;
+                        normSharedZ[sid] = nzCandidate;
+                        indShared[sid] = indCandidate;
+                    }
                 }
             }
-        }
 
-        block::sync();
-#endif
+            block::sync();
+        }
 
         const device::label_t sxCenter = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::X>()) + 1);
         const device::label_t syCenter = static_cast<device::label_t>(static_cast<int>(Tx.value<axis::Y>()) + 1);
@@ -1883,18 +1998,11 @@ namespace LBM
                 }
             });
 
-        thread::array<scalar_t, NUMBER_MOMENTS<false>()> hydroMoments;
-        device::constexpr_for<0, NUMBER_MOMENTS<false>()>(
-            [&](const auto moment)
-            {
-                hydroMoments[moment] = moments[moment];
-            });
-
         // Save the hydro populations to the block halo
-        HydroHalo::save(pop, hydroMoments, hydroBuffer, Tx, Bx, point);
+        HydroHalo::save(pop, moments, hydroBuffer, Tx, Bx, point);
 
         // Save the phase populations to the block halo
-        PhaseHalo::save(pop_g, hydroMoments, phaseBuffer, Tx, Bx, point);
+        PhaseHalo::save(pop_g, moments, phaseBuffer, Tx, Bx, point);
     }
 }
 

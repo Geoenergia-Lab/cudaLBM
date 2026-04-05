@@ -79,7 +79,7 @@ namespace LBM
     /**
      * @brief Stream step wrapper for multiphase D3Q27 + D3Q7
      **/
-    launchBoundsD3Q27 __global__ void phaseFieldStream(
+    launchBoundsD3Q27 __global__ void phaseFieldStreamScalarHalo(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, const scalar_t> ghostHydro,
         const device::ptrCollection<6, const scalar_t> ghostPhase,
@@ -89,7 +89,7 @@ namespace LBM
         extern __shared__ scalar_t hydroShared[];
         __shared__ scalar_t phaseShared[(PhaseVelocitySet::Q() - 1) * block::stride()];
 
-        phaseStream<BoundaryConditions, VelocitySet, PhaseVelocitySet, HydroHalo, PhaseHalo>(
+        phaseStream<BoundaryConditions, VelocitySet, PhaseVelocitySet, HydroHalo, PhaseHalo, true>(
             devPtrs,
             ghostHydro,
             ghostPhase,
@@ -102,13 +102,52 @@ namespace LBM
     /**
      * @brief Collision step wrapper for multiphase D3Q27 + D3Q7
      **/
-    launchBoundsD3Q27 __global__ void phaseFieldCollide(
+    launchBoundsD3Q27 __global__ void phaseFieldStreamLocal(
+        const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
+        const device::ptrCollection<6, const scalar_t> ghostHydro,
+        const device::ptrCollection<6, const scalar_t> ghostPhase,
+        const device::ptrCollection<6, const scalar_t> ghostPhi,
+        const device::ptrCollection<6, scalar_t> ghostPhiWrite)
+    {
+        extern __shared__ scalar_t hydroShared[];
+        __shared__ scalar_t phaseShared[(PhaseVelocitySet::Q() - 1) * block::stride()];
+
+        phaseStream<BoundaryConditions, VelocitySet, PhaseVelocitySet, HydroHalo, PhaseHalo, false>(
+            devPtrs,
+            ghostHydro,
+            ghostPhase,
+            ghostPhi,
+            ghostPhiWrite,
+            hydroShared,
+            phaseShared);
+    }
+
+    /**
+     * @brief Collision step wrapper for multiphase D3Q27 + D3Q7
+     **/
+    launchBoundsD3Q27 __global__ void phaseFieldCollideScalarHalo(
         const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
         const device::ptrCollection<6, scalar_t> ghostHydro,
         const device::ptrCollection<6, scalar_t> ghostPhase,
         const device::ptrCollection<6, const scalar_t> ghostPhi)
     {
-        phaseCollide<BoundaryConditions, VelocitySet, PhaseVelocitySet, Collision, HydroHalo, PhaseHalo>(
+        phaseCollide<BoundaryConditions, VelocitySet, PhaseVelocitySet, Collision, HydroHalo, PhaseHalo, true>(
+            devPtrs,
+            ghostHydro,
+            ghostPhase,
+            ghostPhi);
+    }
+
+    /**
+     * @brief Collision step wrapper for multiphase D3Q27 + D3Q7 (local scalar-neighbor path)
+     **/
+    launchBoundsD3Q27 __global__ void phaseFieldCollideLocal(
+        const device::ptrCollection<NUMBER_MOMENTS<true>(), scalar_t> devPtrs,
+        const device::ptrCollection<6, scalar_t> ghostHydro,
+        const device::ptrCollection<6, scalar_t> ghostPhase,
+        const device::ptrCollection<6, const scalar_t> ghostPhi)
+    {
+        phaseCollide<BoundaryConditions, VelocitySet, PhaseVelocitySet, Collision, HydroHalo, PhaseHalo, false>(
             devPtrs,
             ghostHydro,
             ghostPhase,
