@@ -315,13 +315,22 @@ namespace LBM
             return static_cast<T>(static_cast<double>(bytes) / static_cast<double>(1024 * 1024));
         }
 
+        /**
+         * @brief Create a directory if it does not exist
+         * @param[in] dir Path to the directory to create
+         * @return true if the directory exists or was created successfully, false otherwise
+         **/
+        template <const bool ThrowOnFailure = true>
         __host__ [[nodiscard]] bool makeDirectory(const name_t &dir)
         {
             if (!std::filesystem::is_directory(dir))
             {
                 if (!std::filesystem::create_directory(dir))
                 {
-                    throw std::runtime_error("Error: unable to create directory" + dir);
+                    if constexpr (ThrowOnFailure)
+                    {
+                        throw std::runtime_error("Error: unable to create directory" + dir);
+                    }
                     return false;
                 }
                 else

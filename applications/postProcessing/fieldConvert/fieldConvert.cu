@@ -72,7 +72,7 @@ int main(const int argc, const char *const argv[])
     const words_t &fieldNames = getFieldNames(fileNamePrefix, doCustomField);
 
     // Get the time indices
-    const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
+    const std::vector<host::label_t> fileNameIndices = programControl::savedTimeSteps("timeStep");
 
     // Get the conversion type
     const name_t conversion = programCtrl.getArgument("-fileType");
@@ -83,27 +83,24 @@ int main(const int argc, const char *const argv[])
     // Check if the writer is valid
     if (it != postProcess::writers.end())
     {
+        // Get the writer function
         const postProcess::writerFunction writer = it->second;
 
-        for (host::label_t timeStep = fileIO::getStartIndex(fileNamePrefix, programCtrl); timeStep < fileNameIndices.size(); timeStep++)
+        for (const host::label_t timeStep : fileNameIndices)
         {
-            const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments = initialiseArrays(
-                fileNamePrefix,
-                programCtrl,
-                fieldNames,
-                timeStep);
+            // Initialise the fields to be processed
+            const host::arrayCollection<scalar_t, ctorType::MUST_READ> hostMoments("timeStep/" + std::to_string(timeStep) + "/" + fileNamePrefix + ".LBMBin", fieldNames);
 
+            // Process the fields
             const std::vector<std::vector<scalar_t>> fields = processFields(hostMoments, mesh, programCtrl, doCutPlane);
 
-            const name_t fileName = processName(programCtrl, fileNamePrefix, fileNameIndices[timeStep], doCutPlane);
+            // Get the output file name
+            const name_t fileName = processName(programCtrl, fileNamePrefix, timeStep, doCutPlane);
 
-            writer(
-                fields,
-                fileName,
-                newMesh,
-                fieldNames);
+            // Write the output file
+            writer(fields, fileName, newMesh, fieldNames);
 
-            if (timeStep < fileNameIndices.size() - 1)
+            if (!(timeStep == fileNameIndices.back()))
             {
                 std::cout << std::endl;
             }
@@ -111,8 +108,8 @@ int main(const int argc, const char *const argv[])
     }
     else
     {
-        // Throw
-        throw std::runtime_error(invalidWriter(postProcess::writers, conversion));
+        // We don't actually need to throw, we can just print the error message
+        errorHandler::check<throws::NO_THROW>(-1, "Invalid writer function for conversion type: " + conversion);
     }
 
     return 0;

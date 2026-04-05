@@ -96,6 +96,16 @@ namespace LBM
                 common_write<time::instantaneous>(fileName, mesh, varNames, fields, timeStep, 0);
             }
 
+            __host__ static inline const name_t make_filename(const name_t &dirName, const name_t &fieldName)
+            {
+                return "timeStep/" + dirName + "/" + fieldName + fileExtension();
+            }
+
+            __host__ static inline const name_t make_filename(const host::label_t timeStep, const name_t &fieldName)
+            {
+                return make_filename(std::to_string(timeStep), fieldName);
+            }
+
         private:
             template <const time::type TimeType, typename T>
             __host__ static void common_write(
@@ -106,16 +116,28 @@ namespace LBM
                 const host::label_t timeStep,
                 const host::label_t meanCount)
             {
+                const name_t resolvedName = make_filename(timeStep, fileName);
+
+                if (!fileSystem::makeDirectory("timeStep"))
+                {
+                    throw std::runtime_error("Error: unable to create timeStep directory");
+                }
+
+                if (!fileSystem::makeDirectory("timeStep/" + std::to_string(timeStep)))
+                {
+                    throw std::runtime_error("Error: unable to create directory for time step " + std::to_string(timeStep));
+                }
+
                 types::assertions::validate<T>();
                 endian::assertions::validate();
 
                 // Check if there is enough disk space to store the file
-                writer::diskSpaceAssertion<This>(mesh, varNames, fileName);
+                writer::diskSpaceAssertion<This>(mesh, varNames, resolvedName);
 
-                std::ofstream out(fileName, std::ios::binary);
+                std::ofstream out(resolvedName, std::ios::binary);
                 if (!out)
                 {
-                    throw std::runtime_error("Cannot open file: " + fileName);
+                    throw std::runtime_error("Cannot open file: " + resolvedName);
                 }
 
                 // Write the system information

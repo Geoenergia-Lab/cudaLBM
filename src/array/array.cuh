@@ -182,30 +182,27 @@ namespace LBM
 
     /**
      * @brief Initialises the mean counter from a file.
+     * @param[in] fieldName The name of the field for which to initialise the mean counter
      * @param[in] programCtrl The program control object
      * @returns The mean counter as a device::label_t.
      **/
-    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const name_t &fieldName)
+    __host__ [[nodiscard]] host::label_t initialiseMeanCount(const name_t &fieldName, const programControl &programCtrl)
     {
-        if (fileIO::hasIndexedFiles(fieldName))
+        if (std::filesystem::exists("timeStep/" + std::to_string(programCtrl.latestTime()) + "/" + fieldName + ".LBMBin"))
         {
-            const name_t fileName = fieldName + "_" + std::to_string(fileIO::latestTime(fieldName)) + ".LBMBin";
+            const name_t fileName = "timeStep/" + std::to_string(programCtrl.latestTime()) + "/" + fieldName + ".LBMBin";
 
             const words_t lines = read_until(fileName, "fieldData");
 
             const fileIO::fieldInformation fieldInfo(string::extractBlock(lines, "fieldInformation", 0));
 
-            return static_cast<device::label_t>(fieldInfo.meanCount());
+            return static_cast<host::label_t>(fieldInfo.meanCount());
         }
         else
         {
+            std::cout << "Returning 0 from initialiseMeanCount for field " << fieldName << " because no file was found." << std::endl;
             return 0;
         }
-    }
-
-    __host__ [[nodiscard]] device::label_t initialiseMeanCount(const programControl &programCtrl)
-    {
-        return initialiseMeanCount(programCtrl.caseName());
     }
 }
 

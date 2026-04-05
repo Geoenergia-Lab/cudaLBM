@@ -111,6 +111,10 @@ namespace LBM
                 : arr_(initialiseVector(fileNamePrefix, timeIndex)),
                   varNames_(varNames) {}
 
+            __host__ [[nodiscard]] arrayCollection(const name_t &fileName, const words_t &varNames)
+                : arr_(initialiseVector(fileName)),
+                  varNames_(varNames) {}
+
             /**
              * @brief Destructor for the host arrayCollection class
              **/
@@ -176,6 +180,13 @@ namespace LBM
                     throw std::runtime_error("Did not find indexed case files");
                 }
                 const name_t fileName = fileNamePrefix + "_" + std::to_string(fileIO::timeIndices(fileNamePrefix)[timeIndex]) + ".LBMBin";
+                return fileIO::readFieldFile<T>(fileName);
+            }
+
+            __host__ [[nodiscard]] const std::vector<T> initialiseVector(const name_t &fileName) const
+            {
+                static_assert(cType == ctorType::MUST_READ, "Invalid constructor type");
+
                 return fileIO::readFieldFile<T>(fileName);
             }
 

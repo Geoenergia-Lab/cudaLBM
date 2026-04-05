@@ -41,10 +41,8 @@ thirdParty/openmpi-5.0.7.tar.gz
 build
 
 # Case directory ignores
-cases/*/*/*.LBMBin
-cases/*/*/*/*.dat
-cases/*/*/*/*.vts
-cases/*/*/*/*.vtu
+cases/*/*/timeStep
+cases/*/*/postProcess
 
 # Unit test directory ignores
 unitTests/ComputeSanitizerTest/*.LBMBin

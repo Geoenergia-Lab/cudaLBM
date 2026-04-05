@@ -133,7 +133,7 @@ namespace LBM
                       mesh,
                       programCtrl),
                   name_(name),
-                  meanCount_(initialiseMeanCount(programCtrl))
+                  meanCount_(initialiseMeanCount(name, programCtrl))
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             }
@@ -157,7 +157,7 @@ namespace LBM
                       mesh,
                       programCtrl),
                   name_(name),
-                  meanCount_(initialiseMeanCount(programCtrl))
+                  meanCount_(initialiseMeanCount(name, programCtrl))
             {
                 initialise_boundary_condition(name_, programCtrl.deviceList());
             }
@@ -175,7 +175,7 @@ namespace LBM
                       mesh,
                       programCtrl),
                   name_(componentName),
-                  meanCount_(initialiseMeanCount(programCtrl))
+                  meanCount_(initialiseMeanCount(name, programCtrl))
             {
                 initialise_boundary_condition(componentName, programCtrl.deviceList());
             }

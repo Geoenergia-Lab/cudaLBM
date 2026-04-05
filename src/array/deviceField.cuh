@@ -95,7 +95,7 @@ namespace LBM
                 if constexpr (TimeType == time::instantaneous)
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         self_.mesh(),
                         {self_.name()},
                         hostWriteBuffer.data(),
@@ -104,7 +104,7 @@ namespace LBM
                 else
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         self_.mesh(),
                         {self_.name()},
                         hostWriteBuffer.data(),
@@ -195,7 +195,7 @@ namespace LBM
                 if constexpr (TimeType == time::instantaneous)
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         x_.mesh(),
                         {x_.name(), y_.name(), z_.name()},
                         hostWriteBuffer.data(),
@@ -204,7 +204,7 @@ namespace LBM
                 else
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         x_.mesh(),
                         {x_.name(), y_.name(), z_.name()},
                         hostWriteBuffer.data(),
@@ -308,7 +308,7 @@ namespace LBM
                 if constexpr (TimeType == time::instantaneous)
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         xx_.mesh(),
                         {xx_.name(), xy_.name(), xz_.name(), yy_.name(), yz_.name(), zz_.name()},
                         hostWriteBuffer.data(),
@@ -317,7 +317,7 @@ namespace LBM
                 else
                 {
                     Writer::write(
-                        name_ + "_" + std::to_string(timeStep) + ".LBMBin",
+                        name_,
                         xx_.mesh(),
                         {xx_.name(), xy_.name(), xz_.name(), yy_.name(), yz_.name(), zz_.name()},
                         hostWriteBuffer.data(),

@@ -70,4 +70,17 @@ export CPLUS_INCLUDE_PATH=$CUDALBM_MPI_DIR/include:$CPLUS_INCLUDE_PATH
 # Export the path to the compiled executable
 export PATH=$CUDALBM_PROJECT_DIR/build/bin:$PATH
 
+# Generic definition of cleanCase script
+cleanCase()
+{
+    if [[ -f programControl ]]; 
+    then
+        rm -r timeStep
+        rm -r postProcess
+        return 0
+    else
+        return 1
+    fi
+}
+
 #*---------------------------------------------------------------------------*#

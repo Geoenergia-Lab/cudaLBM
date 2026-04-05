@@ -90,21 +90,13 @@ namespace LBM
              * @param[in] mesh The lattice mesh
              * @param[in] programCtrl The program control object
              **/
-            // __host__ [[nodiscard]] array(
-            //     const name_t &name,
-            //     const host::latticeMesh &mesh,
-            //     const programControl &programCtrl)
-            //     : arrayBase<T, VelocitySet, TimeType>(name, mesh),
-            //       arr_(initialise_array(mesh, name, programCtrl)),
-            //       meanCount_(initialiseMeanCount(programCtrl)) {}
-
             __host__ [[nodiscard]] array(
                 const name_t &name,
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
                 : arrayBase<T, VelocitySet, TimeType>(name, mesh),
-                  arr_(initialise_array(mesh, name, name)),
-                  meanCount_(initialiseMeanCount(programCtrl)) {}
+                  arr_(initialise_array(mesh, name, name, programCtrl)),
+                  meanCount_(initialiseMeanCount(name, programCtrl)) {}
 
             __host__ [[nodiscard]] array(
                 const name_t &name,
@@ -112,8 +104,8 @@ namespace LBM
                 const host::latticeMesh &mesh,
                 const programControl &programCtrl)
                 : arrayBase<T, VelocitySet, TimeType>(name, mesh),
-                  arr_(initialise_array(mesh, name, componentName, name)),
-                  meanCount_(initialiseMeanCount(programCtrl)) {}
+                  arr_(initialise_array(mesh, name, componentName, programCtrl)),
+                  meanCount_(initialiseMeanCount(name, programCtrl)) {}
 
             /**
              * @brief Destructor
@@ -170,55 +162,25 @@ namespace LBM
              **/
             host::label_t meanCount_;
 
-            /**
-             * @brief Initialise array from file or initial conditions.
-             * @param[in] mesh The lattice mesh
-             * @param[in] fieldName Name of the field.
-             * @param[in] programCtrl The program control object
-             * @return Initialised vector.
-             **/
             __host__ [[nodiscard]] static const std::vector<T> initialise_array(
                 const host::latticeMesh &mesh,
                 const name_t &fieldName,
-                const name_t &fileName)
-            {
-                if (fileIO::hasIndexedFiles(fileName))
-                {
-                    return fileIO::readFieldByName<T>(fileName + "_" + std::to_string(fileIO::latestTime(fileName)) + ".LBMBin", fieldName);
-                }
-                else
-                {
-                    std::cout << "Did not find file " << fileName << " for field " << fieldName << std::endl;
-                    return initialConditions(mesh, fieldName);
-                }
-            }
-
-            __host__ [[nodiscard]] static const std::vector<T> initialise_array(
-                const host::latticeMesh &mesh,
-                [[maybe_unused]] const name_t &fieldName,
                 const name_t &componentName,
-                const name_t &fileName)
-            {
-                std::cout << "Doing new initialise array for " << componentName << std::endl;
-                if (fileIO::hasIndexedFiles(fileName))
-                {
-                    std::cout << "Reading " << componentName << " from file " << fileName << std::endl;
-                    return fileIO::readFieldByName<T>(fileName + "_" + std::to_string(fileIO::latestTime(fileName)) + ".LBMBin", componentName);
-                }
-                else
-                {
-                    std::cout << "Did not find file " << fileName << " for component " << componentName << std::endl;
-                    // std::cout << "Did not find file " << fileName << " for field " << componentName << std::endl;
-                    return initialConditions(mesh, componentName);
-                }
-            }
-
-            __host__ [[nodiscard]] static const std::vector<T> initialise_array(
-                const host::latticeMesh &mesh,
-                const name_t &fieldName,
                 const programControl &programCtrl)
             {
-                return initialise_array(mesh, fieldName, programCtrl.caseName());
+                if (!std::filesystem::is_directory("timeStep/" + std::to_string(programCtrl.latestTime())))
+                {
+                    std::cout << "Did not find directory timeStep/" << std::to_string(programCtrl.latestTime()) << std::endl;
+                    return initialConditions(mesh, componentName);
+                }
+                else
+                {
+                    std::cout << "Reading field " << componentName << " from file " << fieldName << " for time step " << programCtrl.latestTime() << std::endl;
+
+                    const name_t resolvedFileName = "timeStep/" + std::to_string(programCtrl.latestTime()) + "/" + fieldName + ".LBMBin";
+
+                    return fileIO::readFieldByName<T>(resolvedFileName, componentName);
+                }
             }
 
             /**

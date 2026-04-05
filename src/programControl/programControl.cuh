@@ -75,7 +75,7 @@ namespace LBM
               nTimeSteps_(string::extractParameter<host::label_t>(string::readFile("programControl"), "nTimeSteps")),
               saveInterval_(string::extractParameter<host::label_t>(string::readFile("programControl"), "saveInterval")),
               infoInterval_(string::extractParameter<host::label_t>(string::readFile("programControl"), "infoInterval")),
-              latestTime_(fileIO::latestTime(caseName_))
+              latestTime_(latestSaved())
         {
             types::assertions::validate<scalar_t>();
             types::assertions::validate<device::label_t>();
@@ -332,6 +332,46 @@ namespace LBM
             }
         }
 
+        __host__ [[nodiscard]] static const std::vector<host::label_t> savedTimeSteps(const std::string &dir_path)
+        {
+            std::vector<host::label_t> numbers;
+
+            // Check if the given path exists and is a directory
+            if (!std::filesystem::exists(dir_path) || !std::filesystem::is_directory(dir_path))
+            {
+                return numbers; // return empty vector if invalid
+            }
+
+            for (const auto &entry : std::filesystem::directory_iterator(dir_path))
+            {
+                // Only consider subdirectories (ignore files, symlinks, etc.)
+                if (entry.is_directory())
+                {
+                    const name_t name = entry.path().filename().string();
+                    try
+                    {
+                        // Convert name to host::label_t
+                        // std::stoul handles leading/trailing whitespace? No, but we assume clean names.
+                        // Use std::stoul for unsigned long, then cast to host::label_t.
+                        const host::label_t num = std::stoull(name);
+                        numbers.push_back(num);
+                    }
+                    catch (const std::invalid_argument &)
+                    {
+                        // Name is not a number – skip
+                    }
+                    catch (const std::out_of_range &)
+                    {
+                        // Number is too large for unsigned long – skip
+                    }
+                }
+            }
+
+            std::sort(numbers.begin(), numbers.end());
+
+            return numbers;
+        }
+
     private:
         /**
          * @brief A reference to the input control object
@@ -375,6 +415,18 @@ namespace LBM
         __host__ [[nodiscard]] T initialiseConst(const name_t &varName) const noexcept
         {
             return string::extractParameter<T>(string::readFile("programControl"), varName);
+        }
+
+        __host__ [[nodiscard]] static inline host::label_t latestSaved()
+        {
+            if (savedTimeSteps("timeStep").empty())
+            {
+                return 0;
+            }
+            else
+            {
+                return savedTimeSteps("timeStep").back();
+            }
         }
     };
 }
