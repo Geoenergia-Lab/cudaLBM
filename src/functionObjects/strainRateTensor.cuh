@@ -57,6 +57,11 @@ namespace LBM
         struct S
         {
             /**
+             * @brief Name of the variable
+             **/
+            static constexpr const char *name = "S";
+
+            /**
              * @brief Number of components of the strain rate tensor
              **/
             static constexpr const host::label_t N = 6;
@@ -160,9 +165,9 @@ namespace LBM
                 const device::symmetricTensorField<VelocitySet, time::instantaneous> &Pi,
                 const streamHandler &streamsLBM,
                 const programControl &programCtrl) noexcept
-                : BaseType("S", hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
-                  S_(name_, mesh_, calculate_, programCtrl),
-                  SMean_(nameMean_, mesh_, calculate_, programCtrl)
+                : BaseType(ObjectType::name, hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
+                  S_(name_, mesh_, 0, programCtrl, calculate_),
+                  SMean_(nameMean_, mesh_, 0, programCtrl, calculateMean_)
             {
                 BaseType::template configure<Kernel>(programCtrl);
             }

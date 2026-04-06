@@ -75,8 +75,8 @@ cleanCase()
 {
     if [[ -f programControl ]]; 
     then
-        rm -r timeStep
-        rm -r postProcess
+        rm -rf timeStep
+        rm -rf postProcess
         return 0
     else
         return 1

@@ -180,6 +180,24 @@ namespace LBM
                 initialise_boundary_condition(componentName, programCtrl.deviceList());
             }
 
+            __host__ [[nodiscard]] array(
+                const name_t &name,
+                const name_t &componentName,
+                const host::latticeMesh &mesh,
+                const T value,
+                const programControl &programCtrl,
+                const bool allocate = true)
+                : arrayBase<T>(
+                      This::allocate_on_devices(
+                          mesh, value, allocate, programCtrl),
+                      mesh,
+                      programCtrl),
+                  name_(componentName),
+                  meanCount_(initialiseMeanCount(name, programCtrl))
+            {
+                initialise_boundary_condition(componentName, programCtrl.deviceList());
+            }
+
             /**
              * @brief Get read-only pointer to device memory for a given GPU.
              * @tparam Idx Type that can be converted to device::label_t.
@@ -296,7 +314,7 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @return Host array of device pointers, or nullptr if not allocated.
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(
+            __host__ [[nodiscard]] static inline T **allocate_on_devices(
                 const host::latticeMesh &mesh,
                 const T *hostArrayGlobal,
                 const bool allocate,
@@ -314,7 +332,7 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @return Host array of device pointers.
              **/
-            __host__ [[nodiscard]] static T **allocate_on_devices(
+            __host__ [[nodiscard]] static inline T **allocate_on_devices(
                 const host::latticeMesh &mesh,
                 const std::vector<T> &hostArrayGlobal,
                 const bool allocate,
@@ -332,7 +350,7 @@ namespace LBM
              * @return Host array of device pointers.
              **/
             template <const host::mallocType MallocType>
-            __host__ [[nodiscard]] T **allocate_on_devices(
+            __host__ [[nodiscard]] static inline T **allocate_on_devices(
                 const host::array<MallocType, T, VelocitySet, TimeType> &hostArrayGlobal,
                 const bool allocate,
                 const programControl &programCtrl)
@@ -348,7 +366,7 @@ namespace LBM
              * @param[in] programCtrl The program control object
              * @return Host array of device pointers.
              **/
-            __host__ [[nodiscard]] T **allocate_on_devices(
+            __host__ [[nodiscard]] static inline T **allocate_on_devices(
                 const host::latticeMesh &mesh,
                 const T val,
                 const bool allocate,
@@ -358,6 +376,11 @@ namespace LBM
                 return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.sizePerDevice());
             }
 
+            // __host__ [[nodiscard]] static inline T** allocate_on_devices
+            // ()
+            // {
+            //     // Check if
+            // }
             /**
              * @brief Initialise boundary condition values on all GPUs for velocity fields.
              * @param[in] name Field name ("u", "v", or "w").

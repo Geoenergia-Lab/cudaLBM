@@ -62,6 +62,11 @@ namespace LBM
             static constexpr const host::label_t N = 1;
 
             /**
+             * @brief Name of the variable
+             **/
+            static constexpr const char *name = "k";
+
+            /**
              * @brief Calculates the total kinetic energy
              * @param[in] devPtrs Device pointer collection containing velocity and moment fields
              * @param[in] idx Spatial index
@@ -144,9 +149,9 @@ namespace LBM
                 const device::symmetricTensorField<VelocitySet, time::instantaneous> &Pi,
                 const streamHandler &streamsLBM,
                 const programControl &programCtrl) noexcept
-                : BaseType("k", hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
-                  k_(name_, mesh_, calculate_, programCtrl),
-                  kMean_(nameMean_, mesh, calculateMean_, programCtrl)
+                : BaseType(ObjectType::name, hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
+                  k_(name_, mesh_, 0, programCtrl, calculate_),
+                  kMean_(nameMean_, mesh, 0, programCtrl, calculateMean_)
             {
                 BaseType::template configure<Kernel>(programCtrl);
             }

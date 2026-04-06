@@ -62,6 +62,11 @@ namespace LBM
             static constexpr const host::label_t N = NUMBER_MOMENTS<host::label_t>();
 
             /**
+             * @brief Name of the variable
+             **/
+            static constexpr const char *name = "moments";
+
+            /**
              * @brief Reads the moments
              * @param[in] devPtrs Device pointer collection containing velocity and moment fields
              * @param[in] idx Spatial index
@@ -134,7 +139,7 @@ namespace LBM
                 const device::symmetricTensorField<VelocitySet, time::instantaneous> &Pi,
                 const streamHandler &streamsLBM,
                 const programControl &programCtrl) noexcept
-                : BaseType("moments", hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
+                : BaseType(ObjectType::name, hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
                   rhoMean_("rhoMean", mesh, 0, programCtrl, calculateMean_),
                   UMean_("UMean", mesh, 0, programCtrl, calculateMean_),
                   PiMean_("PiMean", mesh, 0, programCtrl, calculateMean_)
