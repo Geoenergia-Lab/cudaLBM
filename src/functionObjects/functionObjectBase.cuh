@@ -111,6 +111,11 @@ namespace LBM
                     return {name};
                 }
 
+                if constexpr (N == 3)
+                {
+                    return string::catenate(name, {"_x", "_y", "_z"});
+                }
+
                 if constexpr (N == 6)
                 {
                     return string::catenate(name, {"_xx", "_xy", "_xz", "_yy", "_yz", "_zz"});

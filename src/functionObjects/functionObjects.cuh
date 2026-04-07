@@ -261,27 +261,27 @@ namespace LBM
             return std::filesystem::exists("functionObjects") ? string::containsString(string::trim<true>(string::eraseBraces(string::extractBlock(string::readFile("functionObjects"), "functionObjectList"))), objectName) : false;
         }
 
-        template <class VelocitySet, const time::type TimeType>
-        __host__ [[nodiscard]] const device::scalarField<VelocitySet, TimeType> objectInitialiser(
-            const device::scalarField<VelocitySet, TimeType> &defaultObject)
-        {
-            // If we want to initilise it
-            if (initialiserSwitch(defaultObject.name()))
-            {
-                // Check if there are checkpointed files
-                if (fileIO::hasIndexedFiles(defaultObject.name()))
-                {
-                }
+        // template <class VelocitySet, const time::type TimeType>
+        // __host__ [[nodiscard]] const device::scalarField<VelocitySet, TimeType> objectInitialiser(
+        //     const device::scalarField<VelocitySet, TimeType> &defaultObject)
+        // {
+        //     // If we want to initilise it
+        //     if (initialiserSwitch(defaultObject.name()))
+        //     {
+        //         // Check if there are checkpointed files
+        //         if (fileIO::hasIndexedFiles(defaultObject.name()))
+        //         {
+        //         }
 
-                // Must be no checkpointed files
-                return device::scalarField<VelocitySet, TimeType>(defaultObject.name());
-            }
-            else
-            {
-                // Return an empty
-                return device::scalarField<VelocitySet, TimeType>(defaultObject.name(), defaultObject.self().mesh(), defaultObject.self().programCtrl(), false);
-            }
-        }
+        //         // Must be no checkpointed files
+        //         return device::scalarField<VelocitySet, TimeType>(defaultObject.name());
+        //     }
+        //     else
+        //     {
+        //         // Return an empty
+        //         return device::scalarField<VelocitySet, TimeType>(defaultObject.name(), defaultObject.self().mesh(), defaultObject.self().programCtrl(), false);
+        //     }
+        // }
     }
 }
 

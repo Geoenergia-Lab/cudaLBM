@@ -376,11 +376,6 @@ namespace LBM
                 return This::allocate_on_devices(mesh, toAllocate.data(), allocate, programCtrl, mesh.sizePerDevice());
             }
 
-            // __host__ [[nodiscard]] static inline T** allocate_on_devices
-            // ()
-            // {
-            //     // Check if
-            // }
             /**
              * @brief Initialise boundary condition values on all GPUs for velocity fields.
              * @param[in] name Field name ("u", "v", or "w").

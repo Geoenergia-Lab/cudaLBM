@@ -59,6 +59,9 @@ SourceFiles
 #include "moments.cuh"
 #include "strainRateTensor.cuh"
 #include "kineticEnergy.cuh"
+#include "rhoMean.cuh"
+#include "UMean.cuh"
+#include "PiMean.cuh"
 
 namespace LBM
 {
@@ -86,11 +89,13 @@ namespace LBM
             const programControl &programCtrl)
             : hostWriteBuffer_(hostWriteBuffer),
               mesh_(mesh),
-              M_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
+              rho_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
+              U_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
+              Pi_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
               S_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
               k_(hostWriteBuffer, mesh, rho, U, Pi, streamsLBM, programCtrl),
-              functionVector_(functionObjectCallInitialiser(M_, S_, k_)),
-              saveVector_(functionObjectSaveInitialiser(M_, S_, k_)) {}
+              functionVector_(functionObjectCallInitialiser(rho_, U_, Pi_, S_, k_)),
+              saveVector_(functionObjectSaveInitialiser(rho_, U_, Pi_, S_, k_)) {}
 
         /**
          * @brief Default destructor
@@ -136,9 +141,11 @@ namespace LBM
         const host::latticeMesh &mesh_;
 
         /**
-         * @brief Moments function object
+         * @brief Moments
          **/
-        functionObjects::moments<VelocitySet> M_;
+        functionObjects::density<VelocitySet> rho_;
+        functionObjects::velocityVector<VelocitySet> U_;
+        functionObjects::secondOrderMoments<VelocitySet> Pi_;
 
         /**
          * @brief Strain rate tensor function object
@@ -157,20 +164,14 @@ namespace LBM
 
         /**
          * @brief Initializes function calls based on strain rate tensor configuration
-         * @param[in] S Reference to strain rate tensor object
+         * @param[in] args References to the objects contained in the registry
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] static const std::vector<functionObjects::calculateFunction> functionObjectCallInitialiser(
-            functionObjects::moments<VelocitySet> &moments,
-            functionObjects::strainRateTensor<VelocitySet> &S,
-            functionObjects::kineticEnergy<VelocitySet> &k) noexcept
+        template <typename... Args>
+        __host__ [[nodiscard]] static const std::vector<functionObjects::calculateFunction> functionObjectCallInitialiser(Args &...args) noexcept
         {
             std::vector<functionObjects::calculateFunction> calls;
-
-            addObjectCall(calls, moments);
-            addObjectCall(calls, S);
-            addObjectCall(calls, k);
-
+            (addObjectCall(calls, args), ...);
             return calls;
         }
 
@@ -179,7 +180,7 @@ namespace LBM
         {
             // If both instantaneous and mean calculations are enabled, calculate both in one call
             // Only do this for variables other than the 10 moments
-            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
+            if constexpr (C::ObjectType::canCalculateInstantaneous)
             {
                 if ((object.doInstantaneous()) && (object.doMean()))
                 {
@@ -192,7 +193,7 @@ namespace LBM
             }
 
             // Must be only saving instantaneous, so just calculate instantaneous without saving mean
-            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
+            if constexpr (C::ObjectType::canCalculateInstantaneous)
             {
                 if (object.doInstantaneous() && !(object.doMean()))
                 {
@@ -222,27 +223,21 @@ namespace LBM
 
         /**
          * @brief Initializes save calls based on strain rate tensor configuration
-         * @param[in] S Reference to strain rate tensor object
+         * @param[in] args References to the objects contained in the registry
          * @return Vector of function objects to be executed
          **/
-        __host__ [[nodiscard]] static const std::vector<functionObjects::saveFunction> functionObjectSaveInitialiser(
-            functionObjects::moments<VelocitySet> &moments,
-            functionObjects::strainRateTensor<VelocitySet> &S,
-            functionObjects::kineticEnergy<VelocitySet> &k) noexcept
+        template <typename... Args>
+        __host__ [[nodiscard]] static const std::vector<functionObjects::saveFunction> functionObjectSaveInitialiser(Args &...args) noexcept
         {
             std::vector<functionObjects::saveFunction> calls;
-
-            addSaveCall(calls, moments);
-            addSaveCall(calls, S);
-            addSaveCall(calls, k);
-
+            (addSaveCall(calls, args), ...);
             return calls;
         }
 
         template <class C>
         __host__ static void addSaveCall(std::vector<functionObjects::saveFunction> &calls, C &object) noexcept
         {
-            if constexpr (!std::is_same_v<C, functionObjects::moments<VelocitySet>>)
+            if constexpr (C::ObjectType::canCalculateInstantaneous)
             {
                 if (object.doInstantaneous())
                 {

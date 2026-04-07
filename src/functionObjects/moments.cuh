@@ -83,6 +83,11 @@ namespace LBM
              * @brief Number of blocks per streaming microprocessor
              **/
             static constexpr const host::label_t MIN_BLOCKS_PER_MP = 3;
+
+            /**
+             * @brief Switch that defines whether or not the class will define an instantaneous calculation
+             **/
+            static constexpr const bool calculateInstantaneous = true;
         };
 
         namespace momentsDetail

@@ -10,7 +10,7 @@
 /*---------------------------------------------------------------------------*\
 
 Copyright (C) 2023 UDESC Geoenergia Lab
-Authors: Nathan Duggins (Geoenergia Lab, UDESC)
+Authors: Gustavo Choiare (Geoenergia Lab, UDESC)
 
 This implementation is derived from concepts and algorithms developed in:
   MR-LBM: Moment Representation Lattice Boltzmann Method
@@ -37,72 +37,46 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    File containing kernels and class definitions for the strain rate tensor
+    File containing kernels and class definitions for the velocity vector.
 
 Namespace
     LBM::functionObjects
 
 SourceFiles
-    strainRateTensor.cuh
+    rhoMean.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_STRAINRATETENSOR_CUH
-#define __MBLBM_STRAINRATETENSOR_CUH
+#ifndef __MBLBM_RHOMEAN_CUH
+#define __MBLBM_RHOMEAN_CUH
 
 namespace LBM
 {
     namespace functionObjects
     {
-        struct S
+        struct rho
         {
+            /**
+             * @brief Number of components of the velocity vector
+             **/
+            static constexpr const host::label_t N = 1;
+
             /**
              * @brief Name of the variable
              **/
-            static constexpr const char *name = "S";
+            static constexpr const char *name = "rho";
 
             /**
-             * @brief Number of components of the strain rate tensor
-             **/
-            static constexpr const host::label_t N = 6;
-
-            /**
-             * @brief Calculates a component of the strain rate tensor
-             * @param[in] uAlpha Velocity component in the alpha direction
-             * @param[in] uBeta Velocity component in the beta direction
-             * @param[in] mAlphaBeta Second-order moment in the alpha/beta direction
-             * @return The calculated component of the strain rate tensor
-             **/
-            template <const host::label_t Index>
-            __device__ [[nodiscard]] static inline constexpr scalar_t calculate(const scalar_t uAlpha, const scalar_t uBeta, const scalar_t mAlphaBeta) noexcept
-            {
-                static_assert((Index == index::xx || Index == index::yy || Index == index::zz || Index == index::xy || Index == index::xz || Index == index::yz), "Invalid index");
-
-                if constexpr (Index == index::xx || Index == index::yy || Index == index::zz)
-                {
-                    return velocitySet::as2<scalar_t>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<scalar_t>(2) * velocitySet::scale_ii<scalar_t>() * device::tau);
-                }
-                else
-                {
-                    return velocitySet::as2<scalar_t>() * ((uAlpha * uBeta) - mAlphaBeta) / (static_cast<scalar_t>(2) * velocitySet::scale_ij<scalar_t>() * device::tau);
-                }
-            }
-
-            /**
-             * @brief Calculates the strain rate tensor
+             * @brief Reads the moments
              * @param[in] devPtrs Device pointer collection containing velocity and moment fields
              * @param[in] idx Spatial index
-             * @return The calculated strain rate tensor
+             * @return The moments
              **/
             __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(
                 const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
                 const device::label_t idx) noexcept
             {
-                const thread::array<scalar_t, 3> U = read_from_moments<index::u, index::v, index::w>(devPtrs, idx);
-
-                const thread::array<scalar_t, 6> M = read_from_moments<index::xx, index::xy, index::xz, index::yy, index::yz, index::zz>(devPtrs, idx);
-
-                return {calculate<index::xx>(U[0], U[0], M[0]), calculate<index::xy>(U[0], U[1], M[1]), calculate<index::xz>(U[0], U[2], M[2]), calculate<index::yy>(U[1], U[1], M[3]), calculate<index::yz>(U[1], U[2], M[4]), calculate<index::zz>(U[2], U[2], M[5])};
+                return read_from_moments<0>(devPtrs, idx);
             }
 
             /**
@@ -113,30 +87,30 @@ namespace LBM
             /**
              * @brief Switch that defines whether or not the class will define an instantaneous calculation
              **/
-            static constexpr const bool canCalculateInstantaneous = true;
+            static constexpr const bool canCalculateInstantaneous = false;
         };
 
-        namespace strainRateTensorDetail
+        namespace rhoDetail
         {
-            using This = S;
+            using This = rho;
 
 #include "commonKernelDefinitions.cuh"
         }
 
         /**
-         * @brief Class for managing strain rate tensor calculations in LBM simulations
+         * @brief Class for managing total velocity vector calculations in LBM simulations
          * @tparam VelocitySet The velocity set (D3Q19 or D3Q27)
          **/
         template <class VelocitySet>
-        class strainRateTensor : public FunctionObjectBase<VelocitySet, S::N>
+        class density : public FunctionObjectBase<VelocitySet, rho::N>
         {
         public:
             /**
-             * @brief Alias for the base type and required namespace
+             * @brief Alias for the base type
              **/
-            using ObjectType = S;
+            using ObjectType = rho;
             using BaseType = FunctionObjectBase<VelocitySet, ObjectType::N>;
-            using Kernel = strainRateTensorDetail::kernel;
+            using Kernel = rhoDetail::kernel;
 
             /**
              * @brief Bring base members into scope
@@ -155,14 +129,14 @@ namespace LBM
             using BaseType::U_;
 
             /**
-             * @brief Constructs a strain rate tensor object
+             * @brief Constructs a velocity vector object
              * @param[in] hostWriteBuffer Reference to the host-side write buffer
              * @param[in] mesh The lattice mesh
              * @param[in] rho, ... References to the 10 solution variables
              * @param[in] streamsLBM Stream handler for LBM operations
              * @param[in] programCtrl The program control object
              **/
-            __host__ [[nodiscard]] strainRateTensor(
+            __host__ [[nodiscard]] density(
                 host::array<host::PINNED, scalar_t, VelocitySet, time::instantaneous> &hostWriteBuffer,
                 const host::latticeMesh &mesh,
                 const device::scalarField<VelocitySet, time::instantaneous> &rho,
@@ -171,8 +145,7 @@ namespace LBM
                 const streamHandler &streamsLBM,
                 const programControl &programCtrl) noexcept
                 : BaseType(ObjectType::name, hostWriteBuffer, mesh, rho, U, Pi, streamsLBM),
-                  S_(name_, mesh_, 0, programCtrl, calculate_),
-                  SMean_(nameMean_, mesh_, 0, programCtrl, calculateMean_)
+                  rhoMean_(nameMean_, mesh, 0, programCtrl, calculateMean_)
             {
                 BaseType::template configure<Kernel>(programCtrl);
             }
@@ -180,70 +153,36 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~strainRateTensor() {}
-            __host__ [[nodiscard]] strainRateTensor(const strainRateTensor &) = delete;
-            __host__ [[nodiscard]] strainRateTensor &operator=(const strainRateTensor &) = delete;
+            ~density() {}
+            __host__ [[nodiscard]] density(const density &) = delete;
+            __host__ [[nodiscard]] density &operator=(const density &) = delete;
 
             /**
-             * @brief Calculate the instantaneous strain rate tensor
-             **/
-            __host__ void calculateInstantaneous() noexcept
-            {
-                BaseType::instantaneous(Kernel::instantaneous(), *this);
-            }
-
-            /**
-             * @brief Calculate the time-averaged strain rate tensor
+             * @brief Calculate the time-averaged density
              **/
             __host__ void calculateMean() noexcept
             {
-                BaseType::mean(Kernel::mean(), *this, SMean_.meanCountRef());
+                BaseType::mean(Kernel::mean(), *this, rhoMean_.meanCountRef());
             }
 
             /**
-             * @brief Calculate both the instantaneous and time-averaged strain rate tensor
-             **/
-            __host__ void calculateInstantaneousAndMean() noexcept
-            {
-                BaseType::instantaneousAndMean(Kernel::instantaneousAndMean(), *this, SMean_.meanCountRef());
-            }
-
-            /**
-             * @brief Save the instantaneous strain rate tensor to a file
-             **/
-            __host__ void saveInstantaneous(const host::label_t timeStep) noexcept
-            {
-                S_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
-            }
-
-            /**
-             * @brief Save the time-averaged strain rate tensor to a file
+             * @brief Save the time-averaged density to a file
              **/
             __host__ void saveMean(const host::label_t timeStep) noexcept
             {
-                SMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
-            }
-
-            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> instantaneousPtrs(const host::label_t idx) noexcept
-            {
-                return S_.ptr(idx);
+                rhoMean_.template save<postProcess::LBMBin>(hostWriteBuffer_, timeStep);
             }
 
             __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept
             {
-                return SMean_.ptr(idx);
+                return {rhoMean_.ptr(idx)};
             }
 
         private:
             /**
-             * @brief Instantaneous strain rate tensor
+             * @brief Time-averaged density field
              **/
-            device::symmetricTensorField<VelocitySet, time::instantaneous> S_;
-
-            /**
-             * @brief Time-averaged strain rate tensor
-             **/
-            device::symmetricTensorField<VelocitySet, time::timeAverage> SMean_;
+            device::scalarField<VelocitySet, time::instantaneous> rhoMean_;
         };
     }
 }
