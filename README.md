@@ -15,7 +15,7 @@
 
 ## ⚡ Performance
 
-The code has been benchmarked with the lid driven cavity case using FP32 for both storage and arithmetic. The performance on various NVIDIA GPUs is as follows:
+The code has been benchmarked with the lid driven cavity case using D3Q19 and FP32 for both storage and arithmetic. The performance on various NVIDIA GPUs is as follows:
 
 * **NVIDIA RTX A4000:** ~3300 MLUPS
 * **NVIDIA RTX 4090:** ~6600 MLUPS
@@ -25,7 +25,7 @@ MLUPS stands for Million Lattice Updates Per Second. There is still room for imp
 
 ## 📅 Future Features
 
-* **Multi-GPU Support:** Future versions will leverage CUDA-aware MPI for efficient scaling across multiple GPUs.
+* **Extended boundary conditions:** Future versions will implement runtime-selectable boundary conditions via dynamic dispatch.
 
 ## 🔧 Getting Started
 
