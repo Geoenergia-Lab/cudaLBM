@@ -1,4 +1,4 @@
-![HermiteLBM Logo](HermiteLBM.jpg)
+![HermiteLBM Logo](HermiteLBM.png)
 
 # HermiteLBM
 
