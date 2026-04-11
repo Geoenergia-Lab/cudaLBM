@@ -200,7 +200,10 @@ namespace LBM
         }
         else
         {
-            std::cout << "Returning 0 from initialiseMeanCount for field " << fieldName << " because no file was found." << std::endl;
+            if constexpr (verbose())
+            {
+                std::cout << "Returning 0 from initialiseMeanCount for field " << fieldName << " because no file was found." << std::endl;
+            }
             return 0;
         }
     }

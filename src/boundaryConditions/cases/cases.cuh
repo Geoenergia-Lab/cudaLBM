@@ -54,8 +54,8 @@ SourceFiles
 #include "jetFlow/jetFlow.cuh"
 #include "lidDrivenCavity/lidDrivenCavity.cuh"
 
-#define BOUNDARY_CONDITION JET_FLOW
-// #define BOUNDARY_CONDITION LID_DRIVEN_CAVITY
+// #define BOUNDARY_CONDITION JET_FLOW
+#define BOUNDARY_CONDITION LID_DRIVEN_CAVITY
 
 #ifndef BOUNDARY_CONDITION
 #define BOUNDARY_CONDITION INVALID
