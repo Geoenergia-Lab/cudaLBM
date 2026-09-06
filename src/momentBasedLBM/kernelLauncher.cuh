@@ -150,7 +150,7 @@ namespace LBM
         /**
          * @brief Launches the multi‑GPU kernels.
          **/
-        inline void launch() const noexcept
+        __host__ inline void launch() const noexcept
         {
             launch_multi_GPU(mesh_, programCtrl_, devPtrs_, haloPtrs_, devComm_);
         }
@@ -220,7 +220,7 @@ namespace LBM
         /**
          * @brief Launches the single‑GPU kernel.
          **/
-        inline void launch() const noexcept
+        __host__ inline void launch() const noexcept
         {
             launch_single_GPU(mesh_, programCtrl_, devPtrs_, haloPtrs_);
         }
@@ -286,7 +286,7 @@ namespace LBM
         /**
          * @brief Launches the underlying concrete launcher.
          **/
-        inline constexpr void launch() const noexcept
+        __host__ inline constexpr void launch() const noexcept
         {
             std::visit(
                 [](const auto &launcher)

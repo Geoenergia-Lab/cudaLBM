@@ -74,7 +74,7 @@ namespace LBM
             /**
              * @brief Destructor for the host arrayCollection class
              **/
-            ~arrayCollection() {}
+            __host__ ~arrayCollection() {}
 
             /**
              * @brief Get read-only access to underlying data

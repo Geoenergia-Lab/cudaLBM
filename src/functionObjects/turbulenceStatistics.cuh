@@ -197,7 +197,7 @@ namespace LBM
         /**
          * @brief Destructor for the turbulenceStatistics class
          **/
-        ~turbulenceStatistics() {}
+        __host__ ~turbulenceStatistics() {}
 
         /**
          * @brief Calculates the turbulence statistics: Reynolds stress tensor R, production term P, dissipation term epsilon, and turbulent kinetic energy k

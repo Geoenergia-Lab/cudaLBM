@@ -61,7 +61,7 @@ namespace LBM
          * @brief Returns the global mesh size in a particular axis direction
          * @tparam alpha The axis direction (X, Y or Z)
          **/
-        template <axis::type alpha>
+        template <const axis::type alpha>
         __device__ [[nodiscard]] inline constexpr device::label_t n() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -86,7 +86,7 @@ namespace LBM
          * @brief Returns the number of mesh blocks per GPU in a particular axis direction
          * @tparam alpha The axis direction (X, Y or Z)
          **/
-        template <axis::type alpha>
+        template <const axis::type alpha>
         __device__ [[nodiscard]] inline constexpr device::label_t NUM_BLOCK() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -154,7 +154,7 @@ namespace LBM
              * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The coefficient indicating the direction along the axis (must be -1, 0 or 1)
              **/
-            template <axis::type alpha, const int coeff>
+            template <const axis::type alpha, const int coeff>
             __device__ [[nodiscard]] inline constexpr device::label_t shifted_coordinate() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -209,7 +209,7 @@ namespace LBM
              * @tparam alpha The axis direction (X, Y or Z)
              * @tparam coeff The coefficient indicating the direction along the axis (must be -1, 0 or 1)
              **/
-            template <axis::type alpha, const int coeff>
+            template <const axis::type alpha, const int coeff>
             __device__ [[nodiscard]] inline constexpr device::label_t shifted_block() const noexcept
             {
                 axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -262,26 +262,12 @@ namespace LBM
     /**
      * @brief Struct used to represent 2D indices in a more readable way
      **/
-    // template <const axis::type alpha>
     class dim2
     {
     public:
-        /**
-         * @brief Constructs from a linear index of a flattened 2D array with dimensions (block::n<alpha>(), block::n<beta>())
-         * @param[in] linearIdx The linear index to convert to 2D indices
-         **/
-        // __device__ __host__ [[nodiscard]] inline constexpr dim2(const device::label_t linearIdx) noexcept
-        //     : i_(i(linearIdx)),
-        //       j_(j(linearIdx))
-        // {
-        //     axis::assertions::validate<alpha, axis::NOT_NULL>();
-        // };
-
         __device__ __host__ [[nodiscard]] inline constexpr dim2(const device::label_t a, const device::label_t b) noexcept
             : i_(a),
-              j_(b){
-                  // axis::assertions::validate<alpha, axis::NOT_NULL>();
-              };
+              j_(b){};
 
         __device__ __host__ [[nodiscard]] dim2(const dim2 &) = delete;
         __device__ __host__ [[nodiscard]] dim2 &operator=(const dim2 &) = delete;
@@ -291,13 +277,13 @@ namespace LBM
             return i_;
         }
 
-        template <axis::type alpha>
+        template <const axis::type alpha>
         __device__ __host__ [[nodiscard]] static inline constexpr device::label_t i(const device::label_t linearIdx) noexcept
         {
             return linearIdx % (block::n<axis::orthogonal<alpha, 0>()>());
         }
 
-        template <axis::type alpha>
+        template <const axis::type alpha>
         __device__ __host__ [[nodiscard]] static inline constexpr device::label_t j(const device::label_t linearIdx) noexcept
         {
             return linearIdx / (block::n<axis::orthogonal<alpha, 0>()>());

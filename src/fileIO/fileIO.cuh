@@ -219,44 +219,6 @@ namespace LBM
         }
 
         /**
-         * @brief Determines starting index for field conversion loop
-         * @tparam PC Program control type
-         * @param[in] programCtrl The program control object
-         * @param[in] isLatestTime Flag indicating whether to start from latest time
-         * @return Starting index (0 for earliest, last index for latest)
-         **/
-        __host__ [[nodiscard]] host::label_t getStartIndex(const name_t &fileNamePrefix, const bool isLatestTime)
-        {
-            const std::vector<host::label_t> fileNameIndices = fileIO::timeIndices(fileNamePrefix);
-
-            return isLatestTime ? static_cast<host::label_t>(fileNameIndices.size() - 1) : 0;
-        }
-
-        template <class ProgramControl>
-        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl, const bool isLatestTime)
-        {
-            return getStartIndex(programCtrl.caseName(), isLatestTime);
-        }
-
-        /**
-         * @brief Determines starting index based on program control settings
-         * @tparam PC Program control type
-         * @param[in] programCtrl The program control object
-         * @return Starting index determined by command line arguments
-         **/
-        template <class ProgramControl>
-        __host__ [[nodiscard]] host::label_t getStartIndex(const ProgramControl &programCtrl)
-        {
-            return getStartIndex(programCtrl, programCtrl.input().isArgPresent("-latestTime"));
-        }
-
-        template <class ProgramControl>
-        __host__ [[nodiscard]] host::label_t getStartIndex(const name_t &fileNamePrefix, const ProgramControl &programCtrl)
-        {
-            return getStartIndex(fileNamePrefix, programCtrl.input().isArgPresent("-latestTime"));
-        }
-
-        /**
          * @brief Counts lines before the first occurrence of a target line.
          * @param[in] file Input file stream (position advanced).
          * @param[in] target The line content that stops counting (excluded).
@@ -266,13 +228,11 @@ namespace LBM
         {
             name_t line;
             host::label_t result = 0;
-            // bool found = false;
 
             while (std::getline(file, line))
             {
                 if (line == target)
                 {
-                    // found = true;
                     break;
                 }
                 ++result;

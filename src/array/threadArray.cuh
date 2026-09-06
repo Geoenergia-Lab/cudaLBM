@@ -297,6 +297,10 @@ namespace LBM
                 return N;
             }
 
+            /**
+             * @brief Sums all elements in the array.
+             * @return Total of every entry in the array.
+             **/
             __device__ __host__ [[nodiscard]] inline constexpr T sum() const __restrict__ noexcept
             {
                 return [&]<host::label_t... Is>(std::index_sequence<Is...>)
@@ -337,43 +341,15 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the indices of elements equal to a value in an array
-             * @tparam val The value to compare against
-             * @tparam Equal Whether to count equal or not equal elements
-             * @tparam ReturnSize Size of the returned array (must be equal to count<val, Equal>())
-             * @return Array containing indices of elements equal to val
+             * @brief Returns the index of the K-th element matching the given criterion.
+             *
+             * @tparam val Value to compare against.
+             * @tparam Equal If true, match values equal to val; otherwise match values not equal to val.
+             * @tparam K Zero-based index of the matching element to return.
+             * @return Index of the K-th matching element.
+             * @note This helper is used internally by `indices_of()` and `values_of()`.
              **/
-            // template <const T val, const bool Equal, const host::label_t ReturnSize>
-            // __device__ __host__ [[nodiscard]] inline constexpr const thread::array<host::label_t, ReturnSize> indices_of() const noexcept
-            // {
-            //     host::label_t j = 0;
-
-            //     constexpr const std::integral_constant<T, static_cast<T>(0)> value;
-            //     thread::array<host::label_t, ReturnSize> indices(value);
-
-            //     for (host::label_t i = 0; i < N; i++)
-            //     {
-            //         if constexpr (Equal)
-            //         {
-            //             if (data_[i] == val)
-            //             {
-            //                 indices[j] = i;
-            //                 j++;
-            //             }
-            //         }
-            //         else
-            //         {
-            //             if (!(data_[i] == val))
-            //             {
-            //                 indices[j] = i;
-            //                 j++;
-            //             }
-            //         }
-            //     }
-
-            //     return indices;
-            // }
-            template <const T val, bool Equal, host::label_t K>
+            template <const T val, const bool Equal, const host::label_t K>
             __device__ __host__ constexpr host::label_t get_kth_matching_index() const noexcept
             {
                 host::label_t count = 0;
@@ -389,6 +365,15 @@ namespace LBM
                 }
                 return 0; // fallback
             }
+
+            /**
+             * @brief Builds an array of indices whose elements satisfy a comparison criterion.
+             *
+             * @tparam val Value to compare against.
+             * @tparam Equal If true, select elements equal to val; otherwise select elements not equal to val.
+             * @tparam ReturnSize Number of matching indices to return.
+             * @return Array containing the matching indices.
+             **/
             template <const T val, const bool Equal, const host::label_t ReturnSize>
             __device__ __host__ [[nodiscard]] inline constexpr thread::array<host::label_t, ReturnSize> indices_of() const noexcept
             {
@@ -399,42 +384,13 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the indices of elements equal to a value in an array
-             * @tparam val The value to compare against
-             * @tparam Equal Whether to count equal or not equal elements
-             * @tparam ReturnSize Size of the returned array (must be equal to count<val, Equal>())
-             * @return Array containing indices of elements equal to val
+             * @brief Builds an array of values whose elements satisfy a comparison criterion.
+             *
+             * @tparam val Value to compare against.
+             * @tparam Equal If true, select elements equal to val; otherwise select elements not equal to val.
+             * @tparam ReturnSize Number of matching values to return.
+             * @return Array containing the matching values.
              **/
-            // template <const T val, const bool Equal, const host::label_t ReturnSize>
-            // __device__ __host__ [[nodiscard]] inline constexpr const thread::array<T, ReturnSize> values_of() const noexcept
-            // {
-            //     constexpr const std::integral_constant<T, static_cast<T>(0)> value;
-            //     thread::array<T, ReturnSize> coefficients(value);
-
-            //     host::label_t count = 0;
-
-            //     for (host::label_t i = 0; i < N; i++)
-            //     {
-            //         if constexpr (Equal)
-            //         {
-            //             if (data_[i] == val)
-            //             {
-            //                 coefficients[count] = data_[i];
-            //                 count++;
-            //             }
-            //         }
-            //         else
-            //         {
-            //             if (!(data_[i] == val))
-            //             {
-            //                 coefficients[count] = data_[i];
-            //                 count++;
-            //             }
-            //         }
-            //     }
-
-            //     return coefficients;
-            // }
             template <const T val, const bool Equal, const host::label_t ReturnSize>
             __device__ __host__ [[nodiscard]] inline constexpr thread::array<T, ReturnSize> values_of() const noexcept
             {
@@ -514,6 +470,15 @@ namespace LBM
                 static_assert(in_bounds<i, N>, "index is out of range: Must be < N.");
             }
 
+            /**
+             * @brief Returns the value at the K-th matching position of a comparison criterion.
+             *
+             * @tparam val Value to compare against.
+             * @tparam Equal If true, match values equal to val; otherwise match values not equal to val.
+             * @tparam K Ordinal index of the matching element to select.
+             * @return The value stored at the selected matching index.
+             * @note This is used as the value-producing counterpart to `get_kth_matching_index()`.
+             **/
             template <const T val, bool Equal, host::label_t K>
             __device__ __host__ constexpr T get_kth_matching_value() const noexcept
             {
@@ -534,6 +499,13 @@ namespace LBM
         };
     }
 
+    /**
+     * @brief Creates a zero-initialized thread array of the requested size.
+     *
+     * @tparam T Element type.
+     * @tparam N Number of elements.
+     * @return Zero-filled `thread::array<T, N>`.
+     **/
     template <typename T, const host::label_t N>
     __device__ __host__ [[nodiscard]] inline consteval const thread::array<T, N> zeros() noexcept
     {

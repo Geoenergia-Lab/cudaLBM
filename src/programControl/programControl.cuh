@@ -146,7 +146,7 @@ namespace LBM
         /**
          * @brief Destructor for the programControl class
          **/
-        ~programControl() noexcept
+        __host__ ~programControl() noexcept
         {
             std::cout << std::endl;
             std::cout << "End" << std::endl;

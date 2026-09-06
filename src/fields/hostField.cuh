@@ -71,7 +71,10 @@ namespace LBM
                 : FieldType(name),
                   self_(name, name, mesh, programCtrl) {}
 
-            ~scalarField() {}
+            /**
+             * @brief Default destructor
+             **/
+            __host__ ~scalarField() {}
 
             __host__ [[nodiscard]] inline constexpr ComponentType &self() noexcept { return self_; }
             __host__ [[nodiscard]] inline constexpr const ComponentType &self() const noexcept { return self_; }
@@ -102,7 +105,10 @@ namespace LBM
                   y_(name, fieldType<3>::makeComponentNames<words_t>(name)[1], mesh, programCtrl),
                   z_(name, fieldType<3>::makeComponentNames<words_t>(name)[2], mesh, programCtrl) {}
 
-            ~vectorField() {}
+            /**
+             * @brief Default destructor
+             **/
+            __host__ ~vectorField() {}
 
             __host__ [[nodiscard]] inline constexpr ComponentType &x() noexcept { return x_; }
             __host__ [[nodiscard]] inline constexpr ComponentType &y() noexcept { return y_; }
@@ -143,7 +149,10 @@ namespace LBM
                   yz_(name, fieldType<6>::makeComponentNames<words_t>(name)[4], mesh, programCtrl),
                   zz_(name, fieldType<6>::makeComponentNames<words_t>(name)[5], mesh, programCtrl) {}
 
-            ~symmetricTensorField() {}
+            /**
+             * @brief Default destructor
+             **/
+            __host__ ~symmetricTensorField() {}
 
             __host__ [[nodiscard]] inline constexpr ComponentType &xx() noexcept { return xx_; }
             __host__ [[nodiscard]] inline constexpr ComponentType &xy() noexcept { return xy_; }

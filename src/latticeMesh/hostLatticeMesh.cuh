@@ -122,8 +122,9 @@ namespace LBM
             __host__ [[nodiscard]] latticeMesh &operator=(const latticeMesh &) = delete;
 
             /**
-             * @brief Total number of points in the mesh
-             * @tparam T The size type
+             * @brief Returns the total number of lattice points in the mesh.
+             *
+             * @return The total number of grid points.
              **/
             __host__ [[nodiscard]] inline constexpr host::label_t size() const noexcept
             {
@@ -131,18 +132,21 @@ namespace LBM
             }
 
             /**
-             * @brief Number of points in the mesh in a specific direction
-             * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam T The size type
+             * @brief Returns the number of lattice points along a given axis.
+             *
+             * @tparam alpha Axis direction to query.
+             * @return Number of points in the selected direction.
              **/
-            template <axis::type alpha>
+            template <const axis::type alpha>
             __host__ [[nodiscard]] inline constexpr host::label_t dimension() const noexcept
             {
                 return dimensions_.value<alpha>();
             }
 
             /**
-             * @brief Number of points in the mesh in each specific direction
+             * @brief Returns the mesh dimensions in all three directions.
+             *
+             * @return Const reference to the mesh extents.
              **/
             __host__ [[nodiscard]] inline constexpr const host::blockLabel &dimensions() const noexcept
             {
@@ -150,10 +154,10 @@ namespace LBM
             }
 
             /**
-             * @brief Number of blocks in the mesh in a specific direction
-             * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam ValueType The size type
-             * @return The number of blocks in the specified direction
+             * @brief Returns the number of blocks along a given axis.
+             *
+             * @tparam alpha Axis direction to query.
+             * @return Number of blocks in the selected direction.
              **/
             template <const axis::type alpha>
             __host__ [[nodiscard]] inline constexpr host::label_t nBlocks() const noexcept
@@ -162,8 +166,9 @@ namespace LBM
             }
 
             /**
-             * @brief Number of blocks in the mesh in each specific direction
-             * @return host::blockLabel containing the number of blocks in each direction
+             * @brief Returns the number of blocks in each direction.
+             *
+             * @return Block counts for x, y, and z directions.
              **/
             __host__ [[nodiscard]] inline constexpr host::blockLabel nBlocks() const noexcept
             {
@@ -171,8 +176,9 @@ namespace LBM
             }
 
             /**
-             * @brief Get grid dimensions for CUDA kernel launches
-             * @return dim3 structure with grid dimensions
+             * @brief Returns the CUDA grid dimensions used for kernel launches.
+             *
+             * @return Grid dimensions for the three launch phases.
              **/
             __host__ [[nodiscard]] inline constexpr const std::array<dim3, 3> &gridBlock() const noexcept
             {
@@ -180,8 +186,9 @@ namespace LBM
             }
 
             /**
-             * @brief Get thread block dimensions for CUDA kernel launches
-             * @return dim3 structure with thread block dimensions
+             * @brief Returns the default CUDA thread-block dimensions for kernel launches.
+             *
+             * @return Thread block shape.
              **/
             __host__ [[nodiscard]] static inline consteval dim3 threadBlock() noexcept
             {
@@ -189,8 +196,9 @@ namespace LBM
             }
 
             /**
-             * @brief Get physical domain dimensions
-             * @return Const reference to pointVector containing domain size
+             * @brief Returns the physical domain size associated with the mesh.
+             *
+             * @return Const reference to the physical length vector.
              **/
             __host__ [[nodiscard]] inline constexpr const pointVector &L() const noexcept
             {
@@ -198,44 +206,87 @@ namespace LBM
             }
 
             /**
-             * @brief Boundary check for the faces
-             * @param[in] x,y,z The coordinate of the point
-             * @return True if the point is on the boundary, false otherwise
+             * @brief Tests whether the coordinate lies on the west boundary.
+             *
+             * @param[in] x X coordinate of the point.
+             * @return true if the point is on the west face; otherwise false.
              **/
             __host__ [[nodiscard]] inline constexpr bool West(const host::label_t x) const noexcept
             {
                 return (x == 0);
             }
+
+            /**
+             * @brief Tests whether the coordinate lies on the east boundary.
+             *
+             * @param[in] x X coordinate of the point.
+             * @return true if the point is on the east face; otherwise false.
+             **/
             __host__ [[nodiscard]] inline constexpr bool East(const host::label_t x) const noexcept
             {
                 return (x == dimensions_.x - 1);
             }
+
+            /**
+             * @brief Tests whether the coordinate lies on the south boundary.
+             *
+             * @param[in] y Y coordinate of the point.
+             * @return true if the point is on the south face; otherwise false.
+             **/
             __host__ [[nodiscard]] inline constexpr bool South(const host::label_t y) const noexcept
             {
                 return (y == 0);
             }
+
+            /**
+             * @brief Tests whether the coordinate lies on the north boundary.
+             *
+             * @param[in] y Y coordinate of the point.
+             * @return true if the point is on the north face; otherwise false.
+             **/
             __host__ [[nodiscard]] inline constexpr bool North(const host::label_t y) const noexcept
             {
                 return (y == dimensions_.y - 1);
             }
+
+            /**
+             * @brief Tests whether the coordinate lies on the back boundary.
+             *
+             * @param[in] z Z coordinate of the point.
+             * @return true if the point is on the back face; otherwise false.
+             **/
             __host__ [[nodiscard]] inline constexpr bool Back(const host::label_t z) const noexcept
             {
                 return (z == 0);
             }
+
+            /**
+             * @brief Tests whether the coordinate lies on the front boundary.
+             *
+             * @param[in] z Z coordinate of the point.
+             * @return true if the point is on the front face; otherwise false.
+             **/
             __host__ [[nodiscard]] inline constexpr bool Front(const host::label_t z) const noexcept
             {
                 return (z == dimensions_.z - 1);
             }
 
             /**
-             * @brief Returns the number of devices
-             * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam T The return type
+             * @brief Returns the per-axis device decomposition counts.
+             *
+             * @return Device counts in each direction.
              **/
             __host__ [[nodiscard]] inline constexpr const host::blockLabel &nDevices() const noexcept
             {
                 return nDevices_;
             }
+
+            /**
+             * @brief Returns the device count along a given axis.
+             *
+             * @tparam alpha Axis direction to query.
+             * @return Number of devices assigned along the selected axis.
+             **/
             template <const axis::type alpha>
             __host__ [[nodiscard]] inline constexpr host::label_t nDevices() const noexcept
             {
@@ -243,9 +294,11 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the allocation size along a block face for a given QF
-             * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam T The return type
+             * @brief Returns the halo size on a face for a given number of velocities.
+             *
+             * @tparam alpha Axis direction to inspect.
+             * @tparam QF Number of face values stored along the face.
+             * @return Number of entries needed for the face halo.
              **/
             template <const axis::type alpha, const host::label_t QF>
             __host__ [[nodiscard]] inline constexpr host::label_t nFaces() const noexcept
@@ -256,9 +309,11 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the allocation size along a block face for a given QF
-             * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam T The return type
+             * @brief Returns the per-device halo size for a given axis and face width.
+             *
+             * @tparam alpha Axis direction to inspect.
+             * @tparam QF Number of face values stored along the face.
+             * @return Number of face entries assigned to each device.
              **/
             template <const axis::type alpha, const host::label_t QF>
             __host__ [[nodiscard]] inline constexpr host::label_t nFacesPerDevice() const noexcept
@@ -269,7 +324,9 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the allocation size for the number of points per GPU
+             * @brief Returns the number of lattice points assigned to each device.
+             *
+             * @return Number of mesh points per GPU.
              **/
             __host__ [[nodiscard]] inline constexpr host::label_t sizePerDevice() const noexcept
             {
@@ -281,13 +338,22 @@ namespace LBM
             }
 
             /**
-             * @brief Computes the allocation size for the number of blocks per GPU
+             * @brief Returns the number of blocks assigned to each device along a specific axis.
+             *
+             * @tparam alpha Axis direction to inspect.
+             * @return Number of blocks per GPU in the selected direction.
              **/
             template <const axis::type alpha>
             __host__ [[nodiscard]] inline constexpr host::label_t blocksPerDevice() const noexcept
             {
                 return nBlocks<alpha>() / nDevices_.value<alpha>();
             }
+
+            /**
+             * @brief Returns the number of blocks per device in each direction.
+             *
+             * @return Block counts per GPU for x, y, and z directions.
+             **/
             __host__ [[nodiscard]] inline constexpr host::blockLabel blocksPerDevice() const noexcept
             {
                 return {nBlocks<axis::X>() / nDevices_.value<axis::X>(), nBlocks<axis::Y>() / nDevices_.value<axis::Y>(), nBlocks<axis::Z>() / nDevices_.value<axis::Z>()};
@@ -314,6 +380,11 @@ namespace LBM
              **/
             const std::array<dim3, 3> gridBlock_;
 
+            /**
+             * @brief Builds the CUDA grid launch dimensions from the per-device block layout.
+             *
+             * @return Three grid descriptors used by the solver kernels.
+             **/
             __host__ [[nodiscard]] inline constexpr const std::array<dim3, 3> initialiseGridBlock() const noexcept
             {
                 return {
@@ -323,10 +394,11 @@ namespace LBM
             }
 
             /**
-             * @brief Validates that the block decomposition is compatible with the mesh dimensions
+             * @brief Validates that the mesh dimensions are compatible with the CUDA block size.
              *
-             * @param[in] nBlocks The number of blocks in each direction
-             * @param[in] dimensions The dimensions of the mesh
+             * @param[in] dimensions Mesh extents to validate.
+             *
+             * @throws std::runtime_error If the mesh dimensions are not multiples of the block dimensions.
              **/
             __host__ static void validate_block_dimensions(const host::blockLabel &dimensions)
             {
@@ -351,18 +423,24 @@ namespace LBM
                     throw std::runtime_error("block::nx() * nxBlocks() * block::ny() * nyBlocks() * block::nz() * nzBlocks() not equal to mesh.size()\nMesh dimensions should be multiples of 8");
                 }
             }
+
+            /**
+             * @brief Validates the current mesh against the block layout.
+             **/
             __host__ inline void validate_block_dimensions() const
             {
                 validate_block_dimensions(dimensions_);
             }
 
             /**
-             * @brief Validates that the mesh dimensions do not exceed the limits of host::label_t
-             * and that the per-GPU allocation size does not exceed available GPU memory
+             * @brief Validates that the mesh size and per-device allocation size are safe.
              *
-             * @param[in] programCtrl The program control object containing device information
-             * @param[in] dimensions The dimensions of the mesh
-             * @param[in] nDevices The number of devices in each direction for multi-GPU decomposition
+             * @param[in] programCtrl Program configuration used to inspect device layout.
+             * @param[in] dimensions Mesh dimensions to validate.
+             * @param[in] nDevices Device decomposition layout.
+             *
+             * @details Ensures the mesh does not exceed the storage limits of `host::label_t`
+             * and checks the allocation footprint implied by the multi-GPU decomposition.
              **/
             __host__ static void validate_allocation_size(
                 [[maybe_unused]] const programControl &programCtrl,
@@ -382,16 +460,25 @@ namespace LBM
                 }
             }
 
+            /**
+             * @brief Validates the current mesh allocation against the configured device layout.
+             *
+             * @param[in] programCtrl Program configuration used to inspect the active devices.
+             **/
             __host__ inline void validate_allocation_size(const programControl &programCtrl) const
             {
                 validate_allocation_size(programCtrl, dimensions_, nDevices_);
             }
 
             /**
-             * @brief Initializes device constants for each GPU based on the program control and mesh dimensions
-             * @param[in] programCtrl The program control object containing simulation parameters
-             * @param[in] dimensions The dimensions of the mesh
-             * @param[in] nDevices The number of devices in each direction for multi-GPU decomposition
+             * @brief Copies the mesh constants onto each GPU used by the simulation.
+             *
+             * @param[in] programCtrl Program configuration controlling the active devices.
+             * @param[in] dimensions Mesh dimensions.
+             * @param[in] nBlocks Number of blocks in each direction.
+             * @param[in] nDevices Device decomposition across the domain.
+             *
+             * @details Synchronises each device and uploads the mesh metadata needed by kernels.
              **/
             __host__ static void set_constants(
                 const programControl &programCtrl,
@@ -432,6 +519,11 @@ namespace LBM
                     });
             }
 
+            /**
+             * @brief Copies the current mesh constants onto the active GPU devices.
+             *
+             * @param[in] programCtrl Program configuration used to determine the active GPU layout.
+             **/
             __host__ inline void set_constants(const programControl &programCtrl) const
             {
                 set_constants(programCtrl, dimensions_, nBlocks(), nDevices_);

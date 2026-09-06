@@ -148,7 +148,7 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~density() {}
+            __host__ ~density() {}
             __host__ [[nodiscard]] density(const density &) = delete;
             __host__ [[nodiscard]] density &operator=(const density &) = delete;
 

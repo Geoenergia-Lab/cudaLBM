@@ -205,7 +205,7 @@ namespace LBM
          * @param[in] value The value to copy to the symbol
          **/
         template <typename T>
-        void copyToSymbol(const T &symbol, const T value) noexcept
+        __host__ void copyToSymbol(const T &symbol, const T value) noexcept
         {
             syncDevice();
             const T valueTemp = value;
@@ -225,7 +225,7 @@ namespace LBM
          * @param[in] value The value to copy to the symbol
          **/
         template <typename T, const host::label_t N>
-        void copyToSymbol(const T (&symbol)[N], const T (&value)[N]) noexcept
+        __host__ void copyToSymbol(const T (&symbol)[N], const T (&value)[N]) noexcept
         {
             syncDevice();
 
@@ -245,7 +245,7 @@ namespace LBM
          * @param[in] index The index in the array to copy the value to
          **/
         template <typename T, const host::label_t N, typename SizeType>
-        void copyToSymbol(const T (&symbol)[N], const T value, const SizeType index) noexcept
+        __host__ void copyToSymbol(const T (&symbol)[N], const T value, const SizeType index) noexcept
         {
             if (static_cast<host::label_t>(index) >= N)
             {

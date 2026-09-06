@@ -186,7 +186,7 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~strainRateTensor() {}
+            __host__ ~strainRateTensor() {}
             __host__ [[nodiscard]] strainRateTensor(const strainRateTensor &) = delete;
             __host__ [[nodiscard]] strainRateTensor &operator=(const strainRateTensor &) = delete;
 

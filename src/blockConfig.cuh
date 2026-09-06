@@ -106,7 +106,7 @@ namespace LBM
         /**
          * @brief Threads per block in an arbitrary dimension (compile-time constant)
          **/
-        template <axis::type alpha, typename T = device::label_t>
+        template <const axis::type alpha, typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T n() noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();

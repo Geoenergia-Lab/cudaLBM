@@ -148,7 +148,7 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~secondOrderMoments() {}
+            __host__ ~secondOrderMoments() {}
             __host__ [[nodiscard]] secondOrderMoments(const secondOrderMoments &) = delete;
             __host__ [[nodiscard]] secondOrderMoments &operator=(const secondOrderMoments &) = delete;
 

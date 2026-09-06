@@ -59,3 +59,6 @@ applications/testExecutable/*/*/*.dat
 applications/testExecutable/*/*/*.vts
 applications/testExecutable/*/*/*.vtu
 applications/testExecutable/*/logs
+
+# Pre-commit folder ignores
+preCommit/__pycache__

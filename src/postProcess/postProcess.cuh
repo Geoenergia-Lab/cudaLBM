@@ -59,14 +59,15 @@ namespace LBM
     namespace postProcess
     {
         /**
-         * @brief Calculates physical coordinates of lattice points
-         * @tparam T Coordinate data type (typically scalar_t or double)
-         * @param[in] mesh The lattice mesh
-         * @return Vector of coordinates in interleaved format [x0, y0, z0, x1, y1, z1, ...]
+         * @brief Builds the physical coordinate array for each lattice node.
          *
-         * This function converts lattice indices to physical coordinates using
-         * the domain dimensions stored in the mesh. Coordinates are normalized
-         * to the physical domain size and distributed evenly across the lattice.
+         * @tparam T Coordinate value type.
+         * @param[in] mesh Lattice mesh defining the domain geometry.
+         * @return Vector of physical coordinates in interleaved form:
+         *         [x0, y0, z0, x1, y1, z1, ...].
+         *
+         * @details Converts each lattice index into a physical coordinate using the mesh
+         * spacing and dimensions. The values are stored in a single flat vector.
          **/
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshCoordinates(const host::latticeMesh &mesh)
@@ -89,11 +90,14 @@ namespace LBM
         }
 
         /**
-         * @brief Calculates the connectivity of the points of a latticeMesh object
-         * @tparam one_based If true, indices are 1-based. If false, 0-based.
-         * @tparam IndexType The integer type for the connectivity data (e.g., uint32_t, host::label_t).
-         * @param[in] mesh The lattice mesh
-         * @return An std::vector of type IndexType containing the latticeMesh object connectivity
+         * @brief Builds the connectivity list for each hexahedral cell in the mesh.
+         *
+         * @tparam one_based If true, element indices are one-based; otherwise zero-based.
+         * @tparam IndexType Integer type used for the connectivity entries.
+         * @param[in] mesh Lattice mesh to process.
+         * @return Vector containing the cell connectivity for the mesh.
+         *
+         * @details Each cell contributes eight point indices forming a hexahedron.
          **/
         template <const bool one_based, typename IndexType>
         __host__ [[nodiscard]] const std::vector<IndexType> meshConnectivity(const host::latticeMesh &mesh)
@@ -129,10 +133,14 @@ namespace LBM
         }
 
         /**
-         * @brief Calculates the point offsets of the points of a latticeMesh object
-         * @tparam T The integer type for the offset data (e.g., uint32_t, host::label_t).
-         * @param[in] mesh The lattice mesh
-         * @return An std::vector of type T containing the latticeMesh object point offsets
+         * @brief Builds the cell offset array for the mesh.
+         *
+         * @tparam T Integer type used for the offsets.
+         * @param[in] mesh Lattice mesh.
+         * @return Vector containing the per-cell offset values.
+         *
+         * @details The returned values are the cumulative offsets used for VTK-like
+         * connectivity or element writing.
          **/
         template <typename T>
         __host__ [[nodiscard]] const std::vector<T> meshOffsets(const host::latticeMesh &mesh)
@@ -158,8 +166,19 @@ namespace LBM
     public:
         static constexpr const char *directoryPrefix = "postProcess";
 
+        /**
+         * @brief Verifies that the output directory has enough free space for a file export.
+         *
+         * @tparam Writer Output file writer type.
+         * @param[in] mesh Lattice mesh used to estimate output size.
+         * @param[in] varNames Variable names included in the exported field data.
+         * @param[in] fileName Base file name for the output.
+         *
+         * @details Computes the expected disk usage from the mesh and variable metadata
+         * and throws if the file cannot be written safely.
+         **/
         template <class Writer>
-        static inline void diskSpaceAssertion(const host::latticeMesh &mesh, const words_t &varNames, const name_t &fileName)
+        __host__ static inline void diskSpaceAssertion(const host::latticeMesh &mesh, const words_t &varNames, const name_t &fileName)
         {
             fileSystem::diskSpaceAssertion<
                 Writer::file_format,
@@ -172,18 +191,29 @@ namespace LBM
                 fileName);
         }
 
+        /**
+         * @brief Prints a status entry to the console.
+         *
+         * @param[in] key Status label.
+         * @param[in] value Boolean result to display.
+         **/
         __host__ static inline void printStatus(const name_t &key, const bool value) noexcept
         {
             std::cout << IO::whitespace<4>{} << key << ": " << (value ? "OK;" : "Fail;") << std::endl;
         }
 
         /**
-         * @brief Templated writer function for post-processing
-         * @tparam Writer The type of file output (VTU, VTS, Tecplot)
-         * @param[in] solutionVars The solution variables to write
-         * @param[in] fileName The name of the file to be written
-         * @param[in] mesh The lattice mesh
-         * @param[in] varNames The names of the variables to write
+         * @brief Writes post-processed solution data to the requested output format.
+         *
+         * @tparam Writer Concrete output writer type.
+         * @param[in] solutionVars Solution variables to export, grouped by field.
+         * @param[in] fileName Output file name without extension.
+         * @param[in] mesh Mesh describing the geometry.
+         * @param[in] varNames Names of the exported solution variables.
+         *
+         * @details Validates the variable count and field sizes, creates the output
+         * directory if needed, checks disk space, and writes the file using the selected
+         * writer backend.
          **/
         template <class Writer>
         __host__ static void write(

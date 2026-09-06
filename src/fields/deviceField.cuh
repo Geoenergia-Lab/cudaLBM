@@ -164,7 +164,7 @@ namespace LBM
             /**
              * @brief Destructor for fieldBase
              **/
-            ~fieldBase() {}
+            __host__ ~fieldBase() {}
 
             /**
              * @brief Save the field data to disk using the provided Writer class.

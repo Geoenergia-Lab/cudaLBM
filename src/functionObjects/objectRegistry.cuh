@@ -91,7 +91,7 @@ namespace LBM
         /**
          * @brief Default destructor
          **/
-        ~objectRegistry() {}
+        __host__ ~objectRegistry() {}
 
         /**
          * @brief Disable copying
@@ -103,7 +103,7 @@ namespace LBM
          * @brief Executes all registered function object calculations for given time step
          * @param[in] timeStep The current simulation time step
          **/
-        inline void calculate() noexcept
+        __host__ inline void calculate() noexcept
         {
             for (const functionObjects::calculateFunction &func : functionVector_)
             {
@@ -115,7 +115,7 @@ namespace LBM
          * @brief Executes all registered function object calculations for given time step
          * @param[in] timeStep The current simulation time step
          **/
-        inline void save(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
+        __host__ inline void save(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
         {
             for (const functionObjects::saveFunction &save : saveVector_)
             {
@@ -164,6 +164,11 @@ namespace LBM
             return calls;
         }
 
+        /**
+         * @brief Adds a call to a calculate function to the list of functions to call
+         * @param[out] calls The list of functions to be called
+         * @param[in] object The object whose calculate function to add
+         **/
         template <class C>
         __host__ static void addObjectCall(std::vector<functionObjects::calculateFunction> &calls, C &object) noexcept
         {
@@ -242,6 +247,11 @@ namespace LBM
             return calls;
         }
 
+        /**
+         * @brief Adds a call to a save function to the list of functions to call
+         * @param[out] calls The list of functions to be called
+         * @param[in] object The object whose save function to add
+         **/
         template <class C>
         __host__ static void addSaveCall(std::vector<functionObjects::saveFunction> &calls, C &object) noexcept
         {

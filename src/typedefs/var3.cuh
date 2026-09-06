@@ -82,7 +82,7 @@ namespace LBM
          * @brief Access the data by axis
          * @tparam alpha The axis direction (X, Y or Z)
          **/
-        template <axis::type alpha, typename ValueType = value_type>
+        template <const axis::type alpha, typename ValueType = value_type>
         __device__ __host__ [[nodiscard]] constexpr ValueType value() const noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
@@ -105,6 +105,7 @@ namespace LBM
 
         /**
          * @brief Print the structure to an output stream
+         * @tparam LineBreak Add a line break
          * @param[in] name Name to identify the structure in the output
          * @param[in] os Output stream to write to
          **/
@@ -121,6 +122,7 @@ namespace LBM
 
         /**
          * @brief Print the structure to std::cout
+         * @tparam LineBreak Add a line break
          * @param[in] name Name to identify the structure in the output
          **/
         template <const bool LineBreak = false>
@@ -145,6 +147,7 @@ namespace LBM
 
             /**
              * @brief Total size
+             * @tparam ValueType The return type
              **/
             template <typename ValueType = value_type>
             __device__ __host__ [[nodiscard]] inline constexpr ValueType size() const noexcept

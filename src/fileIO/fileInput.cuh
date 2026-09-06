@@ -60,7 +60,7 @@ namespace LBM
          * @param[in,out] value Reference to value whose endianness will be swapped
          **/
         template <typename T>
-        void swapEndian(T &value)
+        __host__ void swapEndian(T &value)
         {
             char *bytes = reinterpret_cast<char *>(&value);
             for (host::label_t i = 0; i < sizeof(T) / 2; ++i)
@@ -75,7 +75,7 @@ namespace LBM
          * @param[in,out] data Vector whose elements' endianness will be swapped
          **/
         template <typename T>
-        void swapEndianVector(std::vector<T> &data)
+        __host__ void swapEndianVector(std::vector<T> &data)
         {
             for (T &value : data)
             {

@@ -55,7 +55,7 @@ namespace LBM
     struct system
     {
         /**
-         * @brief Supported operating systems (Linux, Windows)
+         * @brief Supported operating systems for the build.
          **/
         typedef enum distroEnum : int64_t
         {
@@ -65,7 +65,10 @@ namespace LBM
         } distroEnum;
 
         /**
-         * @brief Get the name of the operating system
+         * @brief Detects the current operating system.
+         *
+         * @return The detected OS enum value:
+         *         `LINUX`, `WINDOWS`, or `UNDEFINED` if unsupported.
          **/
         __host__ [[nodiscard]] static inline constexpr distroEnum distro() noexcept
         {
@@ -79,7 +82,9 @@ namespace LBM
         }
 
         /**
-         * @brief Check if the system has more than 1 GPU
+         * @brief Determines whether the build enables multi-GPU support.
+         *
+         * @return true if `HAS_MULTI_GPU` is defined and enabled; otherwise false.
          **/
         __host__ [[nodiscard]] static inline consteval bool hasMultiGPU() noexcept
         {
@@ -91,8 +96,11 @@ namespace LBM
         }
 
         /**
-         * @brief Queries the number of available CUDA devices
-         * @return Count of available CUDA devices
+         * @brief Queries the number of available CUDA devices.
+         *
+         * @tparam T Output numeric type used to store the device count.
+         * @return The number of CUDA devices available, cast to type T.
+         *         Returns 0 if the query fails.
          **/
         template <typename T>
         __host__ [[nodiscard]] static inline T deviceCount() noexcept
@@ -108,27 +116,50 @@ namespace LBM
             return static_cast<T>(N);
         }
 
+        /**
+         * @brief Returns the bit-width of the scalar type used by the solver.
+         *
+         * @return The number of bits in `scalar_t`.
+         **/
         __host__ [[nodiscard]] static inline consteval host::label_t scalarSize() noexcept
         {
             return static_cast<host::label_t>(sizeof(scalar_t)) * static_cast<host::label_t>(8);
         }
 
+        /**
+         * @brief Returns the bit-width of the device label type.
+         *
+         * @return The number of bits in `device::label_t`.
+         **/
         __host__ [[nodiscard]] static inline consteval host::label_t labelSize() noexcept
         {
             return static_cast<host::label_t>(sizeof(device::label_t)) * static_cast<host::label_t>(8);
         }
 
+        /**
+         * @brief Identifies the endianness of the current binary.
+         *
+         * @return A string describing the machine endianness.
+         **/
         __host__ [[nodiscard]] static inline consteval const char *binaryType() noexcept
         {
             return endian::nameString();
         }
 
+        /**
+         * @brief Prints the current system information block to the supplied stream.
+         *
+         * @param[in,out] out Output stream to write the information to.
+         **/
         __host__ static void print(std::ostream &out)
         {
             IO::printBlock(out, "systemInformation", "{", "};", "binaryType", binaryType(), "scalarSize", scalarSize(), "labelSize", labelSize());
             out << std::endl;
         }
 
+        /**
+         * @brief Prints the system information block to standard output.
+         **/
         __host__ static void print()
         {
             print(std::cout);
@@ -136,7 +167,7 @@ namespace LBM
     };
 
     /**
-     * @brief Assert that the operating system is valid
+     * @brief Static assertion ensuring the detected operating system is valid.
      **/
     static_assert(!(system::distro() == system::UNDEFINED), "Operating system must be either LINUX or WINDOWS");
 }

@@ -59,7 +59,15 @@ namespace LBM
     class signalHandler
     {
     public:
-        signalHandler()
+        /**
+         * @brief Installs the interrupt handler used to mark the program as failed on Ctrl+C or SIGINT.
+         *
+         * @details On Windows, the console control handler is registered to intercept Ctrl+C and Ctrl+Break.
+         * On POSIX systems, a `sigaction` handler is installed for `SIGINT`.
+         *
+         * @throws std::runtime_error If the OS-specific handler registration fails.
+         **/
+        __host__ [[nodiscard]] signalHandler()
         {
 #ifdef _WIN32
             // Register a console control handler for Ctrl+C and Ctrl+Break.
@@ -80,7 +88,13 @@ namespace LBM
 #endif
         }
 
-        ~signalHandler()
+        /**
+         * @brief Removes the installed interrupt handler.
+         *
+         * @details Restores the previous signal state on POSIX systems and unregisters the
+         * console control handler on Windows.
+         **/
+        __host__ ~signalHandler()
         {
 #ifdef _WIN32
             // Remove our handler from the console control handler chain.
@@ -96,9 +110,13 @@ namespace LBM
 
     private:
         /**
-         * @brief Common implementation of storing the program status for Linux and Windows systems
+         * @brief Common signal-processing path used by both Windows and POSIX handlers.
+         *
+         * @param[in] signal Signal number passed by the OS.
+         *
+         * @details Marks the program state as failed so the simulation can terminate cleanly.
          **/
-        static void handleSignalImpl([[maybe_unused]] int signal)
+        __host__ static void handleSignalImpl([[maybe_unused]] int signal)
         {
             std::cout << "Abort signal received" << std::endl;
             runTime::program_status.store(runTime::programStatus::BAD, std::memory_order_relaxed);
@@ -106,10 +124,10 @@ namespace LBM
 
 #ifdef _WIN32
         /**
-         * @brief Windows console control handler.
+         * @brief Windows console-control callback for interrupt events.
          *
-         * @param dwCtrlType The type of control event.
-         * @return TRUE if the event was handled, FALSE to pass to the next handler.
+         * @param[in] dwCtrlType Event type reported by the OS.
+         * @return TRUE if the event was handled and should not be passed further; otherwise FALSE.
          **/
         __host__ [[nodiscard]] static BOOL WINAPI handleSignal(const DWORD dwCtrlType)
         {
@@ -126,9 +144,11 @@ namespace LBM
         }
 #else
         /**
-         * @brief POSIX signal handler
+         * @brief POSIX callback invoked when SIGINT is received.
+         *
+         * @param[in] signal Signal number delivered by the OS.
          **/
-        static void handleSignal([[maybe_unused]] int signal)
+        __host__ static void handleSignal([[maybe_unused]] int signal)
         {
             handleSignalImpl(signal);
         }

@@ -584,7 +584,6 @@ namespace LBM
                 {
                     // Split by space and remove whitespace
                     const words_t s = splitByWhitespace(S[i]);
-                    // const words_t s = split<" "[0], true>(S[i]);
 
                     // Check that the last char is ;
                     // Perform the exit here if the above string is not equal to ;

@@ -177,6 +177,10 @@ namespace LBM
             return static_cast<T>(numerator) / static_cast<T>(denominator);
         }
 
+        /**
+         * @brief Save the solution fields in a particular format
+         * @tparam Writer Type of file writer to use
+         **/
         template <class Writer>
         __host__ void save()
         {

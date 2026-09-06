@@ -54,6 +54,9 @@ namespace LBM
 {
     namespace runTime
     {
+        /**
+         * @brief Error codes used to report simulation or runtime faults.
+         **/
         typedef enum programStatusEnum : int
         {
             BAD = -1,
@@ -62,6 +65,9 @@ namespace LBM
 
         namespace error
         {
+            /**
+             * @brief Enumeration of runtime error conditions recognized by the solver.
+             **/
             typedef enum errorCodeEnum : int
             {
                 NO_ERROR,
@@ -77,6 +83,14 @@ namespace LBM
                 INVALID_WRITER_FUNCTION
             } code;
 
+            /**
+             * @brief Returns the human-readable error message associated with each runtime error code.
+             *
+             * @return Array of message strings indexed by `error::code`.
+             *
+             * @details The array contains one entry per error enum value, with position 0 reserved
+             * for the no-error case.
+             **/
             __host__ [[nodiscard]] inline consteval const std::array<const char *, 11> messages() noexcept
             {
                 return {
@@ -94,14 +108,28 @@ namespace LBM
             }
         }
 
-        // Single std::atomic storing the status of the program (BAD or GOOD)
+        /**
+         * @brief Stores whether the program is currently in a healthy runtime state.
+         **/
         static constinit std::atomic<programStatus> program_status(GOOD);
+
+        /**
+         * @brief Stores the first CUDA runtime error reported by the program.
+         **/
         static constinit std::atomic<cudaError_t> first_cuda_error(cudaSuccess);
+
+        /**
+         * @brief Stores the first non-CUDA runtime error code reported by the program.
+         **/
         static constinit std::atomic<int> first_reg_error(0);
 
         /**
-         * @brief Updates the internal allocation status and records the first CUDA error encountered.
-         * @param[in] code The CUDA error code to process.
+         * @brief Updates the runtime error state from a CUDA error code.
+         *
+         * @param[in] code CUDA error code reported by the runtime.
+         *
+         * @details Records the first CUDA error encountered and marks the program as failed
+         * if a non-success status is reported.
          **/
         __host__ void update_codes(const cudaError_t code) noexcept
         {
@@ -117,6 +145,14 @@ namespace LBM
             }
         }
 
+        /**
+         * @brief Updates the runtime error state from a CUDA error code.
+         *
+         * @param[in] code CUDA error code reported by the runtime.
+         *
+         * @details Records the first CUDA error encountered and marks the program as failed
+         * if a non-success status is reported.
+         **/
         __host__ void update_codes(const int code) noexcept
         {
             // Record the first error (only if no error has been recorded yet).

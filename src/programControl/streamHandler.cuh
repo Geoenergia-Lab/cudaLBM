@@ -110,7 +110,7 @@ namespace LBM
          * Automatically synchronizes and destroys all CUDA streams upon
          * object destruction. Ensures proper cleanup of GPU resources.
          **/
-        ~streamHandler() noexcept
+        __host__ ~streamHandler() noexcept
         {
             for (const cudaStream_t &stream : streams_)
             {
@@ -129,7 +129,7 @@ namespace LBM
          * @brief Synchronizes a specific CUDA stream
          * @param[in] i Integral constant representing the stream index
          **/
-        inline void synchronize(const host::label_t i) const noexcept
+        __host__ inline void synchronize(const host::label_t i) const noexcept
         {
             errorHandler::handleInline(cudaStreamSynchronize(streams_[i]));
         }

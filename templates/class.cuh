@@ -75,6 +75,8 @@ namespace LBM
 
         /**
          * @brief Parameterized constructor
+         * @tparam ParamType1 Type of the first parameter of the constructor
+         * @tparam ParamType2 Type of the second parameter of the constructor
          * @param[in] param1 Description of first parameter
          * @param[in] param2 Description of second parameter
          **/
@@ -90,30 +92,32 @@ namespace LBM
          * @brief Copy constructor
          * @param[in] other Object to copy from
          **/
-        YourClassName(const YourClassName &other) {}
+        __host__ YourClassName(const YourClassName &other) {}
 
         /**
          * @brief Move constructor
          * @param[in] other Object to move from
          **/
-        YourClassName(const YourClassName &&other) noexcept {}
+        __host__ YourClassName(const YourClassName &&other) noexcept {}
 
         /**
          * @brief Copy assignment operator
          * @param[in] other Object to copy from
          * @return Reference to this object
          **/
-        YourClassName &operator=(const YourClassName &other) {}
+        __host__ YourClassName &operator=(const YourClassName &other) {}
 
         /**
          * @brief Move assignment operator
          * @param[in] other Object to move from
          * @return Reference to this object
          **/
-        YourClassName &operator=(const YourClassName &&other) noexcept {}
+        __host__ YourClassName &operator=(const YourClassName &&other) noexcept {}
 
         /**
          * @brief Example member function
+         * @tparam ReturnType The return type
+         * @tparam InputType The input type
          * @param[in] input Description of input parameter
          * @return Description of return value
          **/
@@ -122,6 +126,8 @@ namespace LBM
 
         /**
          * @brief Example CUDA device function
+         * @tparam DeviceReturnType The return type
+         * @tparam DeviceInputType The type of the input
          * @param[in] input Description of input parameter
          * @return Description of return value
          **/
@@ -135,21 +141,25 @@ namespace LBM
 
         /**
          * @brief Example private helper function
+         * @tparam HelperInputType Type of the helper input
          * @param[in] input Description of input parameter
          **/
         template <class HelperInputType>
-        void helperFunction(const HelperInputType input) {}
+        __host__ void helperFunction(const HelperInputType input) {}
     };
 
     /**
      * @brief Example non-member function
+     * @tparam ReturnType The return type of the function
+     * @tparam ClassName The name of the class
+     * @tparam ParamType The name of the parameter
      * @param[in] obj Instance of YourClassName
      * @param[in] param Additional parameter
      * @return Description of return value
      * @note Optional
      **/
-    template <class ReturnType, class ParamType>
-    __device__ __host__ [[nodiscard]] ReturnType nonMemberFunction(const YourClassName &obj, const ParamType param) {}
+    template <class ReturnType, class ClassName, class ParamType>
+    __device__ __host__ [[nodiscard]] ReturnType nonMemberFunction(const ClassName &obj, const ParamType param) {}
 
 } // namespace LBM
 

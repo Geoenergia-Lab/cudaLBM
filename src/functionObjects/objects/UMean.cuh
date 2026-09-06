@@ -148,7 +148,7 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~velocityVector() {}
+            __host__ ~velocityVector() {}
             __host__ [[nodiscard]] velocityVector(const velocityVector &) = delete;
             __host__ [[nodiscard]] velocityVector &operator=(const velocityVector &) = delete;
 

@@ -59,13 +59,18 @@ namespace LBM
     struct blockHaloInitialisationKernel
     {
         /**
-         * @brief Saves the halo populations to both the read and write buffers
-         * @param[in] moments The array of 10 moments
-         * @param[in] readBuffer Collection of mutable pointers to the block halo faces used during streaming
-         * @param[in] writeBuffer Collection of mutable pointers to the block halo faces used after streaming
-         * @param[in] Tx Three-dimensional thread coordinates
-         * @param[in] Bx Three-dimensional block coordinates
-         * @param[in] point The global point coordinate
+         * @brief Saves the reconstructed halo populations into both halo buffers.
+         *
+         * @param[in] moments Local moment array associated with the current lattice node.
+         * @param[in] readBuffer Halo storage used for reads during the streaming step.
+         * @param[in] writeBuffer Halo storage used for writes after the streaming step.
+         * @param[in] Tx Thread coordinates within the current block.
+         * @param[in] Bx Block coordinates in the global mesh.
+         * @param[in] point Global point coordinate associated with the current halo element.
+         *
+         * @details Reconstructs the distribution function from the moments and writes it
+         * to both the read and write halo buffers so the neighbouring data is available
+         * to the next streaming step.
          **/
         __device__ static inline void saveHalo(
             const momentsArray &moments,
@@ -83,9 +88,13 @@ namespace LBM
         }
 
         /**
-         * @brief Implements solution of the lattice Boltzmann method using the moment representation and the D3Q19 velocity set
-         * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
-         * @param[in] haloBuffer Collection of 12 pointers to device arrays on the GPU used for the block halo
+         * @brief Initialises the block halo for a single lattice block.
+         *
+         * @param[in] devPtrs Device pointer collection containing the moment arrays.
+         * @param[in] haloBuffer Pointer collection holding the halo buffers for all six faces.
+         *
+         * @details Loads the local moments for the current lattice point, synchronises the
+         * block, and writes the reconstructed population data to the halo storage.
          **/
         __device__ static inline void haloInitialisation(
             const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> &devPtrs,
@@ -139,11 +148,10 @@ namespace LBM
     namespace kernel
     {
         /**
-         * @brief Implements solution of the lattice Boltzmann method using the moment representation and the D3Q19 velocity set
-         * @param[in] devPtrs Collection of 10 pointers to device arrays on the GPU
-         * @param[in] haloBuffer Collection of 12 pointers to device arrays on the GPU used for the block halo
-         * @param[in] Q The number of discrete velocities in the velocity set
-         * @param[in] thermalModel The thermal model used in the simulation (thermal or isothermal)
+         * @brief Launches the D3Q19 thermal halo initialisation kernel.
+         *
+         * @param[in] devPtrs Device pointer collection containing the moment arrays.
+         * @param[in] haloBuffer Pointer collection holding the halo buffers for the block.
          **/
         __launch_bounds__(block::maxThreads(), 1) __global__ void momentBasedLBMInitialisationD3Q19Thermal(
             const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
@@ -152,6 +160,12 @@ namespace LBM
             blockHaloInitialisationKernel<D3Q19<Thermal>>::haloInitialisation(devPtrs, haloBuffer);
         }
 
+        /**
+         * @brief Launches the D3Q19 isothermal halo initialisation kernel.
+         *
+         * @param[in] devPtrs Device pointer collection containing the moment arrays.
+         * @param[in] haloBuffer Pointer collection holding the halo buffers for the block.
+         **/
         __launch_bounds__(block::maxThreads(), 1) __global__ void momentBasedLBMInitialisationD3Q19Isothermal(
             const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<12, scalar_t> haloBuffer)
@@ -159,6 +173,12 @@ namespace LBM
             blockHaloInitialisationKernel<D3Q19<Isothermal>>::haloInitialisation(devPtrs, haloBuffer);
         }
 
+        /**
+         * @brief Launches the D3Q27 thermal halo initialisation kernel.
+         *
+         * @param[in] devPtrs Device pointer collection containing the moment arrays.
+         * @param[in] haloBuffer Pointer collection holding the halo buffers for the block.
+         **/
         __launch_bounds__(block::maxThreads(), 1) __global__ void momentBasedLBMInitialisationD3Q27Thermal(
             const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<12, scalar_t> haloBuffer)
@@ -166,6 +186,12 @@ namespace LBM
             blockHaloInitialisationKernel<D3Q27<Thermal>>::haloInitialisation(devPtrs, haloBuffer);
         }
 
+        /**
+         * @brief Launches the D3Q27 isothermal halo initialisation kernel.
+         *
+         * @param[in] devPtrs Device pointer collection containing the moment arrays.
+         * @param[in] haloBuffer Pointer collection holding the halo buffers for the block.
+         **/
         __launch_bounds__(block::maxThreads(), 1) __global__ void momentBasedLBMInitialisationD3Q27Isothermal(
             const device::ptrCollection<NUMBER_MOMENTS<host::label_t>(), const scalar_t> devPtrs,
             const device::ptrCollection<12, scalar_t> haloBuffer)
@@ -173,6 +199,15 @@ namespace LBM
             blockHaloInitialisationKernel<D3Q27<Isothermal>>::haloInitialisation(devPtrs, haloBuffer);
         }
 
+        /**
+         * @brief Returns the correct halo-initialisation kernel for the requested velocity set.
+         *
+         * @tparam VelocitySet Velocity set type used by the current simulation.
+         * @return Function pointer to the corresponding kernel launch entry point.
+         *
+         * @details Selects the appropriate D3Q19/D3Q27 thermal or isothermal initialisation
+         * kernel based on the compile-time velocity set type.
+         **/
         template <class VelocitySet>
         __host__ inline consteval auto momentBasedLBMInitialisation() noexcept
         {

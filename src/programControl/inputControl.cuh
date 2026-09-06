@@ -77,7 +77,7 @@ namespace LBM
         /**
          * @brief Destructor for the inputControl class
          **/
-        ~inputControl() noexcept {}
+        __host__ ~inputControl() noexcept {}
 
         /**
          * @brief Disable copying

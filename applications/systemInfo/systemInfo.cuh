@@ -57,6 +57,12 @@ SourceFiles
 
 namespace LBM
 {
+    /**
+     * @brief Returns the platform-specific file extension used for generated hardware metadata.
+     *
+     * @return A string containing the output file extension for the current OS:
+     *         ".bat" on Windows and ".info" on Linux.
+     **/
     __host__ inline consteval const char *hardware_info_file_extension() noexcept
     {
         if constexpr (system::distro() == system::WINDOWS)
@@ -73,6 +79,11 @@ namespace LBM
         return "";
     }
 
+    /**
+     * @brief Returns the platform-specific comment prefix used in generated hardware files.
+     *
+     * @return The comment marker for the current OS: "::" on Windows and "#" on Linux.
+     **/
     __host__ [[nodiscard]] inline consteval const char *comment_string() noexcept
     {
         if constexpr (system::distro() == system::WINDOWS)
@@ -89,6 +100,15 @@ namespace LBM
         return "";
     }
 
+    /**
+     * @brief Writes a single hardware metadata line to the output stream.
+     *
+     * @param[in,out] outputFile Open output stream receiving the metadata line.
+     * @param[in] line String to write to the output file.
+     *
+     * @details On Windows the line is emitted in batch syntax via `set "value"`.
+     * On Linux it is emitted as a plain shell-style setting line.
+     **/
     __host__ void write_hardware_info_line(std::ofstream &outputFile, const name_t &line) noexcept
     {
         if constexpr (system::distro() == system::WINDOWS)

@@ -76,11 +76,11 @@ namespace LBM
             LITTLE = true
         } type;
 
-        /**
-         * @brief Validate the endianness of the file system
-         **/
         namespace assertions
         {
+            /**
+             * @brief Validate the endianness of the file system
+             **/
             __device__ __host__ inline consteval void validate() noexcept
             {
                 static_assert(((std::endian::native == std::endian::little) || (std::endian::native == std::endian::big)), "System must be little or big endian");
@@ -117,15 +117,16 @@ namespace LBM
             instantaneous = true
         } type;
 
-        /**
-         * @brief Validate the endianness of the file system
-         **/
         namespace assertions
         {
+            /**
+             * @brief Check validate the time stepping type (must be either instantaneous or timeAverage)
+             * @tparam TimeType The time stepping type to check
+             **/
             template <const type TimeType>
             __device__ __host__ inline consteval void validate() noexcept
             {
-                static_assert(((TimeType == timeAverage) || (TimeType == instantaneous)), "Time step type must be instantaneous or timeAverage");
+                static_assert(((TimeType == instantaneous) || (TimeType == timeAverage)), "Time step type must be instantaneous or timeAverage");
             }
         }
 

@@ -160,7 +160,7 @@ namespace LBM
             /**
              * @brief Disable copying
              **/
-            ~kineticEnergy() {}
+            __host__ ~kineticEnergy() {}
             __host__ [[nodiscard]] kineticEnergy(const kineticEnergy &) = delete;
             __host__ [[nodiscard]] kineticEnergy &operator=(const kineticEnergy &) = delete;
 

@@ -59,34 +59,44 @@ namespace LBM
 {
     namespace global
     {
-        template <typename T, const T b_nx, const T b_ny, const T b_nz>
+        /**
+         * @brief Memory index (generic version)
+         * @tparam nx,ny,nz Block dimensions
+         * @param[in] tx,ty,tz Thread-local coordinates
+         * @param[in] bx,by,bz Block indices
+         * @param[in] nxBlocks,nyBlocks Number of blocks in the x and y directions
+         * @return Linearized index using mesh constants
+         *
+         * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
+         **/
+        template <typename T, const T nx, const T ny, const T nz>
         __device__ __host__ [[nodiscard]] inline constexpr T idx(const T tx, const T ty, const T tz, const T bx, const T by, const T bz, const T nxBlocks, const T nyBlocks) noexcept
         {
-            return (tx + b_nx * (ty + b_ny * (tz + b_nz * (bx + nxBlocks * (by + nyBlocks * bz)))));
+            return (tx + nx * (ty + ny * (tz + nz * (bx + nxBlocks * (by + nyBlocks * bz)))));
         }
     }
 
-    /**
-     * @brief Compile-time recursive loop unroller
-     * @tparam Start Starting index (inclusive)
-     * @tparam End Ending index (exclusive)
-     * @tparam F Callable type accepting integral_constant<host::label_t>
-     * @param[in] f Function object to execute per iteration
-     *
-     * @note Equivalent to runtime loop: `for(host::label_t i=Start; i<End; ++i)`
-     * @note Enables `if constexpr` usage in loop bodies
-     * @warning Recursion depth limited by compiler constraints
-     *
-     * Example usage:
-     * @code
-     * constexpr_for<0, 5>([](auto i) {
-     *     // i is integral_constant<host::label_t, N>
-     *     if constexpr (i.value % 2 == 0) { ... }
-     * });
-     * @endcode
-     **/
     namespace host
     {
+        /**
+         * @brief Compile-time recursive loop unroller
+         * @tparam Start Starting index (inclusive)
+         * @tparam End Ending index (exclusive)
+         * @tparam F Callable type accepting integral_constant<host::label_t>
+         * @param[in] f Function object to execute per iteration
+         *
+         * @note Equivalent to runtime loop: `for(host::label_t i=Start; i<End; ++i)`
+         * @note Enables `if constexpr` usage in loop bodies
+         * @warning Recursion depth limited by compiler constraints
+         *
+         * Example usage:
+         * @code
+         * constexpr_for<0, 5>([](auto i) {
+         *     // i is integral_constant<host::label_t, N>
+         *     if constexpr (i.value % 2 == 0) { ... }
+         * });
+         * @endcode
+         **/
         template <const host::label_t Start, const host::label_t End, typename F>
         __host__ inline constexpr void constexpr_for(F &&f) noexcept
         {
@@ -103,6 +113,25 @@ namespace LBM
 
     namespace device
     {
+        /**
+         * @brief Compile-time recursive loop unroller
+         * @tparam Start Starting index (inclusive)
+         * @tparam End Ending index (exclusive)
+         * @tparam F Callable type accepting integral_constant<device::label_t>
+         * @param[in] f Function object to execute per iteration
+         *
+         * @note Equivalent to runtime loop: `for(device::label_t i=Start; i<End; ++i)`
+         * @note Enables `if constexpr` usage in loop bodies
+         * @warning Recursion depth limited by compiler constraints
+         *
+         * Example usage:
+         * @code
+         * constexpr_for<0, 5>([](auto i) {
+         *     // i is integral_constant<device::label_t, N>
+         *     if constexpr (i.value % 2 == 0) { ... }
+         * });
+         * @endcode
+         **/
         template <const device::label_t Start, const device::label_t End, typename F>
         __device__ inline constexpr void constexpr_for(F &&f) noexcept
         {

@@ -133,7 +133,7 @@ namespace LBM
             /**
              * @brief Default destructor
              **/
-            ~array() {}
+            __host__ ~array() {}
 
             /**
              * @brief Get read-only pointer to device memory for a given GPU.
