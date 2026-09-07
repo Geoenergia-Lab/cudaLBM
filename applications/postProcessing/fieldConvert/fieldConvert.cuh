@@ -50,15 +50,7 @@ SourceFiles
 #ifndef __MBLBM_FIELDCONVERT_CUH
 #define __MBLBM_FIELDCONVERT_CUH
 
-#include "../../../src/LBMIncludes.cuh"
-#include "../../../src/typedefs/typedefs.cuh"
-#include "../../../src/strings.cuh"
-#include "../../../src/array/array.cuh"
-#include "../../../src/fields/fields.cuh"
-#include "../../../src/fileIO/fileIO.cuh"
-#include "../../../src/postProcess/postProcess.cuh"
-#include "../../../src/programControl/programControl.cuh"
-#include "../../../src/numericalSchemes/numericalSchemes.cuh"
+#include "../postProcessingIncludes.cuh"
 
 namespace LBM
 {
@@ -244,23 +236,6 @@ namespace LBM
             return hostMoments.deinterleaveAoS(mesh);
         }
     }
-
-    // __host__ [[nodiscard]] const host::latticeMesh processMesh(
-    //     const host::latticeMesh &mesh,
-    //     const programControl &programCtrl,
-    //     const bool cutPlane)
-    // {
-    //     if (cutPlane)
-    //     {
-    //         const axis::type alpha = cutPlaneDirection(programCtrl);
-
-    //         return meshSlice(mesh, alpha);
-    //     }
-    //     else
-    //     {
-    //         return host::latticeMesh(programCtrl);
-    //     }
-    // }
 
     __host__ [[nodiscard]] const name_t processName(const programControl &programCtrl, const name_t &fileNamePrefix, const host::label_t nameIndex, const bool cutPlane)
     {

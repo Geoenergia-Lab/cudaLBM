@@ -170,7 +170,7 @@ namespace LBM
                         &(ptr_[(field * mesh.size()) + (virtualDeviceIndex * nPointsPerDevice)]),
                         devPtrs[field],
                         nPointsPerDevice,
-                        programCtrl.streams()[GPU::internalStreamID(virtualDeviceIndex)]);
+                        programCtrl.streams()[device::internalStreamID(virtualDeviceIndex)]);
                 }
             }
 

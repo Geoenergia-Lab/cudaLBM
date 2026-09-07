@@ -50,11 +50,8 @@ SourceFiles
 #ifndef __MBLBM_FILEIO_CUH
 #define __MBLBM_FILEIO_CUH
 
-#include "../LBMIncludes.cuh"
-#include "../typedefs/typedefs.cuh"
 #include "fileSystem.cuh"
-#include "../memory/memory.cuh"
-#include "../strings.cuh"
+#include "../../memory/memory.cuh"
 
 namespace LBM
 {

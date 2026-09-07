@@ -52,7 +52,7 @@ SourceFiles
 
 #include "../LBMIncludes.cuh"
 #include "../typedefs/typedefs.cuh"
-#include "../fileIO/fileIO.cuh"
+#include "../IO/fileIO/fileIO.cuh"
 
 namespace LBM
 {

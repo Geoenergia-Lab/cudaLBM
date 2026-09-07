@@ -82,7 +82,7 @@ namespace LBM
     template <typename T>
     __host__ void allocateMessage(const name_t &functionName, const host::label_t nPoints, const T *ptr) noexcept
     {
-        std::cout << "Allocated " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " to address " << ptr << " (current device: " << GPU::current_ordinal() << ")" << std::endl;
+        std::cout << "Allocated " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " to address " << ptr << " (current device: " << device::current_ordinal() << ")" << std::endl;
     }
 
     /**
@@ -96,7 +96,7 @@ namespace LBM
     template <typename T>
     __host__ void copyMessage(const name_t &functionName, const host::label_t nPoints, const T *srcPtr, const T *destPtr) noexcept
     {
-        std::cout << "Copied " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " from address " << srcPtr << " to address " << destPtr << " (current device: " << GPU::current_ordinal() << ")" << std::endl;
+        std::cout << "Copied " << sizeof(T) * nPoints << " bytes of memory in " << functionName << " from address " << srcPtr << " to address " << destPtr << " (current device: " << device::current_ordinal() << ")" << std::endl;
     }
 
     namespace host

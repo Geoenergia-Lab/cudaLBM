@@ -50,7 +50,7 @@ SourceFiles
 #ifndef __MBLBM_FILEHEADER_CUH
 #define __MBLBM_FILEHEADER_CUH
 
-#include "../fields/fieldType.cuh"
+#include "../../fields/fieldType.cuh"
 
 namespace LBM
 {

@@ -110,7 +110,7 @@ namespace LBM
     {
         kernel::launch<kernel::momentBasedLBM, VelocitySet::smem_alloc_size()>(
             mesh,
-            programCtrl.streams()[GPU::internalStreamID(0)],
+            programCtrl.streams()[device::internalStreamID(0)],
             devPtrs[0],
             haloPtrs.readBuffer(0, programCtrl.timeStep()),
             haloPtrs.writeBuffer(0, programCtrl.timeStep()),

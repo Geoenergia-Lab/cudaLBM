@@ -37,37 +37,27 @@ License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Description
-    Includes necessary for all LBM solvers
+    Includes necessary for all post processing executables
 
 Namespace
     LBM
 
 SourceFiles
-    solverIncludes.cuh
+    postProcessingIncludes.cuh
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef __MBLBM_SOLVERINCLUDES_CUH
-#define __MBLBM_SOLVERINCLUDES_CUH
+#ifndef __MBLBM_POSTPROCESSINGINCLUDES_CUH
+#define __MBLBM_POSTPROCESSINGINCLUDES_CUH
 
-// Fundamental includes
-#include "../../../src/LBMIncludes.cuh"
-#include "../../../src/IO/basicIO.cuh"
-#include "../../../src/typedefs/typedefs.cuh"
-#include "../../../src/IO/fileIO/fileIO.cuh"
-#include "../../../src/array/array.cuh"
-#include "../../../src/fields/fields.cuh"
-#include "../../../src/postProcess/postProcess.cuh"
-
-// LBM includes
-#include "../../../src/momentBasedLBM/velocitySet/velocitySet.cuh"
-#include "../../../src/momentBasedLBM/blockHalo/blockHalo.cuh"
-#include "../../../src/momentBasedLBM/boundaryConditions/boundaryConditions.cuh"
-#include "../../../src/momentBasedLBM/collision/collision.cuh"
-#include "../../../src/momentBasedLBM/streaming/streaming.cuh"
-
-// Runtime IO includes
-#include "../../../src/functionObjects/objectRegistry.cuh"
-#include "../../../src/IO/runTimeIO/runTimeIO.cuh"
+#include "../../src/LBMIncludes.cuh"
+#include "../../src/IO/basicIO.cuh"
+#include "../../src/typedefs/typedefs.cuh"
+#include "../../src/array/array.cuh"
+#include "../../src/fields/fields.cuh"
+#include "../../src/IO/fileIO/fileIO.cuh"
+#include "../../src/postProcess/postProcess.cuh"
+#include "../../src/programControl/programControl.cuh"
+#include "../../src/numericalSchemes/numericalSchemes.cuh"
 
 #endif

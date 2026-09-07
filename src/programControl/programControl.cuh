@@ -52,10 +52,9 @@ SourceFiles
 
 #include "../LBMIncludes.cuh"
 #include "../typedefs/typedefs.cuh"
-#include "../strings.cuh"
 #include "inputControl.cuh"
 #include "streamHandler.cuh"
-#include "../fileIO/fileIO.cuh"
+#include "../IO/fileIO/fileIO.cuh"
 
 namespace LBM
 {

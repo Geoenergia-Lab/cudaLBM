@@ -51,6 +51,7 @@ SourceFiles
 #define __MBLBM_SYSTEMINFO_CUH
 
 #include "../../src/LBMIncludes.cuh"
+#include "../../src/IO/basicIO.cuh"
 #include "../../src/typedefs/typedefs.cuh"
 #include "../../src/globalFunctions.cuh"
 #include "../../src/programControl/programControl.cuh"

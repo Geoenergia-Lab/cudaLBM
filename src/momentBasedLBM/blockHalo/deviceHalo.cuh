@@ -231,7 +231,7 @@ namespace LBM
             {
                 kernel::launch<kernel::momentBasedLBMInitialisation<VelocitySet>()>(
                     mesh,
-                    programCtrl.streams()[GPU::internalStreamID(deviceIdx)],
+                    programCtrl.streams()[device::internalStreamID(deviceIdx)],
                     devPtrs,
                     haloBuffers);
             }

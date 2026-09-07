@@ -166,6 +166,36 @@ namespace LBM
         }
     };
 
+    namespace device
+    {
+        /**
+         * @brief Queries a device and gets its properties
+         * @param[in] deviceID The ID of the device to query
+         * @return A cudaDeviceProp struct containing the properties of deviceID
+         **/
+        __host__ [[nodiscard]] const cudaDeviceProp properties(const int deviceID)
+        {
+            cudaDeviceProp props;
+
+            errorHandler::handle(cudaGetDeviceProperties(&props, deviceID));
+
+            return props;
+        }
+
+        /**
+         * @brief Get the current GPU device index
+         * @return The index of the currently active GPU device
+         **/
+        __host__ [[nodiscard]] int current_ordinal() noexcept
+        {
+            int result = 0;
+
+            errorHandler::handle(cudaGetDevice(&result));
+
+            return result;
+        }
+    }
+
     /**
      * @brief Static assertion ensuring the detected operating system is valid.
      **/

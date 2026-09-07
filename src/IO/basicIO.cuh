@@ -312,4 +312,6 @@ namespace LBM
     using IO::operator<<;
 }
 
+#include "strings.cuh"
+
 #endif

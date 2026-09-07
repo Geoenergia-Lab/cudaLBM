@@ -299,7 +299,7 @@ namespace LBM
                 {
                     kernel::launch<momentBasedLBM, VelocitySet::smem_alloc_size()>(
                         mesh.gridBlock()[device::idxStream(deviceIdx, idxStreams[idxStream])],
-                        programCtrl.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs[deviceIdx],
                         haloPtrs.readBuffer(deviceIdx, timeStep),
                         haloPtrs.writeBuffer(deviceIdx, timeStep),

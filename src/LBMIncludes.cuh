@@ -113,6 +113,4 @@ namespace LBM
     }
 }
 
-#include "templates/basicIO.cuh"
-
 #endif

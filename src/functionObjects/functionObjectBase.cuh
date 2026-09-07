@@ -129,7 +129,7 @@ namespace LBM
                 {
                     kernel::launch<FunctionObject::Kernel::mean()>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         object.meanPtrs(deviceIdx),
                         invCount);
@@ -151,7 +151,7 @@ namespace LBM
                 {
                     kernel::launch<FunctionObject::Kernel::instantaneous()>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         object.meanPtrs(deviceIdx));
                 }
@@ -174,7 +174,7 @@ namespace LBM
                 {
                     kernel::launch<FunctionObject::Kernel::instantaneousAndMean()>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         object.instantaneousPtrs(deviceIdx),
                         object.meanPtrs(deviceIdx),
@@ -197,7 +197,7 @@ namespace LBM
                 {
                     kernel::launch<FunctionObject::Kernel::prime()>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         object.meanPtrs(deviceIdx),
                         object.primePtrs(deviceIdx));
@@ -221,7 +221,7 @@ namespace LBM
                 {
                     kernel::launch<FunctionObject::Kernel::primeSqMean()>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         object.meanPtrs(deviceIdx),
                         object.primeSqMeanPtrs(deviceIdx),

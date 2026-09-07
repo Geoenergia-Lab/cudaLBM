@@ -248,29 +248,6 @@ namespace LBM
                 }
             }
         }
-
-        /**
-         * @brief Get the current GPU device index
-         * @return The index of the currently active GPU device
-         **/
-        __host__ [[nodiscard]] int current_ordinal() noexcept
-        {
-            int result = 0;
-
-            errorHandler::handle(cudaGetDevice(&result));
-
-            return result;
-        }
-
-        /**
-         * @brief Compute a unique stream ID for a given device index
-         * @param[in] deviceIdx The index of the device (GPU)
-         * @return A unique stream ID for the device
-         **/
-        __host__ [[nodiscard]] inline constexpr host::label_t internalStreamID(const host::label_t deviceIdx) noexcept
-        {
-            return (deviceIdx * 3) + 1;
-        }
     }
 
     namespace host
@@ -532,20 +509,6 @@ namespace LBM
             const host::label_t ndx, const host::label_t ndy) noexcept
         {
             return Cartesian::idx(dx, dy, dz, ndx, ndy);
-        }
-
-        /**
-         * @brief Queries a device and gets its properties
-         * @param[in] deviceID The ID of the device to query
-         * @return A cudaDeviceProp struct containing the properties of deviceID
-         **/
-        __host__ [[nodiscard]] const cudaDeviceProp properties(const int deviceID)
-        {
-            cudaDeviceProp props;
-
-            errorHandler::handle(cudaGetDeviceProperties(&props, deviceID));
-
-            return props;
         }
     }
 }

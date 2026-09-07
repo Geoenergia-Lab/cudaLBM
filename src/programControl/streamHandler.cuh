@@ -84,6 +84,16 @@ namespace LBM
                 return idxStream(idxDev, 2); // West stream
             }
         }
+
+        /**
+         * @brief Compute a unique stream ID for a given device index
+         * @param[in] deviceIdx The index of the device (GPU)
+         * @return A unique stream ID for the device
+         **/
+        __host__ [[nodiscard]] inline constexpr host::label_t internalStreamID(const host::label_t deviceIdx) noexcept
+        {
+            return idxStream(deviceIdx, 1);
+        }
     }
 
     /**

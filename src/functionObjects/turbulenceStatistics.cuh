@@ -213,7 +213,7 @@ namespace LBM
                 {
                     kernel::launch<turbulenceStatisticsCalculate>(
                         mesh_,
-                        programCtrl_.streams()[GPU::internalStreamID(deviceIdx)],
+                        programCtrl_.streams()[device::internalStreamID(deviceIdx)],
                         devPtrs_[deviceIdx],
                         R_.ptr(deviceIdx),
                         P_.ptr(deviceIdx),

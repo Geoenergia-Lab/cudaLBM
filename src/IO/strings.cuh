@@ -47,8 +47,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#include "LBMIncludes.cuh"
-#include "typedefs/typedefs.cuh"
+#include "../LBMIncludes.cuh"
+#include "../typedefs/typedefs.cuh"
 
 #ifndef __MBLBM_STRINGS_CUH
 #define __MBLBM_STRINGS_CUH
@@ -173,6 +173,10 @@ namespace LBM
             return newLines;
         }
 
+        /**
+         * @brief Splits a string by its whitespace into a vector of strings
+         * @param[in] str The string to split
+         **/
         __host__ [[nodiscard]] const words_t splitByWhitespace(const name_t &str)
         {
             std::istringstream iss(str);
@@ -578,30 +582,74 @@ namespace LBM
             return result;
         }
 
-        __host__ [[nodiscard]] const name_t extractParameterLine(const words_t &S, const name_t &name)
+        /**
+         * @brief Extract the line on which a parameter is found
+         * @param[in] parameterLines The lines to scan
+         * @param[in] name The parameter to look for
+         **/
+        __host__ [[nodiscard]] const name_t extractParameterLine(const words_t &parameterLines, const name_t &name)
         {
             // Loop over S
-            for (device::label_t i = 0; i < S.size(); i++)
+            for (device::label_t i = 0; i < parameterLines.size(); i++)
             {
                 // Check if S[i] contains a substring of name
-                if (S[i].find(name) != name_t::npos)
+                if (parameterLines[i].find(name) != name_t::npos)
                 {
                     // Split by space and remove whitespace
-                    const words_t s = splitByWhitespace(S[i]);
+                    const words_t paramLine = splitByWhitespace(parameterLines[i]);
 
                     // Check that the last char is ;
                     // Perform the exit here if the above string is not equal to ;
 
-                    return name_t(s[1].begin(), s[1].end() - 1);
+                    return name_t(paramLine[1].begin(), paramLine[1].end() - 1);
                 }
             }
 
             // Otherwise return 0
             // Should theoretically never get to this point because we have checked already that the string exists
 
-            throw std::runtime_error("Parameter " + name_t(name) + " not found");
+            throw std::runtime_error("Parameter " + name + " not found");
 
             return "";
+        }
+
+        /**
+         * @brief Extracts a parameter of type T from a string
+         * @tparam T Type of the parameter to extract
+         * @param[in] parameterValueString String representation of the parameter value
+         **/
+        template <typename T>
+        __host__ [[nodiscard]] T extractParameter(const name_t &parameterValueString)
+        {
+            // Is it supposed an integral value?
+            if constexpr (std::is_integral_v<T>)
+            {
+                if (isNumber(parameterValueString))
+                {
+                    // Check if T is an unsigned integral type
+                    if constexpr (std::is_unsigned_v<T>)
+                    {
+                        return static_cast<T>(std::stoul(parameterValueString));
+                    }
+                    // T must be a signed integral type
+                    else
+                    {
+                        return static_cast<T>(std::stol(parameterValueString));
+                    }
+                }
+            }
+            // Is it supposed a floating point value?
+            else if constexpr (std::is_floating_point_v<T>)
+            {
+                return static_cast<T>(std::stold(parameterValueString));
+            }
+            // Is it supposed a string?
+            else if constexpr (std::is_same_v<T, name_t>)
+            {
+                return parameterValueString;
+            }
+
+            return 0;
         }
 
         /**
@@ -616,72 +664,7 @@ namespace LBM
         template <typename T>
         __host__ [[nodiscard]] T extractParameter(const words_t &S, const name_t &name)
         {
-            // First get the parameter line string
-            const name_t toReturn = extractParameterLine(S, name);
-
-            // Is it supposed an integral value?
-            if constexpr (std::is_integral_v<T>)
-            {
-                if (isNumber(toReturn))
-                {
-                    // Check if T is an unsigned integral type
-                    if constexpr (std::is_unsigned_v<T>)
-                    {
-                        return static_cast<T>(std::stoul(toReturn));
-                    }
-                    // T must be a signed integral type
-                    else
-                    {
-                        return static_cast<T>(std::stol(toReturn));
-                    }
-                }
-            }
-            // Is it supposed a floating ponit value?
-            else if constexpr (std::is_floating_point_v<T>)
-            {
-                return static_cast<T>(std::stold(toReturn));
-            }
-            // Is it supposed a string?
-            else if constexpr (std::is_same_v<T, name_t>)
-            {
-                return toReturn;
-            }
-
-            return 0;
-        }
-
-        template <typename T>
-        __host__ [[nodiscard]] T extractParameter(const name_t &toReturn)
-        {
-            // Is it supposed an integral value?
-            if constexpr (std::is_integral_v<T>)
-            {
-                if (isNumber(toReturn))
-                {
-                    // Check if T is an unsigned integral type
-                    if constexpr (std::is_unsigned_v<T>)
-                    {
-                        return static_cast<T>(std::stoul(toReturn));
-                    }
-                    // T must be a signed integral type
-                    else
-                    {
-                        return static_cast<T>(std::stol(toReturn));
-                    }
-                }
-            }
-            // Is it supposed a floating point value?
-            else if constexpr (std::is_floating_point_v<T>)
-            {
-                return static_cast<T>(std::stold(toReturn));
-            }
-            // Is it supposed a string?
-            else if constexpr (std::is_same_v<T, name_t>)
-            {
-                return toReturn;
-            }
-
-            return 0;
+            return extractParameter<T>(extractParameterLine(S, name));
         }
 
         /**
@@ -703,9 +686,7 @@ namespace LBM
 
             const words_t fileLines = string::readFile(fileName);
 
-            return {string::extractParameter<value_type>(fileLines, prefix + "x"),
-                    string::extractParameter<value_type>(fileLines, prefix + "y"),
-                    string::extractParameter<value_type>(fileLines, prefix + "z")};
+            return {string::extractParameter<value_type>(fileLines, prefix + "x"), string::extractParameter<value_type>(fileLines, prefix + "y"), string::extractParameter<value_type>(fileLines, prefix + "z")};
         }
 
         /**

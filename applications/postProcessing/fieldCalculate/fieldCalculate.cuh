@@ -50,13 +50,7 @@ SourceFiles
 #ifndef __MBLBM_FIELDCALCULATE_CUH
 #define __MBLBM_FIELDCALCULATE_CUH
 
-#include "../../../src/LBMIncludes.cuh"
-#include "../../../src/typedefs/typedefs.cuh"
-#include "../../../src/array/array.cuh"
-#include "../../../src/postProcess/postProcess.cuh"
-#include "../../../src/programControl/programControl.cuh"
-#include "../../../src/numericalSchemes/numericalSchemes.cuh"
-#include "../fieldConvert/fieldConvert.cuh"
+#include "../postProcessingIncludes.cuh"
 #include "calculators.cuh"
 #include "reductionCalculators.cuh"
 #include "pointwiseCalculators.cuh"
