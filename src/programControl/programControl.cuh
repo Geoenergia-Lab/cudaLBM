@@ -161,6 +161,7 @@ namespace LBM
 
         /**
          * @brief Print the file header
+         * @tparam LineBreak Add a line break
          **/
         template <const bool LineBreak = false>
         __host__ static void printHeader() noexcept
@@ -235,6 +236,7 @@ namespace LBM
 
         /**
          * @brief Decide whether or not the program should perform a checkpoint
+         * @param[in] timeStep The time step to check
          * @return True if the program should checkpoint, false otherwise
          **/
         __device__ __host__ [[nodiscard]] inline constexpr bool save(const host::label_t timeStep) const noexcept
@@ -244,6 +246,7 @@ namespace LBM
 
         /**
          * @brief Decide whether or not the program should perform a checkpoint
+         * @param[in] timeStep The time step to check
          * @return True if the program should checkpoint, false otherwise
          **/
         __device__ __host__ [[nodiscard]] inline constexpr bool print(const host::label_t timeStep) const noexcept
@@ -293,7 +296,7 @@ namespace LBM
         /**
          * @brief Veriefies if the command line has the argument -type
          * @return A string representing the convertion type passed at the command line
-         * @param[in] programCtrl The program control object
+         * @param[in] argument The argument to search for
          **/
         __host__ [[nodiscard]] const name_t getArgument(const name_t &argument) const
         {
@@ -330,6 +333,7 @@ namespace LBM
         /**
          * @brief Configures a kernel function to prefer shared memory and sets its dynamic shared memory size
          * @tparam smem_alloc_size The amount of shared memory (in bytes) to allocate for the kernel
+         * @tparam PreferShared Controls preference of shared memory (default true)
          * @tparam T The function type (e.g., a lambda or a function pointer)
          * @param[in] func The kernel function to configure
          **/
@@ -440,6 +444,7 @@ namespace LBM
 
         /**
          * @brief Reads a variable from the caseInfo file into a parameter of type T
+         * @tparam T The return type
          * @return The variable as type T
          * @param[in] varName The name of the variable to read
          **/

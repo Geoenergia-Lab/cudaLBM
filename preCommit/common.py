@@ -96,7 +96,7 @@ FUNCTION_PATTERN = re.compile(
 def looks_like_function_definition(lines, index):
     """
     Heuristically determine if the line at `index` begins a function definition.
-    `lines` is a list of strings; we may pass a modified copy for current line.
+    Handles single‑line and multi‑line signatures.
     """
     line = lines[index].strip()
     if not line:
@@ -129,19 +129,73 @@ def looks_like_function_definition(lines, index):
         return False
 
     if "(" not in line or ")" not in line:
+        # No parentheses on this line, so not a function signature
         return False
 
+    # First try the regex (works for single‑line signatures)
     if FUNCTION_PATTERN.match(line):
         return True
 
-    # Fallback: if the line ends with ')' or trailing qualifiers,
-    # check if the next non‑empty line starts with '{'
+    # Fallback 1: line ends with ')' or qualifiers, check next line for '{'
     if line.endswith((")", "const", "noexcept", "override", "final")):
         next_index = index + 1
         while next_index < len(lines) and not lines[next_index].strip():
             next_index += 1
         if next_index < len(lines):
             return lines[next_index].strip().startswith("{")
+
+    # Fallback 2: multi‑line signature where '(' is on this line but ')' is later.
+    # We look forward for the matching ')' (ignoring nested parentheses) and then
+    # see if the next non‑empty line starts with '{'.
+    # We only enter this fallback if the current line has an opening parenthesis
+    # and does NOT have a closing parenthesis.
+    if "(" in line and ")" not in line:
+        depth = 0
+        i = index
+        # Find the first '(' on this line and start counting depth
+        start_pos = line.find("(")
+        if start_pos == -1:
+            return False
+        # Move through characters from this line onward
+        while i < len(lines):
+            current = lines[i]
+            if i == index:
+                # Start from the opening parenthesis position
+                j = start_pos
+            else:
+                j = 0
+            while j < len(current):
+                ch = current[j]
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        # Found matching ')', now look for '{' after this line or on following lines
+                        next_i = i
+                        next_j = j + 1
+                        # Skip whitespace on the same line and subsequent lines
+                        while next_i < len(lines):
+                            if next_i == i:
+                                rest = current[next_j:]
+                            else:
+                                rest = lines[next_i].strip()
+                            if rest.startswith("{"):
+                                return True
+                            if rest.strip() and not rest.startswith(
+                                ("const", "noexcept", "override", "final")
+                            ):
+                                # Some other content that is not just qualifiers,
+                                # so likely not a function definition
+                                break
+                            next_i += 1
+                        # If we reached end without finding '{', return False
+                        return False
+                j += 1
+            i += 1
+        # If we exit without finding closing ')' or '{', return False
+        return False
+
     return False
 
 

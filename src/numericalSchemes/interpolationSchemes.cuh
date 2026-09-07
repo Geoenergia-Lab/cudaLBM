@@ -77,9 +77,9 @@ namespace LBM
             /**
              * @brief Perform linear interpolation using the stored field values and weight
              * @tparam ValueType The type of the field values and interpolation weight (e.g., scalar_t)
-             * @param[in] f0 The field value at the first grid point
-             * @param[in] f1 The field value at the second grid point
-             * @param[in] weight The interpolation weight, which should be between 0 and 1, where 0 corresponds to f0 and 1 corresponds to f1
+             * @param[in] f_0 The field value at the first grid point
+             * @param[in] f_1 The field value at the second grid point
+             * @param[in] W The interpolation weight, which should be between 0 and 1, where 0 corresponds to f0 and 1 corresponds to f1
              * @return The interpolated field value at the arbitrary point
              **/
             template <typename ValueType>
@@ -90,7 +90,6 @@ namespace LBM
 
             /**
              * @brief Perform linear interpolation using the stored field values and weight
-             * @tparam T The type of the field values and interpolation weight (e.g., scalar_t)
              * @return The interpolated field value at the arbitrary point
              **/
             __host__ [[nodiscard]] inline constexpr T linear() const noexcept

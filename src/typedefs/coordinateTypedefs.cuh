@@ -201,7 +201,10 @@ namespace LBM
             /**
              * @brief Constructs from an arbitrary input
              **/
-            __device__ [[nodiscard]] inline explicit coordinate(const device::label_t bx, const device::label_t by, const device::label_t bz) noexcept
+            __device__ [[nodiscard]] inline explicit coordinate(
+                const device::label_t bx,
+                const device::label_t by,
+                const device::label_t bz) noexcept
                 : var3<device::label_t>(bx, by, bz) {}
 
             /**

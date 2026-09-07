@@ -66,6 +66,7 @@ namespace LBM
             /**
              * @brief Variadic constructor: construct from an arbitrary number of pointers
              * @return A pointer collection object constructed from args
+             * @tparam Args Type of the constructor arguments
              * @param[in] args An arbitrary number N of pointers of type T
              **/
             template <typename... Args>
@@ -79,7 +80,7 @@ namespace LBM
 
             /**
              * @brief Provides access to the GPU pointer
-             * @param[in] i The index of the pointer
+             * @tparam i The index of the pointer
              **/
             template <const host::label_t i>
             __device__ __host__ [[nodiscard]] inline constexpr T *ptr() const noexcept

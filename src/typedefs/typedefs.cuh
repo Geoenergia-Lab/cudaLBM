@@ -132,6 +132,7 @@ namespace LBM
 
         /**
          * @brief Returns a string based on the type of time stepping
+         * @tparam TimeType The time stepping approach
          **/
         template <const type TimeType>
         __device__ __host__ inline consteval const char *nameString() noexcept
@@ -162,6 +163,7 @@ namespace LBM
         {
             /**
              * @brief Fundamental assertion to validate the type of either a floating point or integral type
+             * @tparam T The type to validate
              **/
             template <typename T>
             __device__ __host__ inline consteval void validate() noexcept

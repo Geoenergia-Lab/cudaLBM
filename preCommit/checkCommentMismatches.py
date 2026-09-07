@@ -222,16 +222,22 @@ def split_parameters(param_str):
         if not seg:
             continue
         # Remove default value (everything after '=' at depth 0)
-        # For simplicity, we'll cut at the first '=' that is not inside brackets.
-        # Usually default values don't contain '=' inside brackets.
         eq_pos = seg.find("=")
         if eq_pos != -1:
             seg = seg[:eq_pos].strip()
-        # Now extract the last identifier (parameter name)
-        # Remove array brackets if present: e.g., "int arr[10]" -> "arr"
-        # Remove trailing attributes like [[maybe_unused]]
-        # Use regex to find the last word that is an identifier
-        match = re.search(r"([A-Za-z_]\w*)\s*(?:\[.*\])?\s*$", seg)
+        # Strip trailing attributes: [[...]]
+        seg = re.sub(r"\[\[[^\]]*\]\]\s*$", "", seg).strip()
+        # Strip trailing array dimensions: [N] or [] possibly multiple
+        while True:
+            new_seg = re.sub(r"\[[^\[\]]*\]\s*$", "", seg).strip()
+            if new_seg == seg:
+                break
+            seg = new_seg
+        # If the segment ends with ')', remove it (to handle references inside parentheses)
+        if seg.endswith(")"):
+            seg = seg[:-1].strip()
+        # Now extract the last identifier
+        match = re.search(r"([A-Za-z_]\w*)\s*$", seg)
         if match:
             names.append(match.group(1))
     return names
@@ -300,8 +306,9 @@ def scan_file(path):
             continue
 
         # Create a view of lines for detection (with cleaned current line)
-        view_lines = lines[:index] + [code_line]
-        if not looks_like_function_definition(view_lines, index):
+        temp_lines = lines.copy()
+        temp_lines[index] = code_line
+        if not looks_like_function_definition(temp_lines, index):
             continue
 
         match = FUNCTION_PATTERN.match(code_line.strip())

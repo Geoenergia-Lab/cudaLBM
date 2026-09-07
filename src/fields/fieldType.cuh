@@ -58,6 +58,7 @@ namespace LBM
     public:
         /**
          * @brief Constructs the field from a name
+         * @param[in] name Name of the field
          **/
         __host__ [[nodiscard]] inline constexpr fieldType(const std::string &name) noexcept : name_(name) {}
 

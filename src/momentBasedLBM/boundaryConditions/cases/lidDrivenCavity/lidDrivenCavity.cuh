@@ -493,9 +493,9 @@ namespace LBM
 
         /**
          * @brief Branchless computation of the velocity component based on the boundary
+         * @tparam alpha The axis direction (X, Y or Z)
          * @param[in] boundarySwitches Switches indicating active boundary conditions
          * @param[in] n_boundaries Number of active boundaries
-         * @tparam index Index of the velocity component to compute
          * @return Velocity component value
          **/
         template <const axis::type alpha>

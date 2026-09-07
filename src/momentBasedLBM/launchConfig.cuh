@@ -54,6 +54,7 @@ namespace LBM
 {
     /**
      * @brief Minimum number of blocks per streaming microprocessor
+     * @tparam VelocitySet The velocity set in use
      **/
     template <class VelocitySet>
     __device__ __host__ [[nodiscard]] inline consteval device::label_t MIN_BLOCKS_PER_MP() noexcept

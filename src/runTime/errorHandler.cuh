@@ -63,8 +63,9 @@ namespace LBM
     public:
         /**
          * @brief Check a CUDA error and terminate if not successful.
+         * @tparam T The type of the error code to check
          * @param[in] err CUDA error code.
-         *
+         * @param[in] loc Location of the error in the source code.
          * If err != cudaSuccess, prints an error report and calls std::exit().
          * This version is not marked inline, suitable for calls outside
          * performance-critical loops.
@@ -77,8 +78,9 @@ namespace LBM
 
         /**
          * @brief Inline version of handle
+         * @tparam T The type of the error code to check
          * @param[in] err CUDA error code.
-         *
+         * @param[in] loc Location of the error in the source code.
          * Identical to handle() but gives the compiler an inline hint.
          * Use this in tight loops where function call overhead matters.
          **/
@@ -91,6 +93,9 @@ namespace LBM
     private:
         /**
          * @brief Implementation of handle
+         * @tparam T The type of the error code to check
+         * @param[in] err Integer error code.
+         * @param[in] loc Location of the error in the source code.
          **/
         template <typename T>
         __host__ static inline void handle_impl(const T err, const std::source_location &loc) noexcept
@@ -114,8 +119,9 @@ namespace LBM
 
         /**
          * @brief Terminate program with a formatted error report (integer code).
+         * @tparam T The type of the error code to check
          * @param[in] err Integer error code.
-         * @param[in] errorString Human-readable message.
+         * @param[in] loc Location of the error in the source code.
          **/
         template <typename T>
         __host__ static inline void update_codes_and_print(const T err, const std::source_location &loc) noexcept

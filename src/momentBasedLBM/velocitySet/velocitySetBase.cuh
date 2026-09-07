@@ -57,6 +57,7 @@ namespace LBM
     public:
         /**
          * @brief Get the a^2 constant (3.0)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T as2() noexcept
@@ -66,6 +67,7 @@ namespace LBM
 
         /**
          * @brief Get the speed of sound squared (c^2 = 1 / 3)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T cs2() noexcept
@@ -75,6 +77,7 @@ namespace LBM
 
         /**
          * @brief Get scaling factor for first-order moments
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T scale_i() noexcept
@@ -84,6 +87,7 @@ namespace LBM
 
         /**
          * @brief Get scaling factor for diagonal second-order moments
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T scale_ii() noexcept
@@ -93,6 +97,7 @@ namespace LBM
 
         /**
          * @brief Get scaling factor for off-diagonal second-order moments
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T scale_ij() noexcept
@@ -102,6 +107,7 @@ namespace LBM
 
         /**
          * @brief Get scaling factor for potentially diagonal or off-diagonal second-order moments
+         * @tparam T The return type
          * @param[in] is_diagonal Boolean indicating whether the moment is diagonal (true) or off-diagonal (false)
          * @return Scaling factor for the second-order moment
          **/

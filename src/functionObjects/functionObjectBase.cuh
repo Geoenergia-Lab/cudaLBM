@@ -99,6 +99,7 @@ namespace LBM
 
             /**
              * @brief Configures the kernels to allocate no dynamic shared memory and prefer L1 cache
+             * @tparam Kernel Kernel function to configure
              * @param[in] programCtrl The program control object
              **/
             template <class Kernel>

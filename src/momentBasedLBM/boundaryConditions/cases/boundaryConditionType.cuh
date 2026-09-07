@@ -67,6 +67,7 @@ namespace LBM
 
         /**
          * @brief Determine whether or not the boundary conditions are periodc along a particular axis
+         * @tparam alpha The axis direction (X, Y or Z)
          **/
         template <const axis::type alpha>
         __device__ __host__ [[nodiscard]] static inline consteval bool periodic() noexcept

@@ -67,7 +67,7 @@ namespace LBM
         const name_t cutPlanePrefix = programCtrl.getArgument("-cutPlane");
 
         // Need to check that j = 1 because the first character before the = symbol should be x, y or z and nothing else
-        if (!(string::findCharPosition(cutPlanePrefix, "=") == 1))
+        if (!(string::findCharPosition<"="[0]>(cutPlanePrefix) == 1))
         {
             return axis::NO_DIRECTION;
         }

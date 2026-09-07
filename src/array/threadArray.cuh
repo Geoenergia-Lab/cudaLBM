@@ -91,6 +91,7 @@ namespace LBM
 
             /**
              * @brief Fill constructor
+             * @tparam v Value to fill the array
              * @param[in] value Initial value for all array elements
              **/
             template <const T v>
@@ -312,6 +313,7 @@ namespace LBM
             /**
              * @brief Computes the number of elements equal to a value in an array
              * @tparam val The value to compare against
+             * @tparam Equal Count elements equal t (if true) or not equal to (if false)
              * @return Number of elements in the array equal to val
              **/
             template <const T val, const bool Equal>
@@ -430,9 +432,6 @@ namespace LBM
             /**
              * @brief Get the non-zero values in the array
              * @tparam ReturnSize Size of the returned array
-             * @tparam T Type of elements in the array
-             * @tparam N Size of the input array
-             * @param[in] arr The input array
              * @return Array containing only non-zero values from the input array
              **/
             template <const host::label_t ReturnSize>
@@ -444,9 +443,6 @@ namespace LBM
             /**
              * @brief Get the non-zero indices in the array
              * @tparam ReturnSize Size of the returned array
-             * @tparam T Type of elements in the array
-             * @tparam N Size of the input array
-             * @param[in] arr The input array
              * @return Array containing only non-zero indices from the input array
              **/
             template <const device::label_t ReturnSize>
@@ -463,6 +459,7 @@ namespace LBM
 
             /**
              * @brief Compile-time check that accesses are valid
+             * @tparam i Index of the element
              **/
             template <const host::label_t i>
             __device__ __host__ static inline consteval void assert_legal_access() noexcept

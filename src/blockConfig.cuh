@@ -60,6 +60,7 @@ namespace LBM
     {
         /**
          * @brief Threads per block in x-dimension (compile-time constant)
+         * @tparam T Return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] inline consteval T nx() noexcept
@@ -75,6 +76,7 @@ namespace LBM
 
         /**
          * @brief Threads per block in y-dimension (compile-time constant)
+         * @tparam T Return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] inline consteval T ny() noexcept
@@ -90,6 +92,7 @@ namespace LBM
 
         /**
          * @brief Threads per block in z-dimension (compile-time constant)
+         * @tparam T Return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] inline consteval T nz() noexcept
@@ -105,6 +108,8 @@ namespace LBM
 
         /**
          * @brief Threads per block in an arbitrary dimension (compile-time constant)
+         * @tparam alpha The axis direction (X, Y or Z)
+         * @tparam T Return type
          **/
         template <const axis::type alpha, typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T n() noexcept
@@ -116,6 +121,7 @@ namespace LBM
 
         /**
          * @brief Total threads per block (nx * ny * nz)
+         * @tparam T Return type
          **/
         template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T size() noexcept
@@ -125,6 +131,7 @@ namespace LBM
 
         /**
          * @brief Padding for the shared memory
+         * @tparam T Return type
          **/
         template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T padding() noexcept
@@ -134,6 +141,7 @@ namespace LBM
 
         /**
          * @brief Stride for the shared memory
+         * @tparam T Return type
          **/
         template <typename T = device::label_t>
         __device__ __host__ [[nodiscard]] inline consteval T stride() noexcept
@@ -143,6 +151,9 @@ namespace LBM
 
         /**
          * @brief Total size of the shared memory
+         * @tparam Q Number of velocity coefficients of the lattice
+         * @tparam nVars Number of moment variables
+         * @param[in] variableSize Size of the variable
          **/
         template <const host::label_t Q, const host::label_t nVars>
         __device__ __host__ [[nodiscard]] inline consteval host::label_t sharedMemoryBufferSize(const host::label_t variableSize = 1) noexcept

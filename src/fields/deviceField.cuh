@@ -328,6 +328,7 @@ namespace LBM
 
             /**
              * @brief Get a collection of const device pointers (one per component).
+             * @tparam Is Indices of the pointer collection to make
              * @param[in] idx Virtual device index.
              * @return ptrCollection with N const scalar_t*.
              **/
@@ -339,6 +340,7 @@ namespace LBM
 
             /**
              * @brief Get a collection of non-const device pointers (one per component).
+             * @tparam Is Indices of the pointer collection to make
              * @param[in] idx Virtual device index.
              * @return ptrCollection with N scalar_t*.
              **/

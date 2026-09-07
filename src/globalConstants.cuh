@@ -54,6 +54,7 @@ namespace LBM
 {
     /**
      * @brief Number of hydrodynamic moments
+     * @tparam T The return type
      **/
     template <typename T = device::label_t>
     __device__ __host__ [[nodiscard]] inline consteval T NUMBER_MOMENTS() noexcept
@@ -68,6 +69,7 @@ namespace LBM
 
     /**
      * @brief Reference density 1.0
+     * @tparam T The return type
      **/
     template <typename T = scalar_t>
     __device__ __host__ [[nodiscard]] inline consteval T rho0() noexcept

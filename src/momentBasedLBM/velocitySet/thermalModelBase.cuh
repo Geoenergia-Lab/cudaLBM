@@ -154,7 +154,6 @@ namespace LBM
          * @brief Selects between the modified diagonal terms and the original diagonal components based on the moment index
          * @tparam i The moment index
          * @param[in] moments The calculated moments array
-         * @param[in] diagonalTerm The modified diagonal terms for the isothermal formulation
          * @return The selected moment value based on the index
          **/
         template <const host::label_t i>
@@ -214,7 +213,6 @@ namespace LBM
          * @brief Selects between the modified diagonal terms and the original diagonal components based on the moment index
          * @tparam i The moment index
          * @param[in] moments The calculated moments array
-         * @param[in] diagonalTerm The modified diagonal terms for the isothermal formulation
          * @return The selected moment value based on the index
          **/
         template <const host::label_t i>

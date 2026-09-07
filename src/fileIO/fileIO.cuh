@@ -62,6 +62,7 @@ namespace LBM
     {
         /**
          * @brief Safely converts an integer of type T to a std::streamsize
+         * @tparam T Type of variable to convert
          * @param[in] size The size to convert
          **/
         template <typename T>

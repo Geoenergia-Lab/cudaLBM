@@ -72,9 +72,12 @@ namespace LBM
         {
             /**
              * @brief Disk space for scalar data
-             * @tparam Fields Whether fields are included
+             * @tparam T Typedef enum of bool underlying type
+             * @tparam Present Whether elements are included
              * @tparam Format File format (ASCII or BINARY)
-             * @param[in] nx, ny, nz Number of mesh points
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              * @param[in] nVars Number of variables
              **/
             template <typename T, const T Present, const format Format>
@@ -113,8 +116,12 @@ namespace LBM
         {
             /**
              * @brief Disk space for element connectivity
-             * @tparam Elements Whether elements are included
+             * @tparam T Typedef enum of bool underlying type
+             * @tparam Present Whether elements are included
              * @tparam N Number of labels per element
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              **/
             template <typename T, const T Present, const host::label_t N>
             __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
@@ -142,7 +149,9 @@ namespace LBM
              * @brief Disk space for field data (multiple variables per grid point)
              * @tparam Fields Whether fields are included
              * @tparam Format File format (ASCII or BINARY)
-             * @param[in] nx, ny, nz Mesh dimensions
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              * @param[in] nVars Number of variables
              **/
             template <const contained Fields, const format Format>
@@ -164,7 +173,9 @@ namespace LBM
              * @brief Disk space for point coordinates (always 3 components per node)
              * @tparam Points Whether points are included
              * @tparam Format File format
-             * @param[in] nx, ny, nz Mesh dimensions
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              **/
             template <const contained Points, const format Format>
             __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
@@ -184,7 +195,9 @@ namespace LBM
             /**
              * @brief Disk space for element connectivity (8 labels per element)
              * @tparam Elements Whether elements are included
-             * @param[in] nx, ny, nz Mesh dimensions
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              **/
             template <const contained Elements>
             __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
@@ -204,7 +217,9 @@ namespace LBM
             /**
              * @brief Disk space for offset data (1 label per element)
              * @tparam Offsets Whether offsets are included
-             * @param[in] nx, ny, nz Mesh dimensions
+             * @param[in] nx Global X dimension
+             * @param[in] ny Global Y dimension
+             * @param[in] nz Global Z dimension
              **/
             template <const contained Offsets>
             __host__ [[nodiscard]] inline constexpr host::label_t usage(const host::label_t nx, const host::label_t ny, const host::label_t nz) noexcept
@@ -216,11 +231,13 @@ namespace LBM
         /**
          * @brief Compute total expected disk space for all output components
          * @tparam Format File format
-         * @tparam fields Whether field data is included
-         * @tparam points Whether point coordinates are included
-         * @tparam elements Whether element connectivity is included
-         * @tparam offsets Whether offset data is included
-         * @param[in] nx, ny, nz Mesh dimensions
+         * @tparam Fields Whether field data is included
+         * @tparam Points Whether point coordinates are included
+         * @tparam Elements Whether element connectivity is included
+         * @tparam Offsets Whether offset data is included
+         * @param[in] nx Global X dimension
+         * @param[in] ny Global Y dimension
+         * @param[in] nz Global Z dimension
          * @param[in] nVars Number of field variables (ignored if fields == No)
          * @return Total bytes required
          **/
@@ -232,7 +249,11 @@ namespace LBM
 
         /**
          * @brief Overload for usage with a mesh object.
-         * @tparam Format,fields, points, elements, offsets Same as above.
+         * @tparam Format File format
+         * @tparam Fields Whether field data is included
+         * @tparam Points Whether point coordinates are included
+         * @tparam Elements Whether element connectivity is included
+         * @tparam Offsets Whether offset data is included
          * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, host::label_t>(), etc.).
          * @param[in] mesh The lattice mesh.
          * @param[in] nVars Number of field variables.
@@ -258,6 +279,8 @@ namespace LBM
 
         /**
          * @brief Checks if at least `required` bytes are available on the disk of `dir`.
+         * @param[in] required Required disk space
+         * @param[in] dir The directory to query
          **/
         __host__ [[nodiscard]] inline bool hasEnoughSpace(const host::label_t required, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
         {
@@ -266,14 +289,20 @@ namespace LBM
 
         /**
          * @brief Throws a runtime_error due to insufficient disk space
+         * @param[in] fileName Name of the file
+         * @param[in] required Required disk space
+         * @param[in] available Available disk space
          **/
-        __host__ void insufficientDiskSpace(const name_t &fileName, const host::label_t expected, const host::label_t available = availableDiskSpace())
+        __host__ void insufficientDiskSpace(const name_t &fileName, const host::label_t required, const host::label_t available = availableDiskSpace())
         {
-            throw std::runtime_error("Insufficient disk space to write " + fileName + "\nRequired: " + std::to_string(expected) + "\nAvailable: " + std::to_string(available));
+            throw std::runtime_error("Insufficient disk space to write " + fileName + "\nRequired: " + std::to_string(required) + "\nAvailable: " + std::to_string(available));
         }
 
         /**
          * @brief Throws if insufficient disk space.
+         * @param[in] fileName Name of the file
+         * @param[in] required Required disk space
+         * @param[in] available Available disk space
          **/
         __host__ void ensureDiskSpace(const name_t &fileName, const host::label_t required, const host::label_t available = availableDiskSpace())
         {
@@ -285,6 +314,15 @@ namespace LBM
 
         /**
          * @brief Check whether sufficient disk space exists for a given output config.
+         * @tparam Format File format
+         * @tparam Fields Whether field data is included
+         * @tparam Points Whether point coordinates are included
+         * @tparam Elements Whether element connectivity is included
+         * @tparam Offsets Whether offset data is included
+         * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, host::label_t>(), etc.).
+         * @param[in] mesh The lattice mesh.
+         * @param[in] nVars Number of field variables (ignored if fields == No)
+         * @param[in] dir The directory to query
          **/
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
         __host__ [[nodiscard]] bool diskSpaceCheck(const LatticeMesh &mesh, const host::label_t nVars, const std::filesystem::path &dir = std::filesystem::current_path()) noexcept
@@ -295,6 +333,16 @@ namespace LBM
 
         /**
          * @brief Assert (throw) that sufficient disk space exists.
+         * @tparam Format File format
+         * @tparam Fields Whether field data is included
+         * @tparam Points Whether point coordinates are included
+         * @tparam Elements Whether element connectivity is included
+         * @tparam Offsets Whether offset data is included
+         * @tparam LatticeMesh Type of the mesh (must provide dimension<axis::X, host::label_t>(), etc.).
+         * @param[in] mesh The lattice mesh.
+         * @param[in] nVars Number of field variables (ignored if fields == No)
+         * @param[in] fileName Name of the file
+         * @param[in] dir The directory to query
          **/
         template <const format Format, const fields::contained Fields, const points::contained Points, const elements::contained Elements, const offsets::contained Offsets, class LatticeMesh>
         __host__ void diskSpaceAssertion(const LatticeMesh &mesh, const host::label_t nVars, const name_t &fileName, const std::filesystem::path &dir = std::filesystem::current_path())
@@ -317,6 +365,7 @@ namespace LBM
 
         /**
          * @brief Create a directory if it does not exist
+         * @tparam ThrowOnFailure Throw a std::runtime_error on failure
          * @param[in] dir Path to the directory to create
          * @return true if the directory exists or was created successfully, false otherwise
          **/

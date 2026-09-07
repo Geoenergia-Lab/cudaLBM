@@ -88,8 +88,7 @@ namespace LBM
          * @note This implementation assumes zero force terms, so velocity updates are omitted
          * @note Uses device-level relaxation parameters (device::t_omegaVar, device::omegaVar_d2, device::omega)
          **/
-        template <class MomentsArray>
-        __device__ static inline void collide(MomentsArray &moments) noexcept
+        __device__ static inline void collide(momentsArray &moments) noexcept
         {
             // Diagonal moment updates (remove force terms)
             moments[m_i<4>()] = collide(moments[m_i<1>()], moments[m_i<4>()]);

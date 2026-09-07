@@ -71,7 +71,9 @@ namespace LBM
 
         /**
          * @brief Constructor
-         * @param[in] X, Y, Z Initialiser values
+         * @param[in] X Initialiser value
+         * @param[in] Y Initialiser value
+         * @param[in] Z Initialiser value
          **/
         __device__ __host__ [[nodiscard]] inline constexpr var3(const T X, const T Y, const T Z) noexcept
             : x(X),
@@ -81,6 +83,7 @@ namespace LBM
         /**
          * @brief Access the data by axis
          * @tparam alpha The axis direction (X, Y or Z)
+         * @tparam ValueType The return type
          **/
         template <const axis::type alpha, typename ValueType = value_type>
         __device__ __host__ [[nodiscard]] constexpr ValueType value() const noexcept

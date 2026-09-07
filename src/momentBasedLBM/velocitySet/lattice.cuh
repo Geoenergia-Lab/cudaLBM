@@ -120,6 +120,7 @@ namespace LBM
 
         /**
          * @brief Get weight for stationary component (q=0)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T w_0() noexcept
@@ -137,6 +138,7 @@ namespace LBM
 
         /**
          * @brief Get weight for orthogonal directions (q=1-6)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T w_1() noexcept
@@ -154,6 +156,7 @@ namespace LBM
 
         /**
          * @brief Get weight for diagonal directions (q=7-18)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T w_2() noexcept
@@ -171,6 +174,7 @@ namespace LBM
 
         /**
          * @brief Get weight for corner directions (q=19-26)
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T w_3() noexcept
@@ -188,6 +192,7 @@ namespace LBM
 
         /**
          * @brief Get all weights for device computation
+         * @tparam T The underlying data type of the array
          * @return Thread array of 27 weights in D3Q27 order
          **/
         template <typename T>
@@ -211,7 +216,8 @@ namespace LBM
          * @brief Returns a component of the velocity set along an arbitrary axis
          * @tparam T The type of data to return
          * @tparam alpha The axis (X, Y or Z)
-         * @param[in] q The index of the component
+         * @tparam q_ Value of the lattice index
+         * @param[in] q The lattice index
          **/
         template <typename T, const axis::type alpha, const device::label_t q_>
         __device__ __host__ [[nodiscard]] static inline consteval T c(const q_i<q_> q) noexcept
@@ -221,6 +227,7 @@ namespace LBM
 
         /**
          * @brief Returns the number of components of the velocity set
+         * @tparam T The return type
          **/
         template <typename T = host::label_t>
         __device__ __host__ [[nodiscard]] static inline consteval T Q() noexcept
@@ -230,6 +237,7 @@ namespace LBM
 
         /**
          * @brief Returns the number of components of the velocity set facing any given cardinal direction
+         * @tparam T The return type
          **/
         template <typename T>
         __device__ __host__ [[nodiscard]] static inline consteval T QF() noexcept
@@ -257,7 +265,8 @@ namespace LBM
 
         /**
          * @brief Returns the first Q_ elements of an arbitrary array
-         * @tparam Fundamental type of the underlying array
+         * @tparam T The type of the underlying array
+         * @param[in] arr The array of which to make the first Q_ elements
          * @return A thread::array containing the first Q_ elements of the input array
          **/
         template <typename T>
@@ -268,7 +277,7 @@ namespace LBM
 
         /**
          * @brief Fundamental definition of the lattice speeds
-         * @tparam The underlying type
+         * @tparam T The type of the underlying array
          * @tparam alpha The axis direction (X, Y or Z)
          **/
         template <typename T, const axis::type alpha>
@@ -297,6 +306,7 @@ namespace LBM
 
         /**
          * @brief Get all weights for device computation
+         * @tparam T The return type
          * @return Thread array of 27 weights in D3Q27 order
          **/
         template <typename T>
@@ -307,6 +317,7 @@ namespace LBM
 
         /**
          * @brief Get x-components for all directions
+         * @tparam T The return type
          * @return Thread array of 27 x-velocity components
          **/
         template <typename T>
@@ -317,6 +328,7 @@ namespace LBM
 
         /**
          * @brief Get y-components for all directions
+         * @tparam T The return type
          * @return Thread array of 27 y-velocity components
          **/
         template <typename T>
@@ -327,6 +339,7 @@ namespace LBM
 
         /**
          * @brief Get z-components for all directions
+         * @tparam T The return type
          * @return Thread array of 27 z-velocity components
          **/
         template <typename T>

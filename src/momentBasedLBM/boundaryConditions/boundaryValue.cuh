@@ -92,9 +92,9 @@ namespace LBM
          **/
         const scalar_t value;
 
-        /** *
+        /**
          * @brief Extracts a parameter from the configuration file
-         * @tparam T Type of the parameter to extract
+         * @tparam safety_check Performs a safety check on the parameter
          * @param[in] fieldName Name of the field to extract
          * @param[in] regionName Name of the boundary region
          * @param[in] initialConditionsName Name of the configuration file (default: "initialConditions")

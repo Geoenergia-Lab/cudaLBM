@@ -87,7 +87,7 @@ namespace LBM
         {
             /**
              * @brief Calculates the dissipation term epsilon from the fluctuation of the strain rate tensor SPrime and the viscosity nu
-             * @param[in] SPrime Fluctuation of the strain rate tensor
+             * @param[in] SPrime Perturbation of the strain rate tensor
              * @param[in] nu Kinematic viscosity
              **/
             __device__ __host__ [[nodiscard]] static inline constexpr const scalar calculate(const symmetricTensor &SPrime, const scalar_t nu) noexcept
@@ -97,6 +97,7 @@ namespace LBM
 
             /**
              * @brief Convenience function to calculate epsilon using device-allocated constant variables
+             * @param[in] SPrime Perturbation of the strain rate tensor
              **/
             __device__ [[nodiscard]] static inline const scalar calculate(const symmetricTensor &SPrime) noexcept
             {
@@ -232,6 +233,7 @@ namespace LBM
 
         /**
          * @brief Saves the turbulence statistics: Reynolds stress tensor R, production term P, dissipation term epsilon, and turbulent kinetic energy k to the host write buffer
+         * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
          * @param[in] timeStep The current time step for saving the turbulence statistics
          **/
         __host__ inline void save(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept

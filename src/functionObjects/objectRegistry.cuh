@@ -101,7 +101,6 @@ namespace LBM
 
         /**
          * @brief Executes all registered function object calculations for given time step
-         * @param[in] timeStep The current simulation time step
          **/
         __host__ inline void calculate() noexcept
         {
@@ -113,6 +112,7 @@ namespace LBM
 
         /**
          * @brief Executes all registered function object calculations for given time step
+         * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
          * @param[in] timeStep The current simulation time step
          **/
         __host__ inline void save(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
@@ -153,6 +153,7 @@ namespace LBM
 
         /**
          * @brief Initializes function calls based on strain rate tensor configuration
+         * @tparam Args Types of the objects contained in the registry
          * @param[in] args References to the objects contained in the registry
          * @return Vector of function objects to be executed
          **/
@@ -166,6 +167,7 @@ namespace LBM
 
         /**
          * @brief Adds a call to a calculate function to the list of functions to call
+         * @tparam C Type of the object
          * @param[out] calls The list of functions to be called
          * @param[in] object The object whose calculate function to add
          **/
@@ -236,6 +238,7 @@ namespace LBM
 
         /**
          * @brief Initializes save calls based on strain rate tensor configuration
+         * @tparam Args Types of the objects contained in the registry
          * @param[in] args References to the objects contained in the registry
          * @return Vector of function objects to be executed
          **/
@@ -249,6 +252,7 @@ namespace LBM
 
         /**
          * @brief Adds a call to a save function to the list of functions to call
+         * @tparam C Type of the object
          * @param[out] calls The list of functions to be called
          * @param[in] object The object whose save function to add
          **/

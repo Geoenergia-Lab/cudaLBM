@@ -100,6 +100,7 @@ namespace LBM
     public:
         /**
          * @brief Default constructor
+         * @param[in] deviceIndices Ordinals of the devices for which to create the streams
          **/
         __host__ [[nodiscard]] streamHandler(const std::vector<deviceIndex_t> &deviceIndices) noexcept
             : streams_(createCudaStreams(deviceIndices)) {}
@@ -158,7 +159,7 @@ namespace LBM
         /**
          * @brief Creates and initializes CUDA streams
          * @return std::array of N initialized CUDA streams
-         *
+         * @param[in] deviceIndices Ordinals of the devices for which to create the streams
          * Private helper function that handles actual stream creation
          * with proper error checking and device synchronization.
          **/

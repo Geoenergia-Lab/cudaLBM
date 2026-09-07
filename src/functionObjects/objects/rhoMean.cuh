@@ -178,6 +178,8 @@ namespace LBM
 
             /**
              * @brief Save the time-averaged density to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void saveMean(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -186,6 +188,8 @@ namespace LBM
 
             /**
              * @brief Save the time-averaged density to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void savePrime(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -194,6 +198,8 @@ namespace LBM
 
             /**
              * @brief Save the time average of the square of the perturbation of the density to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void savePrimeSqMean(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -201,10 +207,21 @@ namespace LBM
             }
 
             /**
-             * @brief Access to the pointers of the underlying device fields
+             * @brief Access to the pointers of the time averaged field
+             * @param[in] idx Memory index
              **/
             __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept { return {rhoMean_.ptr(idx)}; }
+
+            /**
+             * @brief Access to the pointers of the perturbation field
+             * @param[in] idx Memory index
+             **/
             __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primePtrs(const host::label_t idx) noexcept { return {rhoPrime_.ptr(idx)}; }
+
+            /**
+             * @brief Access to the pointers of the mean of the square of the perturbation field
+             * @param[in] idx Memory index
+             **/
             __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primeSqMeanPtrs(const host::label_t idx) noexcept { return {rhoPrimeSqMean_.ptr(idx)}; }
 
         private:

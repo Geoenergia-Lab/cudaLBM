@@ -102,6 +102,8 @@ namespace LBM
 
         /**
          * @brief Calculates the spatial mean of a field
+         * @tparam ReturnType The return type
+         * @tparam T Type of the variable to sum
          * @param[in] field The field to calculate the mean of
          * @return The spatial mean of the field
          **/
@@ -118,6 +120,7 @@ namespace LBM
 
         /**
          * @brief Calculates the spatial mean of a field
+         * @tparam T Type of the variable to sum
          * @param[in] field The field to calculate the mean of
          * @return The spatial mean of the field
          **/
@@ -129,7 +132,9 @@ namespace LBM
 
         /**
          * @brief Checks if a field contains any NaN values
+         * @tparam T Type of the field to check
          * @param[in] field The field to check
+         * @param[out] status Status of the calculation (1 if field contains NaN)
          * @return True if the field contains NaN values, false otherwise
          **/
         template <typename T>

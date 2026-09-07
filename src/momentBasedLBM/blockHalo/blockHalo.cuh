@@ -79,12 +79,20 @@ namespace LBM
          * @tparam alpha The axis direction (X, Y or Z)
          * @tparam pop Population index
          * @tparam QF Number of populations
-         * @param[in] ta,tb Thread-local y/z coordinates
-         * @param[in] bx,by,bz Block indices
+         * @param[in] ta Thread-local alpha coordinate
+         * @param[in] tb Thread-local beta coordinate
+         * @param[in] bx Block index in the x-direction
+         * @param[in] by Block index in the y-direction
+         * @param[in] bz Block index in the z-direction
          * @return Linearized two-dimensional face index
          **/
         template <const axis::type alpha, const device::label_t pop, const device::label_t QF>
-        __device__ [[nodiscard]] inline device::label_t idxPop(const device::label_t ta, const device::label_t tb, const device::label_t bx, const device::label_t by, const device::label_t bz) noexcept
+        __device__ [[nodiscard]] inline device::label_t idxPop(
+            const device::label_t ta,
+            const device::label_t tb,
+            const device::label_t bx,
+            const device::label_t by,
+            const device::label_t bz) noexcept
         {
             axis::assertions::validate<alpha, axis::NOT_NULL>();
 

@@ -123,7 +123,7 @@ namespace LBM
     private:
         /**
          * @brief Computes periodic boundary index with optimization for power-of-two dimensions
-         * @tparam Shift Direction shift (-1 for backward, +1 for forward)
+         * @tparam coeff Direction shift (-1 for backward, +1 for forward)
          * @tparam Dim Dimension size (periodic length)
          * @param[in] idx Current index position
          * @return Shifted index with periodic wrapping

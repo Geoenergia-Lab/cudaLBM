@@ -61,10 +61,18 @@ namespace LBM
     {
         /**
          * @brief Memory index (generic version)
-         * @tparam nx,ny,nz Block dimensions
-         * @param[in] tx,ty,tz Thread-local coordinates
-         * @param[in] bx,by,bz Block indices
-         * @param[in] nxBlocks,nyBlocks Number of blocks in the x and y directions
+         * @tparam T The return type
+         * @tparam nx Block dimensions in the X axis
+         * @tparam ny Block dimensions in the Y axis
+         * @tparam nz Block dimensions in the Z axis
+         * @param[in] tx Thread x-coordinate within block
+         * @param[in] ty Thread y-coordinate within block
+         * @param[in] tz Thread z-coordinate within block
+         * @param[in] bx Block index in the x-direction
+         * @param[in] by Block index in the y-direction
+         * @param[in] bz Block index in the z-direction
+         * @param[in] nxBlocks Number of blocks in x-direction
+         * @param[in] nyBlocks Number of blocks in y-direction
          * @return Linearized index using mesh constants
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
@@ -150,6 +158,8 @@ namespace LBM
     {
         /**
          * @brief Assert that no arguments are passed by reference
+         * @tparam T Return type of the function to check
+         * @tparam Args Type of the function arguments
          **/
         template <typename T, typename... Args>
         __device__ __host__ [[nodiscard]] inline consteval bool has_reference_parameters(T (*)(Args...))
@@ -163,6 +173,7 @@ namespace LBM
          * @tparam KernelFunc The kernel function to launch
          * @tparam sharedMem The amount of dynamic shared memory in bytes
          * @tparam threadBlock The size of the block as a dim3
+         * @tparam Args Type of arguments to pass to the kernel
          * @param[in] grid The number of blocks to launch
          * @param[in] stream The execution stream on which to launch the kernel
          * @param[in] args Arguments to pass to the kernel
@@ -180,9 +191,9 @@ namespace LBM
 
     /**
      * @brief Raise a variable to a compile-time constant integer power
-     * @tparam N The power
+     * @tparam Pow The power
      * @tparam T The arithmetic type
-     * @param[in] var The variable to exponent
+     * @param[in] val The variable to exponent
      **/
     template <const host::label_t Pow, typename T>
     __device__ __host__ [[nodiscard]] inline constexpr T pow(const T &val) noexcept
@@ -266,6 +277,7 @@ namespace LBM
     {
         /**
          * @brief Nested loop over block and thread indices
+         * @tparam F Type of the callable function
          * @param[in] nBlocks Number of blocks in the X, Y and Z directions
          * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
          *
@@ -308,7 +320,9 @@ namespace LBM
     {
         /**
          * @brief Nested loop over global grid indices
+         * @tparam F Type of the callable function
          * @param[in] dimensions Number of points in the X, Y and Z directions
+         * @param[in] indent Identation to the loop end condition
          * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
          *
          * Example:
@@ -335,6 +349,8 @@ namespace LBM
 
         /**
          * @brief Nested loop over indices in a plane
+         * @tparam alpha The axis direction (X, Y or Z)
+         * @tparam F Type of the callable function
          * @param[in] dimensions Number of points in the X, Y and Z directions
          * @param[in] f Function called for each (bx, by, bz, tx, ty, tz)
          *
@@ -365,23 +381,29 @@ namespace LBM
     {
         /**
          * @brief Memory index (host version)
-         * @param[in] tx,ty,tz Thread-local coordinates
-         * @param[in] bx,by,bz Block indices
-         * @param[in] nxBlocks,nyBlocks Number of blocks in the x and y directions
+         * @param[in] tx Thread x-coordinate within block
+         * @param[in] ty Thread y-coordinate within block
+         * @param[in] tz Thread z-coordinate within block
+         * @param[in] bx Block index in the x-direction
+         * @param[in] by Block index in the y-direction
+         * @param[in] bz Block index in the z-direction
+         * @param[in] nxBlocks Number of blocks in x-direction
+         * @param[in] nyBlocks Number of blocks in y-direction
          * @return Linearized index using mesh constants
          *
          * Layout: [bx][by][bz][tz][ty][tx] (tx fastest varying)
          **/
-        __host__ [[nodiscard]] inline constexpr label_t idx(
-            const label_t tx, const label_t ty, const label_t tz,
-            const label_t bx, const label_t by, const label_t bz,
-            const label_t nxBlocks, const label_t nyBlocks) noexcept
+        __host__ [[nodiscard]] inline constexpr label_t idx(const label_t tx, const label_t ty, const label_t tz, const label_t bx, const label_t by, const label_t bz, const label_t nxBlocks, const label_t nyBlocks) noexcept
         {
             return global::idx<host::label_t, block::nx<host::label_t>(), block::ny<host::label_t>(), block::nz<host::label_t>()>(tx, ty, tz, bx, by, bz, nxBlocks, nyBlocks);
         }
 
         /**
          * @overload Compute the memory index from a thread and block label
+         * @param[in] Tx Three-dimensional thread coordinates
+         * @param[in] Bx Three-dimensional block coordinates
+         * @param[in] nxBlocks Number of blocks in x-direction
+         * @param[in] nyBlocks Number of blocks in y-direction
          **/
         __host__ [[nodiscard]] inline constexpr label_t idx(const host::threadLabel &Tx, const host::blockLabel &Bx, const label_t nxBlocks, const label_t nyBlocks) noexcept
         {
@@ -393,8 +415,11 @@ namespace LBM
     {
         /**
          * @brief Global scalar field index (collapsed 3D)
-         * @param[in] x,y,z Global coordinates
-         * @param[in] nx,ny Global dimensions
+         * @param[in] x Global X coordinate
+         * @param[in] y Global Y coordinate
+         * @param[in] z Global Z coordinate
+         * @param[in] nx Global X dimension
+         * @param[in] ny Global Y dimension
          * @return Linearized index: x + nx*(y + ny*z)
          **/
         __device__ __host__ [[nodiscard]] inline constexpr host::label_t idx(const host::label_t x, const host::label_t y, const host::label_t z, const host::label_t nx, const host::label_t ny) noexcept
@@ -404,7 +429,9 @@ namespace LBM
 
         /**
          * @overload
-         * @param[in] point Point coordinates
+         * @param[in] point The global point coordinate
+         * @param[in] nx Global X dimension
+         * @param[in] ny Global Y dimension
          **/
         __device__ __host__ [[nodiscard]] inline constexpr host::label_t idx(const host::pointLabel &point, const host::label_t nx, const host::label_t ny) noexcept
         {
@@ -419,6 +446,7 @@ namespace LBM
     {
         /**
          * @brief Check if current thread exceeds global bounds
+         * @param[in] point The global point coordinate
          * @note Uses device constants device::nx, device::ny, device::nz
          * @return True if thread is outside domain boundaries
          **/
@@ -444,8 +472,8 @@ namespace LBM
 
         /**
          * @overload
-         * @param[in] tx Thread coordinates (thread::coordinate)
-         * @param[in] bx Block indices (thread::coordinate)
+         * @param[in] Tx Three-dimensional thread coordinates
+         * @param[in] Bx Three-dimensional block coordinates
          **/
         __device__ [[nodiscard]] inline device::label_t idx(const thread::coordinate &Tx, const block::coordinate &Bx) noexcept
         {
@@ -475,7 +503,7 @@ namespace LBM
 
         /**
          * @overload
-         * @param[in] tx Thread coordinates (thread::coordinate)
+         * @param[in] Tx Three-dimensional thread coordinates
          **/
         __device__ [[nodiscard]] inline device::label_t idx(const thread::coordinate &Tx) noexcept
         {

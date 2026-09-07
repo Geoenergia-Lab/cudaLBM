@@ -109,13 +109,14 @@ namespace LBM
 
         /**
          * @brief Finds the position of a char within a string
+         * @tparam c The character to search for
          * @param[in] str The string to search
-         * @param[in] c The character to search for
          * @return The position of c within str
          **/
-        __host__ [[nodiscard]] inline constexpr host::label_t findCharPosition(const name_t &str, const char (&c)[2])
+        template <const char c>
+        __host__ [[nodiscard]] inline constexpr host::label_t findCharPosition(const name_t &str)
         {
-            return str.find(c[0]);
+            return str.find(c);
         }
 
         /**
@@ -187,6 +188,7 @@ namespace LBM
 
         /**
          * @brief Trims leading and trailing whitespace from a string.
+         * @tparam trimSemicolon Switch controlling the trimming of semi colons
          * @param[in] str The input string to trim.
          * @return Trimmed string, or empty string if only whitespace.
          * @note Handles space, tab, newline, carriage return, form feed, and vertical tab.
@@ -213,6 +215,7 @@ namespace LBM
 
         /**
          * @brief Trims leading and trailing whitespace from each string in a vector.
+         * @tparam trimSemicolon Switch controlling the trimming of semi colons
          * @param[in] str The vector of strings to trim.
          * @return A new vector with each string trimmed.
          **/
@@ -428,6 +431,7 @@ namespace LBM
 
         /**
          * @brief Reads the caseInfo file in the current directory into a vector of strings
+         * @param[in] fileName Name of the file to read
          * @return A std::vector of std::string_view objects contained within the caseInfo file
          * @note This function will cause the program to exit if caseInfo is not found in the launch directory
          **/
@@ -538,9 +542,9 @@ namespace LBM
 
         /**
          * @brief Splits the string_view object s according to the delimiter delim
+         * @tparam delim The delimiter
+         * @tparam removeWhitespace Controls the removal of whitespace; removes blank spaces from the return value if true
          * @param[in] s The string_view object which is to be split
-         * @param[in] delim The delimiter character by which s is split, e.g. a comma, space, etc
-         * @param[in] removeWhitespace Controls the removal of whitespace; removes blank spaces from the return value if true (default true)
          * @return A std::vector of std::string_view objects split from s by delim
          * @note This function can be used to, for example, split a string by commas, spaces, etc
          **/
@@ -602,7 +606,7 @@ namespace LBM
 
         /**
          * @brief Searches for an entry corresponding to variableName within the vector of strings S
-         * @param[in] T The type of variable returned
+         * @tparam T The type of variable returned
          * @param[in] S The vector of strings which is searched
          * @param[in] name The name of the variable which is to be found and returned as type T
          * @return The value of the variable expressed as a type T
@@ -737,8 +741,9 @@ namespace LBM
 
         /**
          * @brief Parses the value of the argument following name
-         * @param[in] argc First argument passed to main
-         * @param[in] argv Second argument passed to main
+         * @tparam T Type of the vector to return
+         * @param[in] args Arguments passed to the command line
+         * @param[in] name Argument to search for
          * @return A vector of integral type T
          * @note This function can be used to parse arguments passed to the executable on the command line such as -GPU 0,1
          **/

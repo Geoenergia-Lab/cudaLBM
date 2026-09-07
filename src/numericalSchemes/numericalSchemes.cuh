@@ -61,6 +61,8 @@ namespace LBM
         {
             /**
              * @brief Check that the selected numerical scheme order is valid: positive multiple number of 2 up to the maximum scheme order
+             * @tparam Order Order of the numerical scheme
+             * @tparam MaximumSchemeOrder Maximum permissible order
              **/
             template <const host::label_t Order, const host::label_t MaximumSchemeOrder>
             __device__ __host__ inline consteval void validate() noexcept
@@ -89,6 +91,7 @@ namespace LBM
 
         /**
          * @brief Calculates the magnitude of a tensor of arbitrary rank at a given index
+         * @tparam Squared Calculate the square magnitude
          * @tparam T The data type of the vector components.
          * @param[in] f The tensor
          * @param[in] i The index
@@ -117,6 +120,7 @@ namespace LBM
 
         /**
          * @brief Calculates the magnitude of a tensor of arbitrary rank
+         * @tparam Squared Calculate the square magnitude
          * @tparam T The data type of the vector components.
          * @param[in] f The tensor
          * @return The magnitude of the tensor

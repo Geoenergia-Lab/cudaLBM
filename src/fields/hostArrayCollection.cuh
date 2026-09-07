@@ -105,6 +105,8 @@ namespace LBM
 
             /**
              * @brief Splits the underlying large vector into N fields
+             * @tparam Deinterleave De-interleave the mesh ordering to Cartesian
+             * @tparam Sort Sort the elements in ascending order
              * @param[in] mesh The lattice mesh
              * @return Vector of vectors where each inner vector contains all values for one variable
              * @throws std::invalid_argument if input size doesn't match mesh dimensions
@@ -190,6 +192,7 @@ namespace LBM
 
             /**
              * @brief Split the fields into separate vectors and de-interleave into natural Cartesian coordinates
+             * @param[in] mesh Reference to the lattice mesh
              **/
             __host__ [[nodiscard]] const std::vector<std::vector<T>> deinterleaveAoS(const host::latticeMesh &mesh) const
             {
@@ -198,6 +201,7 @@ namespace LBM
 
             /**
              * @brief Split the fields into separate vectors without de-interleaving
+             * @param[in] mesh Reference to the lattice mesh
              **/
             __host__ [[nodiscard]] const std::vector<std::vector<T>> splitFieldsRaw(const host::latticeMesh &mesh) const
             {
@@ -206,6 +210,7 @@ namespace LBM
 
             /**
              * @brief Split the fields into separate vectors and sort each field in ascending order
+             * @param[in] mesh Reference to the lattice mesh
              **/
             __host__ [[nodiscard]] const std::vector<std::vector<T>> splitFieldsAndSort(const host::latticeMesh &mesh) const
             {
@@ -230,8 +235,8 @@ namespace LBM
 
             /**
              * @brief Initialize vector from mesh dimensions
-             * @param[in] programCtrl The program control object
-             * @param[in] mesh The lattice mesh
+             * @param[in] fileName Name of the file to read
+             * @param[in] empty Whether or not the field is to be initialised as empty
              * @return Initialized data vector
              * @throws std::runtime_error if indexed files not found
              **/

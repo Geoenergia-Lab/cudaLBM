@@ -179,6 +179,7 @@ namespace LBM
 
         /**
          * @brief Folded sum of the moments for a given distribution function
+         * @tparam i The moment index
          * @param[in] thermo The thermal model
          * @param[in] moments The calculated moments array
          **/
@@ -337,6 +338,7 @@ namespace LBM
         /**
          * @brief Adds or subtracts a particular population based on the sign of the coefficient
          * @tparam coeff The coefficient indicating the direction along the axis (must be -1 or 1)
+         * @tparam I Index to process
          * @tparam BoundaryNormal The boundary normal vector type
          * @param[in] pop_value A particular population
          * @param[in] boundaryNormal
@@ -360,7 +362,8 @@ namespace LBM
 
         /**
          * @brief Determines whether or not a particular lattice coefficient is negative
-         * @tparam alpha The axis direction (X, Y or Z)
+         * @tparam alpha The axis direction (X, Y, or Z)
+         * @tparam q_ Value of the lattice index
          * @param[in] q The lattice index
          * @return True if the lattice coefficient is negative, false otherwise
          **/
@@ -375,7 +378,8 @@ namespace LBM
         /**
          * @brief Determines whether or not a particular lattice coefficient is positive
          * @tparam alpha The axis direction (X, Y, or Z)
-         * @param[in] The lattice index
+         * @tparam q_ Value of the lattice index
+         * @param[in] q The lattice index
          * @return True if the lattice coefficient is positive, false otherwise
          **/
         template <const axis::type alpha, const device::label_t q_>

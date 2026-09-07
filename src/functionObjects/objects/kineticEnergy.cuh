@@ -68,8 +68,7 @@ namespace LBM
 
             /**
              * @brief Calculates the total kinetic energy
-             * @param[in] devPtrs Device pointer collection containing velocity and moment fields
-             * @param[in] idx Spatial index
+             * @param[in] U The perturbation of the velocity vector
              * @return The calculated total kinetic energy
              **/
             __device__ [[nodiscard]] static inline constexpr const scalar calculate(const vector &U) noexcept
@@ -83,9 +82,7 @@ namespace LBM
              * @param[in] idx Spatial index
              * @return The calculated total kinetic energy
              **/
-            __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(
-                const device::ptrColl_t &devPtrs,
-                const device::label_t idx) noexcept
+            __device__ [[nodiscard]] static inline constexpr const thread::array<scalar_t, N> calculate(const device::ptrColl_t &devPtrs, const device::label_t idx) noexcept
             {
                 return calculate(read_from_moments<axis::index<axis::X>(), axis::index<axis::Y>(), axis::index<axis::Z>()>(devPtrs, idx));
             }
@@ -206,6 +203,8 @@ namespace LBM
 
             /**
              * @brief Save the instantaneous kinetic energy to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void saveInstantaneous(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -214,6 +213,8 @@ namespace LBM
 
             /**
              * @brief Save the time-averaged kinetic energy to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void saveMean(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -222,6 +223,8 @@ namespace LBM
 
             /**
              * @brief Save the time-averaged kinetic energy to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void savePrime(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -230,6 +233,8 @@ namespace LBM
 
             /**
              * @brief Save the time average of the square of the perturbation of the kinetic energy to a file
+             * @param[in] hostWriteBuffer Host buffer used for copying data from the device before writing.
+             * @param[in] timeStep The current time step for saving the turbulence statistics
              **/
             __host__ void savePrimeSqMean(host::array<host::PINNED, scalar_t> &hostWriteBuffer, const host::label_t timeStep) noexcept
             {
@@ -237,12 +242,40 @@ namespace LBM
             }
 
             /**
-             * @brief Access to the pointers of the underlying device fields
+             * @brief Access to the pointers of the instantaneous field
+             * @param[in] idx Memory index
              **/
-            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> instantaneousPtrs(const host::label_t idx) noexcept { return k_.ptr(idx); }
-            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept { return {kMean_.ptr(idx)}; }
-            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primePtrs(const host::label_t idx) noexcept { return {kPrime_.ptr(idx)}; }
-            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primeSqMeanPtrs(const host::label_t idx) noexcept { return {kPrimeSqMean_.ptr(idx)}; }
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> instantaneousPtrs(const host::label_t idx) noexcept
+            {
+                return k_.ptr(idx);
+            }
+
+            /**
+             * @brief Access to the pointers of the time averaged field
+             * @param[in] idx Memory index
+             **/
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> meanPtrs(const host::label_t idx) noexcept
+            {
+                return {kMean_.ptr(idx)};
+            }
+
+            /**
+             * @brief Access to the pointers of the perturbation field
+             * @param[in] idx Memory index
+             **/
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primePtrs(const host::label_t idx) noexcept
+            {
+                return {kPrime_.ptr(idx)};
+            }
+
+            /**
+             * @brief Access to the pointers of the mean of the square of the perturbation field
+             * @param[in] idx Memory index
+             **/
+            __host__ [[nodiscard]] inline constexpr const device::ptrCollection<ObjectType::N, scalar_t> primeSqMeanPtrs(const host::label_t idx) noexcept
+            {
+                return {kPrimeSqMean_.ptr(idx)};
+            }
 
         private:
             /**

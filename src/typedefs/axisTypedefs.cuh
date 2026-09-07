@@ -140,12 +140,12 @@ namespace LBM
             /**
              * @brief Asserts that the direction alpha is a valid axis direction
              * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam potentialNull Switch that determines whether alpha is allowed to be NO_DIRECTION or not
+             * @tparam Null Switch that determines whether alpha is allowed to be NO_DIRECTION or not
              **/
-            template <const LBM::axis::type alpha, const LBM::axis::null null>
+            template <const LBM::axis::type alpha, const LBM::axis::null Null>
             __device__ __host__ inline consteval void validate() noexcept
             {
-                if constexpr (null == LBM::axis::CAN_BE_NULL)
+                if constexpr (Null == LBM::axis::CAN_BE_NULL)
                 {
                     static_assert(((alpha == LBM::axis::X) || (alpha == LBM::axis::Y) || (alpha == LBM::axis::Z) || (alpha == LBM::axis::NO_DIRECTION)), "Axis direction must be X, Y or Z");
                 }

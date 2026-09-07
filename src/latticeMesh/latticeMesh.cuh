@@ -93,6 +93,7 @@ namespace LBM
          * @tparam KernelFunc The kernel function to launch
          * @tparam sharedMem The amount of dynamic shared memory in bytes
          * @tparam threadBlock The size of the block as a dim3
+         * @tparam Args Type of arguments to pass to the kernel
          * @param[in] mesh The lattice mesh
          * @param[in] stream The execution stream on which to launch the kernel
          * @param[in] args Arguments to pass to the kernel

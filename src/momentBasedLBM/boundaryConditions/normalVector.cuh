@@ -73,9 +73,8 @@ namespace LBM
     public:
         /**
          * @brief Constructs a normalVector from current thread indices
+         * @param[in] point The spatial coordinate of the point
          * @return normalVector for the current thread's position
-         * @param[in] Tx Three-dimensional thread coordinates
-         * @param[in] Bx Three-dimensional block coordinates
          **/
         __device__ [[nodiscard]] inline constexpr normalVector(const device::pointCoordinate &point) noexcept
             : bitmask_(computeBitmask(point)) {}
@@ -212,8 +211,8 @@ namespace LBM
         }
 
         /**
-         * @name Boundary Detection Methods
-         * @brief Check if the point lies on specific boundaries
+         * @name Boundary detection
+         * @tparam T The return type
          * @return True if the point lies on the specified boundary
          **/
         template <typename T = bool>
@@ -221,41 +220,89 @@ namespace LBM
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & WEST()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isEast() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & EAST()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isSouth() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & SOUTH()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isNorth() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & NORTH()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isBack() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & BACK()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isFront() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & FRONT()));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isBoundary() const noexcept
         {
             return static_cast<T>(static_cast<bool>(bitmask_ & 0x40));
         }
+
+        /**
+         * @name Boundary detection
+         * @tparam T The return type
+         * @return True if the point lies on the specified boundary
+         **/
         template <typename T = bool>
         __device__ __host__ [[nodiscard]] inline constexpr T isInterior() const noexcept
         {
             return static_cast<T>(!isBoundary<bool>());
         }
+
+        /**
+         * @name Count the number of intersecting boundary planes at a point
+         * @tparam T The return type
+         * @return Number of boundary planes that intersect a point
+         **/
         template <typename T = nodeType_t>
         __device__ __host__ [[nodiscard]] inline constexpr T countBoundaries() const noexcept
         {
@@ -285,6 +332,7 @@ namespace LBM
 
         /**
          * @brief Compute bitmask from current thread indices
+         * @param[in] point The spatial coordinate of the point
          * @return Bitmask representing boundary configuration
          **/
         __device__ [[nodiscard]] static inline constexpr nodeType_t computeBitmask(const device::pointCoordinate &point) noexcept

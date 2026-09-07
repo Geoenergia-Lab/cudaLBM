@@ -73,6 +73,7 @@ namespace LBM
 
         /**
          * @brief Reads all pointers from devPtrs
+         * @tparam N Number of pointers to read
          * @param[in] devPtrs The pointers to read from
          * @param[in] idx Spatial index
          * @return The values at location idx
@@ -89,6 +90,7 @@ namespace LBM
 
         /**
          * @brief Saves all results to resultPtrs
+         * @tparam N Number of pointers to save
          * @param[in] result The result to save
          * @param[out] resultPtrs The pointers to save to
          * @param[in] idx Spatial index
@@ -105,6 +107,7 @@ namespace LBM
 
         /**
          * @brief Computes the updated time average of a single scalar value.
+         * @tparam T Return type
          * @param[in] fMean Current time average.
          * @param[in] f Current instantaneous value.
          * @param[in] invNewCount Reciprocal of (timeSteps + 1).
@@ -118,13 +121,12 @@ namespace LBM
 
         /**
          * @brief Helper that applies the scalar time_average element‑wise across an array using an index sequence.
-         * @tparam T  Element type.
-         * @tparam N  Array size.
+         * @tparam T Element type.
+         * @tparam N Array size.
          * @tparam Is Index sequence (deduced internally, not to be called directly).
          * @param[in] fMean Current time‑averaged array.
          * @param[in] f Current instantaneous array.
          * @param[in] invNewCount Reciprocal of (timeSteps + 1).
-         * @param[in] std::index_sequence<Is...> Compile‑time index pack for expansion.
          * @return Array where each element is the updated time average of the corresponding elements.
          **/
         template <typename T, const host::label_t N, const host::label_t... Is>
@@ -135,6 +137,8 @@ namespace LBM
 
         /**
          * @brief Calculates the time average of an array.
+         * @tparam T Element type.
+         * @tparam N Array size.
          * @param[in] fMean Current time average array.
          * @param[in] f Current instantaneous array.
          * @param[in] invNewCount Reciprocal of (timeSteps + 1).
@@ -148,6 +152,7 @@ namespace LBM
 
         /**
          * @brief Computes the squared difference between two scalars: (a - b) ^ 2.
+         * @tparam T Return type
          * @param[in] a First value.
          * @param[in] b Second value.
          * @return (a - b) * (a - b).
@@ -160,12 +165,11 @@ namespace LBM
 
         /**
          * @brief Helper that applies the scalar squared_difference element‑wise across two arrays using an index sequence.
-         * @tparam T  Element type.
-         * @tparam N  Array size.
+         * @tparam T Element type.
+         * @tparam N Array size.
          * @tparam Is Index sequence (deduced internally, not to be called directly).
          * @param[in] a First array.
          * @param[in] b Second array.
-         * @param[in] std::index_sequence<Is...> Compile‑time index pack for expansion.
          * @return Array where each element is (a[i] - b[i]) ^ 2.
          **/
         template <typename T, const host::label_t N, const host::label_t... Is>
@@ -176,6 +180,8 @@ namespace LBM
 
         /**
          * @brief Calculates the element‑wise squared difference between two arrays: (a[i] - b[i]) ^ 2
+         * @tparam T Element type.
+         * @tparam N Array size.
          * @param[in] a First array.
          * @param[in] b Second array.
          * @return Array of squared differences.

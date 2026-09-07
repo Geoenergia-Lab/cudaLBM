@@ -127,8 +127,8 @@ namespace LBM
             /**
              * @brief Returns the streaming index for a given axis and velocity
              * @tparam alpha The axis direction (X, Y or Z)
-             * @tparam v The velocity component (-1 or 1)
-             * @param[i] i The index of the velocity
+             * @tparam coeff The velocity component (-1 or 1)
+             * @param[in] i The index of the velocity
              **/
             template <const axis::type alpha, const int coeff>
             __device__ [[nodiscard]] static inline consteval device::label_t streaming_index(const device::label_t i) noexcept

@@ -169,6 +169,7 @@ namespace LBM
         /**
          * @brief Implementation of the exchange function
          * @tparam alpha The axis direction (X, Y or Z)
+         * @param[in] idxExchange The ID of the bidirectional exchange
          * @param[in] timeStep The current time step
          **/
         template <const axis::type alpha>
@@ -181,7 +182,6 @@ namespace LBM
 
             constexpr const host::threadLabel threadStart(static_cast<device::label_t>(0), static_cast<device::label_t>(0), static_cast<device::label_t>(0));
 
-            // Hard-coded for now
             const host::label_t idxDevL = idxExchange;
             const host::label_t idxDevR = idxExchange + 1;
 

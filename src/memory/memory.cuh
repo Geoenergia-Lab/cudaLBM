@@ -201,6 +201,7 @@ namespace LBM
 
         /**
          * @brief Allocates a symbol of type T to the device
+         * @tparam T The type of the pointer to copy to
          * @param[in] symbol The symbol to which the value is to be copied
          * @param[in] value The value to copy to the symbol
          **/
@@ -221,6 +222,8 @@ namespace LBM
 
         /**
          * @brief Allocates an array of type T and size N to the device
+         * @tparam T The type of the pointer to copy to
+         * @tparam N Number of elements of the symbol on the device
          * @param[in] symbol The symbol to which the value is to be copied
          * @param[in] value The value to copy to the symbol
          **/
@@ -240,6 +243,9 @@ namespace LBM
 
         /**
          * @brief Allocates a symbol of type T to an array on the device
+         * @tparam T The type of the pointer to copy to
+         * @tparam N Number of elements of the symbol on the device
+         * @tparam SizeType Index type
          * @param[in] symbol The array to which the value is to be copied
          * @param[in] value The value to copy to the symbol
          * @param[in] index The index in the array to copy the value to
@@ -321,6 +327,7 @@ namespace LBM
 
         /**
          * @overload Allocates memory on a specific device
+         * @tparam T The type of the returned pointer
          * @param[in] nPoints Number of elements to allocate
          * @param[in] deviceID The device on which to allocate the memory
          **/
@@ -445,6 +452,7 @@ namespace LBM
 
         /**
          * @overload Copies to a specific device
+         * @tparam T The type of the pointer to copy to
          * @param[out] ptr Destination device pointer
          * @param[in] f Source host vector
          * @param[in] deviceID The device on which to allocate the memory
@@ -479,6 +487,7 @@ namespace LBM
 
         /**
          * @overload Allocates and copies to memory on a specific device
+         * @tparam T The type of the returned pointer
          * @param[in] f Host vector to copy to device
          * @param[in] deviceID The device on which to allocate the memory
          **/
@@ -516,6 +525,7 @@ namespace LBM
 
         /**
          * @brief Allocates device memory and initializes it with a value on a specific device
+         * @tparam T The type of the returned pointer
          * @param[in] nPoints Number of elements to allocate
          * @param[in] val Value to initialize all elements with
          * @param[in] deviceID The device on which to allocate the memory
@@ -549,10 +559,12 @@ namespace LBM
         /**
          * @brief Wrapper for calls to cudaMemcpyAsync copying device to host
          * @tparam T The type of the pointer
-         * @param[in] hostPtr Pointer on the host to copy to
-         * @param[in] devPtr Pointer on the device to copy from
-         * @param[in] nPoints Number of points of the size of T to copy
-         * @param[in] stream Stream on which to execute the copy
+         * @param[in] destPtr Pointer on the device to copy to
+         * @param[in] destDevice Device to copy to
+         * @param[in] srcPtr Pointer on the device to copy from
+         * @param[in] srcDevice Device to copy from
+         * @param[in] nPoints Number of points to copy
+         * @param[in] stream Device execution stream to copy over
          **/
         template <typename T>
         __host__ inline void memcpyPeerAsync(T *const ptrRestrict destPtr, const deviceIndex_t destDevice, const T *const ptrRestrict srcPtr, const deviceIndex_t srcDevice, const host::label_t nPoints, const cudaStream_t &stream) noexcept

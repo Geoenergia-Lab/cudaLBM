@@ -67,6 +67,7 @@ namespace LBM
         {
             /**
              * @brief Asserts that coeff is a valid velocity set coefficient
+             * @tparam Null Whether or not the velocity coefficient can be 0
              * @tparam coeff The coefficient indicating the direction along the axis
              **/
             template <const int coeff, const null Null>

@@ -135,6 +135,7 @@ __device__ __host__ [[nodiscard]] static inline consteval T faceArea() noexcept
 /**
  * @brief Index for points located on a block face
  * @tparam alpha The axis direction (X, Y or Z)
+ * @param[in] Tx Three-dimensional thread coordinates
  * @return Linearized face index>
  **/
 template <const axis::type alpha>
@@ -147,7 +148,8 @@ __device__ __host__ [[nodiscard]] static inline constexpr device::label_t idxFac
  * @brief Transposes an individual face into the shared memory
  * @tparam alpha The axis direction (X, Y or Z)
  * @tparam coeff The coefficient indicating the direction along the axis (must be -1 or 1)
- * @tparam idxoffset The constant offset into the shared memory for the particular block configuration
+ * @tparam idxOffset The constant offset into the shared memory for the particular block configuration
+ * @tparam SharedBuffer Type of the shared memory buffer
  * @param[in] Tx Three-dimensional thread coordinates
  * @param[in] pop Array to store loaded population values
  * @param[in] sharedBuffer Inline or externally stored shared memory buffer

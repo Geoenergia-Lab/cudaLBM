@@ -129,11 +129,11 @@ namespace LBM
         public:
             /**
              * @brief Constructs a meshPrimitive object by parsing the provided lines of the lattice mesh block.
-             * @param[in] mesh The lattice mesh
+             * @param[in] mesh Vector of strings containing the mesh information
              **/
-            __host__ [[nodiscard]] meshPrimitive(const words_t &meshLines)
-                : nPoints_({read<device::label_t>(meshLines, "nx"), read<device::label_t>(meshLines, "ny"), read<device::label_t>(meshLines, "nz")}),
-                  nDevices_({read<device::label_t>(meshLines, "nxGPUs"), read<device::label_t>(meshLines, "nyGPUs"), read<device::label_t>(meshLines, "nzGPUs")}) {}
+            __host__ [[nodiscard]] meshPrimitive(const words_t &mesh)
+                : nPoints_({read<device::label_t>(mesh, "nx"), read<device::label_t>(mesh, "ny"), read<device::label_t>(mesh, "nz")}),
+                  nDevices_({read<device::label_t>(mesh, "nxGPUs"), read<device::label_t>(mesh, "nyGPUs"), read<device::label_t>(mesh, "nzGPUs")}) {}
 
             /**
              * @brief Returns the number of lattice points in each direction as a device::blockLabel struct.
@@ -292,6 +292,7 @@ namespace LBM
             /**
              * @brief Reads the field names from the field information block.
              * @param[in] fieldInfoLines The lines of the field information block.
+             * @param[in] N Number of field names to read
              * @return A vector containing the field names.
              **/
             __host__ [[nodiscard]] static const words_t readFieldNames(const words_t &fieldInfoLines, const host::label_t N)

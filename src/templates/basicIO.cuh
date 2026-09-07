@@ -233,6 +233,7 @@ namespace LBM
 
         /**
          * @brief Prints one title-value pair and recurses on the rest.
+         * @tparam BraceIndent Number of spaces before opening/closing braces.
          * @tparam Value Type of the current value (must support operator<<).
          * @tparam Rest Remaining title-value pairs.
          * @param[in] os Output stream.
