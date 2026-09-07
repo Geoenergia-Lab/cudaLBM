@@ -129,10 +129,10 @@ namespace LBM
             runTime::update_codes(err);
             IO::printError(
                 "runTimeError",
-                "fileName", base_name(loc),
-                "line", loc.line(),
+                "fileName\t", base_name(loc),
+                "line\t\t", loc.line(),
                 "functionName", loc.function_name(),
-                "errorCode", err,
+                "errorCode\t", err,
                 "errorMessage", get_error_string(err));
         }
 

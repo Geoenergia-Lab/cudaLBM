@@ -55,8 +55,8 @@ int main(const int argc, const char *const argv[])
 {
     const inputControl input(argc, argv);
 
-    // If we supply the -countDevices argument, just do the device count
-    if (input.isArgPresent("-countDevices"))
+    // If we supply the -devList argument, just do the device count
+    if (input.isArgPresent("-devList"))
     {
         const deviceIndex_t deviceCount = countDevices();
 
@@ -65,7 +65,7 @@ int main(const int argc, const char *const argv[])
             programControl::printHeader<true>();
         }
 
-        IO::print_container(std::cout, std::pair<int, int>(0, deviceCount), "devList");
+        IO::print_container(std::cout, std::pair<int, int>(0, deviceCount - 1), "devList");
 
         return 0;
     }

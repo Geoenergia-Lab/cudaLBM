@@ -35,7 +35,7 @@ if notFound compute-sanitizer; then
 fi
 
 # Run systemInfo and capture its output
-DEVICES_OUTPUT=$(systemInfo -countDevices -quiet)
+DEVICES_OUTPUT=$(systemInfo -devList -quiet)
 
 # Extract the content between { and }; from the line that starts with '{'
 DEVICES_LINE=$(printf '%s\n' "$DEVICES_OUTPUT" | sed -n 's/^{\(.*\)};$/\1/p')

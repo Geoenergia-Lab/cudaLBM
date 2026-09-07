@@ -92,7 +92,7 @@ namespace LBM
                     validate_block_dimensions();
 
                     // Safety check for the mesh dimensions
-                    validate_allocation_size(programCtrl);
+                    validate_allocation_size(dimensions_);
 
                     // Must be safe, so allocate device constants
                     set_constants(programCtrl);
@@ -442,10 +442,7 @@ namespace LBM
              * @details Ensures the mesh does not exceed the storage limits of `host::label_t`
              * and checks the allocation footprint implied by the multi-GPU decomposition.
              **/
-            __host__ static void validate_allocation_size(
-                [[maybe_unused]] const programControl &programCtrl,
-                const host::blockLabel &dimensions,
-                [[maybe_unused]] const host::blockLabel &nDevices)
+            __host__ static void validate_allocation_size(const host::blockLabel &dimensions)
             {
                 const host::label_t nxTemp = static_cast<host::label_t>(dimensions.value<axis::X>());
                 const host::label_t nyTemp = static_cast<host::label_t>(dimensions.value<axis::Y>());
@@ -458,16 +455,6 @@ namespace LBM
                 {
                     errorHandler::handle(runTime::error::LABEL_T_CAPACITY_EXCEEDED);
                 }
-            }
-
-            /**
-             * @brief Validates the current mesh allocation against the configured device layout.
-             *
-             * @param[in] programCtrl Program configuration used to inspect the active devices.
-             **/
-            __host__ inline void validate_allocation_size(const programControl &programCtrl) const
-            {
-                validate_allocation_size(programCtrl, dimensions_, nDevices_);
             }
 
             /**
