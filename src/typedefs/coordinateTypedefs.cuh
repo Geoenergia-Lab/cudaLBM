@@ -50,8 +50,8 @@ SourceFiles
 #ifndef __MBLBM_COORDINATETYPEDEFS_CUH
 #define __MBLBM_COORDINATETYPEDEFS_CUH
 
-#include "../blockConfig.cuh"
-#include "../globalConstants.cuh"
+#include "blockConfig.cuh"
+#include "globalConstants.cuh"
 
 namespace LBM
 {
